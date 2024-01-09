@@ -1,0 +1,20 @@
+pip install fiona
+pip install pyproj
+pip install rtree
+pip install shapely
+
+
+cd ~/ros2_ws/
+rm -rf build/rmf_gazebo install/rmf_gazebo
+unset AMENT_PREFIX_PATH
+unset CMAKE_PREFIX_PATH
+source /home/user/ros2_ws/install/setup.bash
+colcon build --packages-select rmf_building_map_msgs rmf_building_map_tools
+source install/setup.bash
+colcon build --packages-select rmf_gazebo
+source install/setup.bash
+
+cd ~/ros2_ws/src/rmf_gazebo
+mkdir launch
+touch launch/start_my_world.launch.xml
+chmod +x launch/start_my_world.launch.xml

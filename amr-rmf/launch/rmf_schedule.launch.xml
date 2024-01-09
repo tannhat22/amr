@@ -1,0 +1,15 @@
+<?xml version='1.0' ?>
+
+<launch>
+  <arg name="failover_mode" default="false"/>
+  <!-- set to false if using real robots -->
+  <arg name="use_sim_time" default="true"/> 
+
+  <!-- Common launch -->
+  <include file="$(find-pkg-share amr-rmf)/launch/turtlebot_rmf_schedule.launch.xml">
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
+    <arg name="failover_mode" value="$(var failover_mode)"/>
+    <arg name="map_name" value="turtlebot_world" />
+  </include>
+
+</launch>
