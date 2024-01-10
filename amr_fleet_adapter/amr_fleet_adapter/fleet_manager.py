@@ -73,7 +73,7 @@ class State:
     def __init__(self, state: RobotState = None, destination: Location = None):
         self.state = state
         self.destination = destination
-        self.last_path_request = None
+        self.last_request = None
         self.last_completed_request = None
         self.mode_teleop = False
         self.svy_transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3414')
@@ -86,8 +86,8 @@ class State:
         self.gps_pos[1] = svy21_xy[0]
 
     def is_expected_task_id(self, task_id):
-        if self.last_path_request is not None:
-            if task_id != self.last_path_request.task_id:
+        if self.last_request is not None:
+            if task_id != self.last_request.task_id:
                 return False
         return True
 
@@ -163,7 +163,7 @@ class FleetManager(Node):
             'robot_mode_requests',
             qos_profile=qos_profile_system_default)
 
-        @app.get('/vdm-rmf/amr_fm/status/',
+        @app.get('/vdm-rmf/data/status/',
                  response_model=Response)
         async def status(robot_name: Optional[str] = None):
             response = {
@@ -188,7 +188,7 @@ class FleetManager(Node):
             return response
 
 
-        @app.post('/vdm-rmf/amr_fm/navigate/',
+        @app.post('/vdm-rmf/cmd/navigate/',
                   response_model=Response)
         async def navigate(robot_name: str, cmd_id: int, dest: Request):
             response = {'success': False, 'msg': ''}
@@ -239,14 +239,14 @@ class FleetManager(Node):
 
             if self.debug:
                 print(f'Sending navigate request for {robot_name}: {cmd_id}')
-            robot.last_path_request = path_request
+            robot.last_request = path_request
             robot.destination = target_loc
 
             response['success'] = True
             return response
 
 
-        @app.post('/vdm-rmf/amr_fm/follow_path/',
+        @app.post('/vdm-rmf/cmd/follow_path/',
                   response_model=Response)
         async def follow_path(robot_name: str, cmd_id: int, dest: Request):
             response = {'success': False, 'msg': ''}
@@ -299,15 +299,15 @@ class FleetManager(Node):
             self.path_pub.publish(path_request)
 
             if self.debug:
-                print(f'Sending navigate request for {robot_name}: {cmd_id}')
-            robot.last_path_request = path_request
+                print(f'Sending follow_path request for {robot_name}: {cmd_id}')
+            robot.last_request = path_request
             robot.destination = target_loc
 
             response['success'] = True
             return response
 
 
-        @app.get('/vdm-rmf/amr_fm/pause_robot/',
+        @app.get('/vdm-rmf/cmd/pause_robot/',
                  response_model=Response)
         async def pause(robot_name: str, cmd_id: int):
             response = {'success': False, 'msg': ''}
@@ -325,12 +325,13 @@ class FleetManager(Node):
 
             if self.debug:
                 print(f'Sending pause request for {robot_name}: {cmd_id}')
+            robot.last_request = mode_request
 
             response['success'] = True
             return response
 
 
-        @app.get('/vdm-rmf/amr_fm/resume_robot/',
+        @app.get('/vdm-rmf/cmd/resume_robot/',
                  response_model=Response)
         async def resume(robot_name: str, cmd_id: int):
             response = {'success': False, 'msg': ''}
@@ -348,12 +349,13 @@ class FleetManager(Node):
 
             if self.debug:
                 print(f'Sending resume request for {robot_name}: {cmd_id}')
+            robot.last_request = mode_request
 
             response['success'] = True
             return response
 
 
-        @app.get('/vdm-rmf/amr_fm/stop_robot/',
+        @app.get('/vdm-rmf/cmd/stop_robot/',
                  response_model=Response)
         async def stop(robot_name: str, cmd_id: int):
             response = {'success': False, 'msg': ''}
@@ -375,14 +377,14 @@ class FleetManager(Node):
 
             if self.debug:
                 print(f'Sending stop request for {robot_name}: {cmd_id}')
-            robot.last_path_request = path_request
+            robot.last_request = path_request
             robot.destination = None
 
             response['success'] = True
             return response
 
 
-        @app.post('/vdm-rmf/amr_fm/start_task/',
+        @app.post('/vdm-rmf/cmd/start_task/',
                   response_model=Response)
         async def start_process(robot_name: str, cmd_id: int, task: Request):
             response = {'success': False, 'msg': ''}
@@ -400,7 +402,7 @@ class FleetManager(Node):
                 cart_request.cart_mode = CartMode.MODE_DROPOFF
 
             destination = Location()
-            destination.level_name = task.task["level_name"]
+            destination.level_name = task.map_name
             destination.x = task.task["pose"]["x"]
             destination.y = task.task["pose"]["y"]
             destination.yaw = task.task["pose"]["yaw"]
@@ -413,49 +415,13 @@ class FleetManager(Node):
 
             if self.debug:
                 print(f'Sending process request for {robot_name}: {cmd_id}')
+            robot.last_request = cart_request
 
             response['success'] = True
             return response
 
 
-        # @app.post('/vdm-rmf/amr_fm/start_task/',
-        #           response_model=Response)
-        # async def start_process(robot_name: str, cmd_id: int, task: Request):
-        #     response = {'success': False, 'msg': ''}
-        #     if (robot_name not in self.robots or
-        #             len(task.task) < 1 or
-        #             task.task not in self.docks):
-        #         return response
-
-        #     robot = self.robots[robot_name]
-
-        #     path_request = PathRequest()
-        #     cur_loc = robot.state.location
-        #     cur_x = cur_loc.x
-        #     cur_y = cur_loc.y
-        #     cur_yaw = cur_loc.yaw
-        #     previous_wp = [cur_x, cur_y, cur_yaw]
-        #     target_loc = Location()
-        #     path_request.path.append(cur_loc)
-        #     for wp in self.docks[task.task]:
-        #         target_loc = wp
-        #         path_request.path.append(target_loc)
-        #         previous_wp = [wp.x, wp.y, wp.yaw]
-
-        #     path_request.fleet_name = self.fleet_name
-        #     path_request.robot_name = robot_name
-        #     path_request.task_id = str(cmd_id)
-        #     self.path_pub.publish(path_request)
-
-        #     if self.debug:
-        #         print(f'Sending process request for {robot_name}: {cmd_id}')
-        #     robot.last_path_request = path_request
-        #     robot.destination = target_loc
-
-        #     response['success'] = True
-        #     return response
-
-        @app.post('/vdm-rmf/amr_fm/toggle_action/',
+        @app.post('/vdm-rmf/cmd/toggle_action/',
                   response_model=Response)
         async def toggle_teleop(robot_name: str, mode: Request):
             response = {'success': False, 'msg': ''}
@@ -465,6 +431,26 @@ class FleetManager(Node):
             self.robots[robot_name].mode_teleop = mode.toggle
             response['success'] = True
             return response
+        
+        @app.get('/vdm-rmf/cmd/is_task_queue_finished/',
+                 response_model=Response)
+        async def is_task_queue_finished(robot_name: str):
+            response = {
+                'data': {},
+                'success': False,
+                'msg': ''
+            }
+            if (robot_name not in self.robots):
+                return response
+
+            robot = self.robots[robot_name]
+            if robot.last_completed_request == robot.last_request.task_id:
+                response['data']['task_finished'] = True
+            else:
+                response['data']['task_finished'] = False
+            response['success'] = True
+            return response
+
 
     def fleet_states_cb(self, msg: FleetState):
         if (msg.name == self.fleet_name):
@@ -474,16 +460,21 @@ class FleetManager(Node):
                     if not robot.is_expected_task_id(robotMsg.task_id) and \
                             not robot.mode_teleop:
                         # This message is out of date, so disregard it.
-                        if robot.last_path_request is not None:
+                        if robot.last_request is not None:
                             # Resend the latest task request for this robot, in case
                             # the message was dropped.
                             if self.debug:
                                 print(
                                     f'Republishing task request for {robotMsg.name}: '
-                                    f'{robot.last_path_request.task_id}, '
+                                    f'{robot.last_request.task_id}, '
                                     f'because it is currently following {robotMsg.task_id}'
                                 )
-                            self.path_pub.publish(robot.last_path_request)
+                            if type(robot.last_request) is PathRequest:
+                                self.path_pub.publish(robot.last_request)
+                            elif type(robot.last_request) is ModeRequest:
+                                self.mode_pub.publish(robot.last_request)
+                            elif type(robot.last_request) is CartRequest:
+                                self.cart_pub.publish(robot.last_request)
                         return
 
                     robot.state = robotMsg
@@ -528,7 +519,7 @@ class FleetManager(Node):
             {'x': position[0], 'y': position[1], 'yaw': angle}
         data['battery'] = robot.state.battery_percent
         if (robot.destination is not None
-                and robot.last_path_request is not None):
+                and robot.last_request is not None):
             destination = robot.destination
             # remove offset for calculation if using gps coords
             if self.gps:
@@ -546,7 +537,7 @@ class FleetManager(Node):
                         self.vehicle_traits.linear.nominal_velocity +
                         ori_delta /
                         self.vehicle_traits.rotational.nominal_velocity)
-            cmd_id = int(robot.last_path_request.task_id)
+            cmd_id = int(robot.last_request.task_id)
             data['destination_arrival'] = {
                 'cmd_id': cmd_id,
                 'duration': duration

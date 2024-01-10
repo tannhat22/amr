@@ -74,7 +74,7 @@ class RobotAPI:
             else False'''
         assert(len(pose) > 2)
         url = self.prefix +\
-            f'/open-rmf/rmf_demos_fm/navigate/?robot_name={robot_name}' \
+            f'/vdm-rmf/cmd/navigate/?robot_name={robot_name}' \
             f'&cmd_id={cmd_id}'
         data = {}  # data fields: task, map_name, destination{}, data{}
         data['map_name'] = map_name
@@ -92,17 +92,73 @@ class RobotAPI:
             print(f'Other error: {err}')
         return False
 
+    def follow_path(self,
+                 robot_name: str,
+                 cmd_id: int,
+                 poses: list,
+                 map_name: str,
+                 speed_limit=0.0):
+        ''' Request the robot to follow path to pose:[x,y,theta] where x, y and
+            and theta are in the robot's coordinate convention. This function
+            should return True if the robot has accepted the request,
+            else False'''
+        assert(len(poses) > 1)
+        url = self.prefix +\
+            f'/vdm-rmf/cmd/follow_path/?robot_name={robot_name}' \
+            f'&cmd_id={cmd_id}'
+        data = {}  # data fields: task, map_name, destination{}, data{}
+        data['map_name'] = map_name
+        data['speed_limit'] = speed_limit
+        data['waypoints'] = [{'x': pose[0], 'y': pose[1], 'yaw': pose[2]} for pose in poses]
+        try:
+            response = requests.post(url, timeout=self.timeout, json=data)
+            response.raise_for_status()
+            if self.debug:
+                print(f'Response: {response.json()}')
+            return response.json()['success']
+        except HTTPError as http_err:
+            print(f'HTTP error: {http_err}')
+        except Exception as err:
+            print(f'Other error: {err}')
+        return False
+
+    # def start_process(self,
+    #                   robot_name: str,
+    #                   cmd_id: int,
+    #                   process: str,
+    #                   map_name: str):
+    #     ''' Request the robot to begin a process. This is specific to the robot
+    #         and the use case. For example, load/unload a cart for Deliverybot
+    #         or begin cleaning a zone for a cleaning robot.
+    #         Return True if the robot has accepted the request, else False'''
+    #     url = self.prefix +\
+    #         f"/vdm-rmf/amr_fm/start_task?robot_name={robot_name}" \
+    #         f"&cmd_id={cmd_id}"
+    #     # data fields: task, map_name, destination{}, data{}
+    #     data = {'task': process, 'map_name': map_name}
+    #     try:
+    #         response = requests.post(url, timeout=self.timeout, json=data)
+    #         response.raise_for_status()
+    #         if self.debug:
+    #             print(f'Response: {response.json()}')
+    #         return response.json()['success']
+    #     except HTTPError as http_err:
+    #         print(f'HTTP error: {http_err}')
+    #     except Exception as err:
+    #         print(f'Other error: {err}')
+    #     return False
+    
     def start_process(self,
                       robot_name: str,
                       cmd_id: int,
-                      process: str,
+                      process: dict,
                       map_name: str):
         ''' Request the robot to begin a process. This is specific to the robot
             and the use case. For example, load/unload a cart for Deliverybot
             or begin cleaning a zone for a cleaning robot.
             Return True if the robot has accepted the request, else False'''
         url = self.prefix +\
-            f"/open-rmf/rmf_demos_fm/start_task?robot_name={robot_name}" \
+            f"/vdm-rmf/cmd/start_task?robot_name={robot_name}" \
             f"&cmd_id={cmd_id}"
         # data fields: task, map_name, destination{}, data{}
         data = {'task': process, 'map_name': map_name}
@@ -118,11 +174,11 @@ class RobotAPI:
             print(f'Other error: {err}')
         return False
 
-    def stop(self, robot_name: str, cmd_id: int):
-        ''' Command the robot to stop.
-            Return True if robot has successfully stopped. Else False'''
+    def pause(self, robot_name: str, cmd_id: int):
+        ''' Command the robot to pause.
+            Return True if robot has successfully paused. Else False'''
         url = self.prefix +\
-            f'/open-rmf/rmf_demos_fm/stop_robot?robot_name={robot_name}' \
+            f'/vdm-rmf/cmd/pause_robot?robot_name={robot_name}' \
             f'&cmd_id={cmd_id}'
         try:
             response = requests.get(url, self.timeout)
@@ -130,6 +186,59 @@ class RobotAPI:
             if self.debug:
                 print(f'Response: {response.json()}')
             return response.json()['success']
+        except HTTPError as http_err:
+            print(f'HTTP error: {http_err}')
+        except Exception as err:
+            print(f'Other error: {err}')
+        return False
+
+    def resume(self, robot_name: str, cmd_id: int):
+        ''' Command the robot to resume.
+            Return True if robot has successfully resumed. Else False'''
+        url = self.prefix +\
+            f'/vdm-rmf/cmd/resume_robot?robot_name={robot_name}' \
+            f'&cmd_id={cmd_id}'
+        try:
+            response = requests.get(url, self.timeout)
+            response.raise_for_status()
+            if self.debug:
+                print(f'Response: {response.json()}')
+            return response.json()['success']
+        except HTTPError as http_err:
+            print(f'HTTP error: {http_err}')
+        except Exception as err:
+            print(f'Other error: {err}')
+        return False
+
+    def stop(self, robot_name: str, cmd_id: int):
+        ''' Command the robot to stop.
+            Return True if robot has successfully stopped. Else False'''
+        url = self.prefix +\
+            f'/vdm-rmf/cmd/stop_robot?robot_name={robot_name}' \
+            f'&cmd_id={cmd_id}'
+        try:
+            response = requests.get(url, self.timeout)
+            response.raise_for_status()
+            if self.debug:
+                print(f'Response: {response.json()}')
+            return response.json()['success']
+        except HTTPError as http_err:
+            print(f'HTTP error: {http_err}')
+        except Exception as err:
+            print(f'Other error: {err}')
+        return False
+
+    def is_task_queue_finished(self, robot_name: str):
+        ''' Command the robot is finished task.
+            Return True if robot has finished task. Else False'''
+        url = self.prefix +\
+            f'/vdm-rmf/cmd/is_task_queue_finished?robot_name={robot_name}'
+        try:
+            response = requests.get(url, self.timeout)
+            response.raise_for_status()
+            if self.debug:
+                print(f'Response: {response.json()}')
+            return response.json()['data']['task_finished']
         except HTTPError as http_err:
             print(f'HTTP error: {http_err}')
         except Exception as err:
@@ -165,6 +274,11 @@ class RobotAPI:
                 return data['last_completed_request'] == cmd_id
 
         return False
+    
+    def task_completed(self, robot_name: str):
+        ''' Return True if the last request the robot successfully completed
+            matches cmd_id. Else False.'''
+        return self.is_task_queue_finished(robot_name)
 
     def process_completed(self, robot_name: str, cmd_id: int):
         ''' Return True if the robot has successfully completed its previous
@@ -191,7 +305,7 @@ class RobotAPI:
         '''Request to toggle the robot's mode_teleop parameter.
            Return True if the toggle request is successful'''
         url = self.prefix +\
-            f"/open-rmf/rmf_demos_fm/toggle_action?robot_name={robot_name}"
+            f"/vdm-rmf/cmd/toggle_action?robot_name={robot_name}"
         data = {'toggle': toggle}
         try:
             response = requests.post(url, timeout=self.timeout, json=data)
@@ -207,10 +321,10 @@ class RobotAPI:
 
     def data(self, robot_name=None):
         if robot_name is None:
-            url = self.prefix + f'/open-rmf/rmf_demos_fm/status/'
+            url = self.prefix + f'/vdm-rmf/data/status/'
         else:
             url = self.prefix +\
-                f'/open-rmf/rmf_demos_fm/status?robot_name={robot_name}'
+                f'/vdm-rmf/data/status?robot_name={robot_name}'
         try:
             response = requests.get(url, timeout=self.timeout)
             response.raise_for_status()
