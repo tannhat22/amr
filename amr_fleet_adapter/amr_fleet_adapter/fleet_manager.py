@@ -163,6 +163,7 @@ class FleetManager(Node):
             'robot_mode_requests',
             qos_profile=qos_profile_system_default)
 
+
         @app.get('/vdm-rmf/data/status/',
                  response_model=Response)
         async def status(robot_name: Optional[str] = None):
@@ -260,13 +261,15 @@ class FleetManager(Node):
             cur_x = robot.state.location.x
             cur_y = robot.state.location.y
             cur_yaw = robot.state.location.yaw
+            cur_loc = robot.state.location
+            path_request.path.append(cur_loc)
             t = self.get_clock().now().to_msg()
             for destination in dest.waypoints:
                 target_x = destination['x']
                 target_y = destination['y']
                 target_yaw = destination['yaw']
+                target_speed_limit = destination['speed_limit']
                 target_map = dest.map_name
-                target_speed_limit = dest.speed_limit
 
                 target_x -= self.offset[0]
                 target_y -= self.offset[1]
@@ -318,7 +321,7 @@ class FleetManager(Node):
             mode_request = ModeRequest()
             mode_request.fleet_name = self.fleet_name
             mode_request.robot_name = robot_name
-            mode_request.mode = RobotMode.MODE_PAUSED
+            mode_request.mode.mode = RobotMode.MODE_PAUSED
 
             mode_request.task_id = str(cmd_id)
             self.mode_pub.publish(mode_request)
@@ -342,7 +345,7 @@ class FleetManager(Node):
             mode_request = ModeRequest()
             mode_request.fleet_name = self.fleet_name
             mode_request.robot_name = robot_name
-            mode_request.mode = RobotMode.MODE_MOVING
+            mode_request.mode.mode = RobotMode.MODE_MOVING
 
             mode_request.task_id = str(cmd_id)
             self.mode_pub.publish(mode_request)
@@ -432,6 +435,7 @@ class FleetManager(Node):
             response['success'] = True
             return response
         
+
         @app.get('/vdm-rmf/cmd/is_task_queue_finished/',
                  response_model=Response)
         async def is_task_queue_finished(robot_name: str):
@@ -518,9 +522,13 @@ class FleetManager(Node):
         data['position'] =\
             {'x': position[0], 'y': position[1], 'yaw': angle}
         data['battery'] = robot.state.battery_percent
+        data['path'] = robot.state.path
         if (robot.destination is not None
                 and robot.last_request is not None):
-            destination = robot.destination
+            # Sửa destination để nhận điểm đầu tiên trong path
+            # destination = robot.destination
+            destination = robot.state.path[0]
+
             # remove offset for calculation if using gps coords
             if self.gps:
                 position[0] -= self.offset[0]

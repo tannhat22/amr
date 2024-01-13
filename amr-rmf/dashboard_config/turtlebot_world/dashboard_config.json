@@ -1,5 +1,5 @@
 { 
-  "world_name" : "turtlebot3",
+  "world_name" : "Turtlebot World",
   "valid_task" : ["Loop"],
   "task": {
     "Delivery": {},
@@ -14,7 +14,8 @@
       ]
     },
     "Station": {},
-    "Patrol": {},
+    "Patrol": {
+    },
     "Charging": {}
   }
 }

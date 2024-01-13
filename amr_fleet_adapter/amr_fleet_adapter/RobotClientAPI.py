@@ -95,21 +95,21 @@ class RobotAPI:
     def follow_path(self,
                  robot_name: str,
                  cmd_id: int,
-                 poses: list,
-                 map_name: str,
-                 speed_limit=0.0):
+                 waypoints: list,
+                 map_name: str):
         ''' Request the robot to follow path to pose:[x,y,theta] where x, y and
             and theta are in the robot's coordinate convention. This function
             should return True if the robot has accepted the request,
             else False'''
-        assert(len(poses) > 1)
+        assert(len(waypoints) > 1)
         url = self.prefix +\
             f'/vdm-rmf/cmd/follow_path/?robot_name={robot_name}' \
             f'&cmd_id={cmd_id}'
         data = {}  # data fields: task, map_name, destination{}, data{}
         data['map_name'] = map_name
-        data['speed_limit'] = speed_limit
-        data['waypoints'] = [{'x': pose[0], 'y': pose[1], 'yaw': pose[2]} for pose in poses]
+        # data['speed_limit'] = speed_limit
+        data['waypoints'] = [{'x': waypoint[0], 'y': waypoint[1],
+                              'yaw': waypoint[2], 'speed_limit': waypoint[3]} for waypoint in waypoints]
         try:
             response = requests.post(url, timeout=self.timeout, json=data)
             response.raise_for_status()
@@ -243,6 +243,15 @@ class RobotAPI:
             print(f'HTTP error: {http_err}')
         except Exception as err:
             print(f'Other error: {err}')
+        return False
+
+    def remaining_path(self, robot_name: str):
+        ''' Return remaining path of the robot'''
+        response = self.data(robot_name)
+        if response is not None:
+            path = response['data'].get('path')
+            return path
+
         return False
 
     def navigation_remaining_duration(self, robot_name: str, cmd_id: int):

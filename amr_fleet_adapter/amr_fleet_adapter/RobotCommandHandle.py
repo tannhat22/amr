@@ -42,7 +42,9 @@ from datetime import timedelta
 # a new path
 class RobotState(enum.IntEnum):
     IDLE = 0
-    MOVING = 1
+    WAITING = 1
+    MOVING = 2
+    DOCKING = 3
 
 
 # Custom wrapper for Plan::Waypoint. We use this to modify position of
@@ -271,6 +273,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
 
             def _follow_path():
                 target_pose = None
+                target_path = None
                 path_index = 0
                 while self.remaining_waypoints \
                         or self.state == RobotState.MOVING:
@@ -288,32 +291,33 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         )
                         return
                     # State machine
-                    if self.state == RobotState.IDLE or target_pose is None:
+                    if (self.state == RobotState.IDLE or target_path is None):
                         # Assign the next waypoint
                         self.target_waypoint = self.remaining_waypoints[0]
                         path_index = self.remaining_waypoints[0].index
-                        # Move robot to next waypoint
-                        target_pose = self.target_waypoint.position
-                        [x, y] = target_pose[:2]
-                        theta = target_pose[2]
-                        speed_limit = \
-                            self.get_speed_limit(self.target_waypoint)
-                        response = self.api.navigate(
+                        target_pose = self.target_waypoint
+                        # Move robot with list waypoint
+                        target_path = self.remaining_waypoints
+                        waypoints_path = []
+                        for pose in target_path:
+                            [x, y] = pose.position[:2]
+                            theta = pose.position[2]
+                            speed_limit = self.get_speed_limit(pose)
+                            waypoints_path.append([x, y, theta, speed_limit])
+
+                        response = self.api.follow_path(
                             self.name,
                             self.next_cmd_id(),
-                            [x, y, theta],
+                            waypoints_path,
                             self.map_name,
-                            speed_limit
                         )
 
                         if response:
-                            self.remaining_waypoints = \
-                                self.remaining_waypoints[1:]
                             self.state = RobotState.MOVING
                         else:
                             self.node.get_logger().info(
                                 f"Robot {self.name} failed to request "
-                                f"navigation to "
+                                f"follow path to "
                                 f"[{x:.0f}, {y:.0f}, {theta:.0f}]."
                                 f"Retrying...")
                             self._quit_path_event.wait(0.1)
@@ -327,8 +331,29 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
 
                         # Check if we have reached the target
                         with self._lock:
-                            if self.api.navigation_completed(
-                                    self.name, cmd_id):
+                            remaining_path = self.api.remaining_path(self.name)
+                            if remaining_path:
+                                n = len(self.remaining_waypoints) - len(remaining_path)
+                                if (n > 0):
+                                    self.remaining_waypoints=self.remaining_waypoints[n:]
+                                    self.target_waypoint = self.remaining_waypoints[0]
+                                    path_index = self.remaining_waypoints[0].index
+                                    target_pose = self.target_waypoint                                    
+                            else:
+                                if remaining_path == False:
+                                    self.node.get_logger().error(
+                                    f"Robot {self.name} failed to request for "
+                                    f"information remaining path. "
+                                    f"Retrying...")
+                                    continue
+                                else:
+                                    self.target_waypoint = self.remaining_waypoints[-1]
+                                    path_index = self.remaining_waypoints[-1].index
+                                    target_pose = self.target_waypoint 
+                                    self.remaining_waypoints = []
+
+                            if self.api.task_completed(
+                                    self.name):
                                 self.node.get_logger().info(
                                     f"Robot [{self.name}] has reached the "
                                     f"destination for cmd_id {cmd_id}"
@@ -416,7 +441,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                 # Request the robot to start the relevant process
                 cmd_id = self.next_cmd_id()
                 while not self.api.start_process(
-                    self.name, cmd_id, self.dock_name, self.map_name
+                    self.name, cmd_id, self.dock_name, self.map_name,  dock_waypoint.location
                 ):
                     self.node.get_logger().info(
                         f"Requesting robot {self.name} to dock at "
