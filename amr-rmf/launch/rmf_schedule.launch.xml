@@ -3,7 +3,7 @@
 <launch>
   <!-- <arg name="failover_mode" default="false"/> -->
   <!-- set to false if using real robots -->
-  <arg name="use_sim_time" default="true"/> 
+  <arg name="use_sim_time" default="false"/> 
   <arg name="server_uri" default="" description="Name of the rmf_demos map to simulate" />
 
   <!-- Common launch -->
@@ -12,6 +12,10 @@
     <!-- <arg name="failover_mode" value="$(var failover_mode)"/> -->
     <arg name="map_name" value="turtlebot_world" />
     <arg name="server_uri" value="$(var server_uri)"/>
+  </include>
+
+  <!-- Fleet server -->
+  <include file="$(find-pkg-share amr-rmf)/launch/turtlebot3_world_ff_server.launch.xml">
   </include>
 
 </launch>

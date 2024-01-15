@@ -22,7 +22,7 @@
     <param name="dds_destination_request_topic" value="destination_request"/>
     <param name="dds_cart_request_topic" value="cart_request"/>
 
-    <param name="update_state_frequency" value="20.0"/>
+    <param name="update_state_frequency" value="10.0"/>
     <param name="publish_state_frequency" value="5.0"/>
 
     <param name="translation_x" value="0.0"/>

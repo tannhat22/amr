@@ -295,7 +295,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         # Assign the next waypoint
                         self.target_waypoint = self.remaining_waypoints[0]
                         path_index = self.remaining_waypoints[0].index
-                        target_pose = self.target_waypoint
+                        target_pose = self.target_waypoint.position
                         # Move robot with list waypoint
                         target_path = self.remaining_waypoints
                         waypoints_path = []
@@ -305,12 +305,16 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             speed_limit = self.get_speed_limit(pose)
                             waypoints_path.append([x, y, theta, speed_limit])
 
+                        # self.node.get_logger().info(f"Wayppoins path: {waypoints_path}")
+
                         response = self.api.follow_path(
                             self.name,
                             self.next_cmd_id(),
                             waypoints_path,
                             self.map_name,
                         )
+
+                        # time.sleep(60)
 
                         if response:
                             self.state = RobotState.MOVING
@@ -323,6 +327,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             self._quit_path_event.wait(0.1)
 
                     elif self.state == RobotState.MOVING:
+                
                         if self.api.requires_replan(self.name):
                             self.replan()
 
@@ -331,34 +336,34 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
 
                         # Check if we have reached the target
                         with self._lock:
-                            remaining_path = self.api.remaining_path(self.name)
-                            if remaining_path:
-                                n = len(self.remaining_waypoints) - len(remaining_path)
+                            remaining_path_length = self.api.remaining_path_length(self.name)
+                            if remaining_path_length:
+                                n = len(self.remaining_waypoints) - remaining_path_length
                                 if (n > 0):
                                     self.remaining_waypoints=self.remaining_waypoints[n:]
                                     self.target_waypoint = self.remaining_waypoints[0]
                                     path_index = self.remaining_waypoints[0].index
-                                    target_pose = self.target_waypoint                                    
-                            else:
-                                if remaining_path == False:
-                                    self.node.get_logger().error(
-                                    f"Robot {self.name} failed to request for "
-                                    f"information remaining path. "
-                                    f"Retrying...")
-                                    continue
-                                else:
-                                    self.target_waypoint = self.remaining_waypoints[-1]
-                                    path_index = self.remaining_waypoints[-1].index
-                                    target_pose = self.target_waypoint 
-                                    self.remaining_waypoints = []
+                                    target_pose = self.target_waypoint.position                                    
+                            elif remaining_path_length == False:
+                                self.node.get_logger().error(
+                                f"Robot {self.name} failed to request for "
+                                f"information remaining path. "
+                                f"Retrying...")
+                                continue
 
-                            if self.api.task_completed(
-                                    self.name):
+                            if self.api.process_completed(
+                                    self.name, cmd_id):
                                 self.node.get_logger().info(
                                     f"Robot [{self.name}] has reached the "
                                     f"destination for cmd_id {cmd_id}"
                                 )
                                 self.state = RobotState.IDLE
+
+                                self.target_waypoint = self.remaining_waypoints[-1]
+                                path_index = self.remaining_waypoints[-1].index
+                                target_pose = self.target_waypoint.position
+                                self.remaining_waypoints = []
+
                                 graph_index = self.target_waypoint.graph_index
                                 if graph_index is not None:
                                     self.on_waypoint = graph_index

@@ -70,9 +70,10 @@ class Response(BaseModel):
 # Fleet Manager
 # ------------------------------------------------------------------------------
 class State:
-    def __init__(self, state: RobotState = None, destination: Location = None):
+    def __init__(self, state: RobotState = None, destination: Location = None, path: list = None):
         self.state = state
         self.destination = destination
+        self.path = path
         self.last_request = None
         self.last_completed_request = None
         self.mode_teleop = False
@@ -305,7 +306,8 @@ class FleetManager(Node):
                 print(f'Sending follow_path request for {robot_name}: {cmd_id}')
             robot.last_request = path_request
             robot.destination = target_loc
-
+            robot.path = path_request.path[1:]
+            
             response['success'] = True
             return response
 
@@ -382,6 +384,7 @@ class FleetManager(Node):
                 print(f'Sending stop request for {robot_name}: {cmd_id}')
             robot.last_request = path_request
             robot.destination = None
+            robot.path = None
 
             response['success'] = True
             return response
@@ -436,24 +439,24 @@ class FleetManager(Node):
             return response
         
 
-        @app.get('/vdm-rmf/cmd/is_task_queue_finished/',
-                 response_model=Response)
-        async def is_task_queue_finished(robot_name: str):
-            response = {
-                'data': {},
-                'success': False,
-                'msg': ''
-            }
-            if (robot_name not in self.robots):
-                return response
+        # @app.get('/vdm-rmf/cmd/is_task_queue_finished/',
+        #          response_model=Response)
+        # async def is_task_queue_finished(robot_name: str):
+        #     response = {
+        #         'data': {},
+        #         'success': False,
+        #         'msg': ''
+        #     }
+        #     if (robot_name not in self.robots):
+        #         return response
 
-            robot = self.robots[robot_name]
-            if robot.last_completed_request == robot.last_request.task_id:
-                response['data']['task_finished'] = True
-            else:
-                response['data']['task_finished'] = False
-            response['success'] = True
-            return response
+        #     robot = self.robots[robot_name]
+        #     if robot.last_completed_request == robot.last_request.task_id:
+        #         response['data']['task_finished'] = True
+        #     else:
+        #         response['data']['task_finished'] = False
+        #     response['success'] = True
+        #     return response
 
 
     def fleet_states_cb(self, msg: FleetState):
@@ -495,6 +498,7 @@ class FleetManager(Node):
                     ):
                         robot = self.robots[robotMsg.name]
                         robot.destination = None
+                        robot.path = None
                         completed_request = int(robotMsg.task_id)
                         if robot.last_completed_request != completed_request:
                             if self.debug:
@@ -522,12 +526,16 @@ class FleetManager(Node):
         data['position'] =\
             {'x': position[0], 'y': position[1], 'yaw': angle}
         data['battery'] = robot.state.battery_percent
-        data['path'] = robot.state.path
         if (robot.destination is not None
-                and robot.last_request is not None):
+            and robot.last_request is not None):
+            data['path_length'] = len(robot.path)
             # Sửa destination để nhận điểm đầu tiên trong path
             # destination = robot.destination
-            destination = robot.state.path[0]
+            destination = robot.path[0]
+            n = len(robot.path) - len(robot.state.path)
+            if (len(robot.state.path) > 0
+                and n > 0):
+                robot.path = robot.path[n:]
 
             # remove offset for calculation if using gps coords
             if self.gps:
@@ -552,6 +560,7 @@ class FleetManager(Node):
             }
         else:
             data['destination_arrival'] = None
+            data['path_length'] = None
 
         data['last_completed_request'] = robot.last_completed_request
         if (

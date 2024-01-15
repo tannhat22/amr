@@ -20,7 +20,6 @@
     will need to make http request calls to the appropriate endpoints within
     these functions.
 '''
-
 import requests
 from urllib.error import HTTPError
 
@@ -110,6 +109,7 @@ class RobotAPI:
         # data['speed_limit'] = speed_limit
         data['waypoints'] = [{'x': waypoint[0], 'y': waypoint[1],
                               'yaw': waypoint[2], 'speed_limit': waypoint[3]} for waypoint in waypoints]
+        
         try:
             response = requests.post(url, timeout=self.timeout, json=data)
             response.raise_for_status()
@@ -228,28 +228,28 @@ class RobotAPI:
             print(f'Other error: {err}')
         return False
 
-    def is_task_queue_finished(self, robot_name: str):
-        ''' Command the robot is finished task.
-            Return True if robot has finished task. Else False'''
-        url = self.prefix +\
-            f'/vdm-rmf/cmd/is_task_queue_finished?robot_name={robot_name}'
-        try:
-            response = requests.get(url, self.timeout)
-            response.raise_for_status()
-            if self.debug:
-                print(f'Response: {response.json()}')
-            return response.json()['data']['task_finished']
-        except HTTPError as http_err:
-            print(f'HTTP error: {http_err}')
-        except Exception as err:
-            print(f'Other error: {err}')
-        return False
+    # def is_task_queue_finished(self, robot_name: str):
+    #     ''' Command the robot is finished task.
+    #         Return True if robot has finished task. Else False'''
+    #     url = self.prefix +\
+    #         f'/vdm-rmf/cmd/is_task_queue_finished?robot_name={robot_name}'
+    #     try:
+    #         response = requests.get(url, self.timeout)
+    #         response.raise_for_status()
+    #         if self.debug:
+    #             print(f'Response: {response.json()}')
+    #         return response.json()['data']['task_finished']
+    #     except HTTPError as http_err:
+    #         print(f'HTTP error: {http_err}')
+    #     except Exception as err:
+    #         print(f'Other error: {err}')
+    #     return False
 
-    def remaining_path(self, robot_name: str):
+    def remaining_path_length(self, robot_name: str):
         ''' Return remaining path of the robot'''
         response = self.data(robot_name)
         if response is not None:
-            path = response['data'].get('path')
+            path = response['data'].get('path_length')
             return path
 
         return False
@@ -284,10 +284,10 @@ class RobotAPI:
 
         return False
     
-    def task_completed(self, robot_name: str):
-        ''' Return True if the last request the robot successfully completed
-            matches cmd_id. Else False.'''
-        return self.is_task_queue_finished(robot_name)
+    # def task_completed(self, robot_name: str):
+    #     ''' Return True if the last request the robot successfully completed
+    #         matches cmd_id. Else False.'''
+    #     return self.is_task_queue_finished(robot_name)
 
     def process_completed(self, robot_name: str, cmd_id: int):
         ''' Return True if the robot has successfully completed its previous

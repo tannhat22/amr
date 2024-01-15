@@ -6,6 +6,5 @@ poses = [
 data = {}
 data['waypoints'] = [{'x': pose[0], 'y': pose[1], 'yaw': pose[2]} for pose in poses]
 print(data['waypoints'])
-a = []
-if a == False:
-    print(a)
+a = None
+print(a == False)
