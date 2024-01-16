@@ -36,6 +36,7 @@ import enum
 import time
 
 from datetime import timedelta
+import re
 
 
 # States for RobotCommandHandle's state machine used when guiding robot along
@@ -304,6 +305,9 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             theta = pose.position[2]
                             speed_limit = self.get_speed_limit(pose)
                             waypoints_path.append([x, y, theta, speed_limit])
+                            # self.node.get_logger().info(
+                            #     f"POS_path: x: {x}, y: {y}, yaw: {theta} /////////////"
+                            # )                            
 
                         # self.node.get_logger().info(f"Wayppoins path: {waypoints_path}")
 
@@ -439,14 +443,49 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
 
             # Get the waypoint that the robot is trying to dock into
             dock_waypoint = self.graph.find_waypoint(self.dock_name)
+            # self.node.get_logger().info(
+            #     f"Requested dock: {self.dock_name}, "
+            #     f"Information dock: {dock_waypoint}"
+            # )
             assert(dock_waypoint)
             self.dock_waypoint_index = dock_waypoint.index
 
             def _dock():
+                dock_mode = self.search_mode_docking(self.dock_name)
+                if dock_mode is None:
+                    self.node.get_logger().error(
+                        f"Can't find mode dock in dock_name: {self.dock_name}. "
+                        f"Please ensure, dock_name liked that *****--mode_dock!"
+                    )
+                    return
+                
+                dock_position = dock_waypoint.location
+                if self.on_waypoint is not None:
+                    current_pos = self.graph.get_waypoint(self.on_waypoint).location
+                    dock_yaw = self.calc_yaw(dock_position, current_pos)
+
+                    if (dock_mode == "pickup"
+                        or dock_mode == "dropoff"):
+                        self.dock_waypoint_index = self.on_waypoint
+
+                else:
+                    self.node.get_logger().error(
+                        f"Can't find yaw dock with dock_name: {self.dock_name}!"
+                    )
+                    return
+            
+                self.node.get_logger().info(
+                    f"Dock position: x: {dock_position[0]}, y: {dock_position[1]}, yaw: {dock_yaw}"
+                )
+
+                process = {'mode': dock_mode,
+                           'location': [dock_position[0], dock_position[1], dock_yaw]}
+
                 # Request the robot to start the relevant process
                 cmd_id = self.next_cmd_id()
+
                 while not self.api.start_process(
-                    self.name, cmd_id, self.dock_name, self.map_name,  dock_waypoint.location
+                    self.name, cmd_id, self.map_name, process
                 ):
                     self.node.get_logger().info(
                         f"Requesting robot {self.name} to dock at "
@@ -459,36 +498,24 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                     self.on_waypoint = None
                     self.on_lane = None
 
-                if self.dock_name not in self.docks:
-                    self.node.get_logger().info(
-                        f"Requested dock {self.dock_name} not found, "
-                        "ignoring docking request"
-                    )
-                    # TODO(MXG): This should open an issue ticket for the robot
-                    # to tell the operator that the robot cannot proceed
-                    return
-
-                positions = []
-                for wp in self.docks[self.dock_name]:
-                    positions.append([wp.x, wp.y, wp.yaw])
                 self.node.get_logger().info(
                     f"Robot {self.name} is docking at {self.dock_name}..."
                 )
 
                 while not self.api.process_completed(self.name, cmd_id):
-                    if len(positions) < 1:
-                        break
+                    # if len(positions) < 1:
+                    #     break
 
-                    traj = schedule.make_trajectory(
-                        self.vehicle_traits,
-                        self.adapter.now(),
-                        positions
-                    )
-                    itinerary = schedule.Route(self.map_name, traj)
-                    if self.update_handle is not None:
-                        participant = \
-                            self.update_handle.get_unstable_participant()
-                        participant.set_itinerary([itinerary])
+                    # traj = schedule.make_trajectory(
+                    #     self.vehicle_traits,
+                    #     self.adapter.now(),
+                    #     positions
+                    # )
+                    # itinerary = schedule.Route(self.map_name, traj)
+                    # if self.update_handle is not None:
+                    #     participant = \
+                    #         self.update_handle.get_unstable_participant()
+                    #     participant.set_itinerary([itinerary])
 
                     # Check if we need to abort
                     if self._quit_dock_event.wait(0.1):
@@ -622,6 +649,14 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
         assert(len(A) > 1)
         assert(len(B) > 1)
         return math.sqrt((A[0] - B[0])**2 + (A[1] - B[1])**2)
+    
+    def calc_yaw(self, start_point: list, end_point: list):
+        delta_x = start_point[0] - end_point[0]
+        delta_y = start_point[1] - end_point[1]
+
+        # Sử dụng hàm arctan2 để tính góc yaw
+        yaw = math.atan2(delta_y, delta_x)
+        return yaw
 
     def get_speed_limit(self, target_waypoint):
         approach_lane_limit = np.inf
@@ -756,3 +791,11 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             return
         if msg.mode.mode == RobotState.IDLE:
             self.complete_robot_action()
+
+    def search_mode_docking(self, dock_name: str):
+        match = re.search(r'--(.+)',dock_name)
+        if match:
+            result = match.group(1)
+            return result
+        else:
+            return None

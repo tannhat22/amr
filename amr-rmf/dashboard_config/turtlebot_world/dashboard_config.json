@@ -1,6 +1,6 @@
 { 
   "world_name" : "Turtlebot World",
-  "valid_task" : ["Loop"],
+  "valid_task" : ["Loop", "Delivery"],
   "task": {
     "Delivery": {},
     "Loop": {

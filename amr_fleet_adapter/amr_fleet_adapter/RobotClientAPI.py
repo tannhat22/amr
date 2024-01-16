@@ -151,8 +151,8 @@ class RobotAPI:
     def start_process(self,
                       robot_name: str,
                       cmd_id: int,
-                      process: dict,
-                      map_name: str):
+                      map_name: str,
+                      process: dict):
         ''' Request the robot to begin a process. This is specific to the robot
             and the use case. For example, load/unload a cart for Deliverybot
             or begin cleaning a zone for a cleaning robot.

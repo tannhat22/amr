@@ -3,7 +3,7 @@
 <launch>
   <!-- <arg name="failover_mode" default="false"/> -->
   <!-- set to false if using real robots -->
-  <arg name="use_sim_time" default="false"/> 
+  <arg name="use_sim_time" default="false"/>
   <arg name="server_uri" default="" description="Name of the rmf_demos map to simulate" />
 
   <!-- Common launch -->

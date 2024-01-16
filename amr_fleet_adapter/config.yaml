@@ -33,7 +33,7 @@ rmf_fleet:
   account_for_battery_drain: True
   task_capabilities: # Specify the types of RMF Tasks that robots in this fleet are capable of performing
     loop: True
-    delivery: False
+    delivery: True
     clean: False
     finishing_request: "nothing" # [park, charge, nothing]
     # action_categories: ["custom_mission_1"]
@@ -51,10 +51,10 @@ robots:
       robot_state_update_frequency: 5.0
       start:
         map_name: "L1"
-        waypoint: "dock1"
+        waypoint: "dock--charger"
         orientation: 0.0 # radians
       charger:
-        waypoint: "dock1"
+        waypoint: "dock--charger"
   
   # Configuration for robot2
   ros2_tb3_0:

@@ -395,23 +395,25 @@ class FleetManager(Node):
         async def start_process(robot_name: str, cmd_id: int, task: Request):
             response = {'success': False, 'msg': ''}
             if (robot_name not in self.robots or
-                    len(task.task) < 1 or
-                    task.task not in self.docks):
+                    len(task.task) < 2):
                 return response
 
             robot = self.robots[robot_name]
 
             cart_request = CartRequest()
             if task.task["mode"] == "pickup":
-                cart_request.cart_mode = CartMode.MODE_PICKUP
+                cart_request.cart_mode.mode = CartMode.MODE_PICKUP
             elif task.task["mode"] == "dropoff":
-                cart_request.cart_mode = CartMode.MODE_DROPOFF
+                cart_request.cart_mode.mode = CartMode.MODE_DROPOFF
+            else:
+                response["msg"] = "Mode dock does not support. Please check mode!"
+                return response
 
             destination = Location()
             destination.level_name = task.map_name
-            destination.x = task.task["pose"]["x"]
-            destination.y = task.task["pose"]["y"]
-            destination.yaw = task.task["pose"]["yaw"]
+            destination.x = task.task["location"][0]
+            destination.y = task.task["location"][1]
+            destination.yaw = task.task["location"][2]
             cart_request.destination = destination
             cart_request.fleet_name = self.fleet_name
             cart_request.robot_name = robot_name
