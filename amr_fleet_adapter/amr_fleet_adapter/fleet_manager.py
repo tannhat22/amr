@@ -32,7 +32,7 @@ from rclpy.qos import QoSDurabilityPolicy as Durability
 from rclpy.qos import QoSReliabilityPolicy as Reliability
 
 from rmf_fleet_msgs.msg import FleetState, RobotState, Location, PathRequest, \
-    CartRequest, ModeRequest, DockSummary, RobotMode, CartMode
+    DockRequest, ModeRequest, DockSummary, RobotMode, DockMode
 
 import rmf_adapter as adpt
 import rmf_adapter.vehicletraits as traits
@@ -154,9 +154,9 @@ class FleetManager(Node):
             'robot_path_requests',
             qos_profile=qos_profile_system_default)
 
-        self.cart_pub = self.create_publisher(
-            CartRequest,
-            'robot_cart_requests',
+        self.dock_pub = self.create_publisher(
+            DockRequest,
+            'robot_dock_requests',
             qos_profile=qos_profile_system_default)
 
         self.mode_pub = self.create_publisher(
@@ -400,11 +400,15 @@ class FleetManager(Node):
 
             robot = self.robots[robot_name]
 
-            cart_request = CartRequest()
-            if task.task["mode"] == "pickup":
-                cart_request.cart_mode.mode = CartMode.MODE_PICKUP
+            dock_request = DockRequest()
+            if task.task["mode"] == "charge":
+                dock_request.dock_mode.mode = DockMode.MODE_CHARGE
+            elif task.task["mode"] == "pickup":
+                dock_request.dock_mode.mode = DockMode.MODE_PICKUP
             elif task.task["mode"] == "dropoff":
-                cart_request.cart_mode.mode = CartMode.MODE_DROPOFF
+                dock_request.dock_mode.mode = DockMode.MODE_DROPOFF
+            elif task.task["mode"] == "undock":
+                dock_request.dock_mode.mode = DockMode.MODE_UNDOCK
             else:
                 response["msg"] = "Mode dock does not support. Please check mode!"
                 return response
@@ -414,16 +418,17 @@ class FleetManager(Node):
             destination.x = task.task["location"][0]
             destination.y = task.task["location"][1]
             destination.yaw = task.task["location"][2]
-            cart_request.destination = destination
-            cart_request.fleet_name = self.fleet_name
-            cart_request.robot_name = robot_name
-            cart_request.task_id = str(cmd_id)
+            dock_request.destination = destination
+            dock_request.fleet_name = self.fleet_name
+            dock_request.robot_name = robot_name
+            dock_request.task_id = str(cmd_id)
 
-            self.cart_pub.publish(cart_request)
+            self.dock_pub.publish(dock_request)
 
             if self.debug:
                 print(f'Sending process request for {robot_name}: {cmd_id}')
-            robot.last_request = cart_request
+            robot.last_request = dock_request
+            robot.destination = destination
 
             response['success'] = True
             return response
@@ -482,8 +487,8 @@ class FleetManager(Node):
                                 self.path_pub.publish(robot.last_request)
                             elif type(robot.last_request) is ModeRequest:
                                 self.mode_pub.publish(robot.last_request)
-                            elif type(robot.last_request) is CartRequest:
-                                self.cart_pub.publish(robot.last_request)
+                            elif type(robot.last_request) is DockRequest:
+                                self.dock_pub.publish(robot.last_request)
                         return
 
                     robot.state = robotMsg
@@ -529,7 +534,8 @@ class FleetManager(Node):
             {'x': position[0], 'y': position[1], 'yaw': angle}
         data['battery'] = robot.state.battery_percent
         if (robot.destination is not None
-            and robot.last_request is not None):
+            and robot.last_request is not None
+            and robot.path is not None):
             data['path_length'] = len(robot.path)
             # Sửa destination để nhận điểm đầu tiên trong path
             # destination = robot.destination

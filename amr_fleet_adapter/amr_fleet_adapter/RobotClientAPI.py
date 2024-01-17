@@ -100,7 +100,7 @@ class RobotAPI:
             and theta are in the robot's coordinate convention. This function
             should return True if the robot has accepted the request,
             else False'''
-        assert(len(waypoints) > 1)
+        assert(len(waypoints) >= 1)
         url = self.prefix +\
             f'/vdm-rmf/cmd/follow_path/?robot_name={robot_name}' \
             f'&cmd_id={cmd_id}'

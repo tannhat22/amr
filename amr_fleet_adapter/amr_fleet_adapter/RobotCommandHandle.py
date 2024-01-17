@@ -517,6 +517,10 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                     #         self.update_handle.get_unstable_participant()
                     #     participant.set_itinerary([itinerary])
 
+                    self.node.get_logger().info(
+                        f"Robot {self.name} is docking at {self.dock_name}..."
+                    )
+
                     # Check if we need to abort
                     if self._quit_dock_event.wait(0.1):
                         self.node.get_logger().info("Aborting docking")

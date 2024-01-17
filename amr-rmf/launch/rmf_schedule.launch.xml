@@ -18,4 +18,8 @@
   <include file="$(find-pkg-share amr-rmf)/launch/turtlebot3_world_ff_server.launch.xml">
   </include>
 
+  <!-- Workcells adapter -->
+  <include file="$(find-pkg-share amr_workcells_adapter)/launch/workcells_adapter.launch.xml">
+  </include>
+
 </launch>
