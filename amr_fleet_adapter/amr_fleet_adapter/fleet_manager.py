@@ -32,7 +32,7 @@ from rclpy.qos import QoSDurabilityPolicy as Durability
 from rclpy.qos import QoSReliabilityPolicy as Reliability
 
 from rmf_fleet_msgs.msg import FleetState, RobotState, Location, PathRequest, \
-    DockRequest, ModeRequest, DockSummary, RobotMode, DockMode
+    DockRequest, ModeRequest, CancelRequest, DockSummary, RobotMode, DockMode
 
 import rmf_adapter as adpt
 import rmf_adapter.vehicletraits as traits
@@ -111,7 +111,11 @@ class FleetManager(Node):
         super().__init__(f'{self.fleet_name}_fleet_manager')
 
         self.robots = {}  # Map robot name to state
-        self.docks = {}  # Map dock name to waypoints
+        self.docks = {} # Map dock name to waypoints
+
+        if 'docks' in self.config:
+            self.docks = self.config['docks']
+        assert(len(self.docks) > 0)
 
         for robot_name, robot_config in self.config["robots"].items():
             self.robots[robot_name] = State()
@@ -162,6 +166,11 @@ class FleetManager(Node):
         self.mode_pub = self.create_publisher(
             ModeRequest,
             'robot_mode_requests',
+            qos_profile=qos_profile_system_default)
+        
+        self.cancel_pub = self.create_publisher(
+            CancelRequest,
+            'robot_cancel_requests',
             qos_profile=qos_profile_system_default)
 
 
@@ -368,21 +377,15 @@ class FleetManager(Node):
                 return response
 
             robot = self.robots[robot_name]
-            path_request = PathRequest()
-            path_request.fleet_name = self.fleet_name
-            path_request.robot_name = robot_name
-            path_request.path = []
-            # Appending the current location twice will effectively tell the
-            # robot to stop
-            path_request.path.append(robot.state.location)
-            path_request.path.append(robot.state.location)
-
-            path_request.task_id = str(cmd_id)
-            self.path_pub.publish(path_request)
+            cancel_request = CancelRequest()
+            cancel_request.fleet_name = self.fleet_name
+            cancel_request.robot_name = robot_name
+            cancel_request.task_id = str(cmd_id)
+            self.cancel_pub.publish(cancel_request)
 
             if self.debug:
                 print(f'Sending stop request for {robot_name}: {cmd_id}')
-            robot.last_request = path_request
+            robot.last_request = cancel_request
             robot.destination = None
             robot.path = None
 
@@ -399,6 +402,12 @@ class FleetManager(Node):
                 return response
 
             robot = self.robots[robot_name]
+            custom_dock = False
+            rotate_to_dock = 0
+            rotate_angle = 0
+            rotate_orientation = 0
+
+
 
             dock_request = DockRequest()
             if task.task["mode"] == "charge":
@@ -413,6 +422,24 @@ class FleetManager(Node):
                 response["msg"] = "Mode dock does not support. Please check mode!"
                 return response
 
+            if task.task["dock_name"] in self.docks:
+                dock_config = self.docks[task.task["dock_name"]]
+                for conf in dock_config:
+                    if conf == 'custom_dock':
+                        custom_dock = dock_config[conf]
+                    elif conf == 'rotate_to_dock':
+                        rotate_to_dock = dock_config[conf]
+                    elif conf == 'rotate_angle':
+                        rotate_angle = dock_config[conf]
+                    elif conf == 'rotate_orientation':
+                        rotate_orientation = dock_config[conf]
+                    else:
+                        continue
+                
+            else:
+                response["msg"] = "Not found dock name in config!"
+                return response
+
             destination = Location()
             destination.level_name = task.map_name
             destination.x = task.task["location"][0]
@@ -421,6 +448,10 @@ class FleetManager(Node):
             dock_request.destination = destination
             dock_request.fleet_name = self.fleet_name
             dock_request.robot_name = robot_name
+            dock_request.custom_docking = custom_dock
+            dock_request.rotate_to_dock = rotate_to_dock
+            dock_request.rotate_angle = rotate_angle
+            dock_request.rotate_orientation = rotate_orientation
             dock_request.task_id = str(cmd_id)
 
             self.dock_pub.publish(dock_request)
@@ -489,6 +520,8 @@ class FleetManager(Node):
                                 self.mode_pub.publish(robot.last_request)
                             elif type(robot.last_request) is DockRequest:
                                 self.dock_pub.publish(robot.last_request)
+                            elif type(robot.last_request is CancelRequest):
+                                self.cancel_pub.publish(robot.last_request)
                         return
 
                     robot.state = robotMsg
@@ -516,6 +549,7 @@ class FleetManager(Node):
                         robot.last_completed_request = completed_request
 
     def dock_summary_cb(self, msg):
+        return
         for fleet in msg.docks:
             if(fleet.fleet_name == self.fleet_name):
                 for dock in fleet.params:
@@ -586,6 +620,8 @@ class FleetManager(Node):
             data['replan'] = True
         else:
             data['replan'] = False
+
+        data['robot_mode'] = robot.state.mode.mode
 
         return data
 

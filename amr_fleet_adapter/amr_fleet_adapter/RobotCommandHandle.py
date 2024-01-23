@@ -43,9 +43,13 @@ import re
 # a new path
 class RobotState(enum.IntEnum):
     IDLE = 0
-    WAITING = 1
+    CHARGING = 1
     MOVING = 2
-    DOCKING = 3
+    PAUSED = 3
+    WAITING = 4
+    EMERGENCY = 5 
+    DOCKING = 7
+    REQUEST_ERROR = 10
 
 
 # Custom wrapper for Plan::Waypoint. We use this to modify position of
@@ -72,6 +76,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                  start,
                  position,
                  charger_waypoint,
+                 dock_config,
                  update_frequency,
                  lane_merge_distance,
                  adapter,
@@ -90,6 +95,12 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
         assert waypoint, f"Charger waypoint {charger_waypoint} \
           does not exist in the navigation graph"
         self.charger_waypoint_index = waypoint.index
+
+        self.dock_config = dock_config
+
+        self.node.get_logger().info(f"WAYPOINTS DOCKS: {self.dock_config}")
+
+
         self.update_frequency = update_frequency
         self.lane_merge_distance = lane_merge_distance
         self.update_handle = None  # RobotUpdateHandle
@@ -217,6 +228,11 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             if self._stopping_thread.is_alive():
                 self._stopping_thread.join()
 
+    # def pause(self):
+    #     if self.debug:
+    #         plan_id = self.update_handle.unstable_current_plan_id()
+    #         print(f'pause for {self.name} with PlanId {plan_id}')
+
     def stop(self):
         if self.debug:
             plan_id = self.update_handle.unstable_current_plan_id()
@@ -292,7 +308,12 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         )
                         return
                     # State machine
-                    if (self.state == RobotState.IDLE or target_path is None):
+                    self.get_mode_from_robot()
+                    if (self.state == RobotState.EMERGENCY
+                        or self.state == RobotState.REQUEST_ERROR):
+                        self.remaining_waypoints = []
+
+                    elif (self.state == RobotState.IDLE or target_path is None):
                         # Assign the next waypoint
                         self.target_waypoint = self.remaining_waypoints[0]
                         path_index = self.remaining_waypoints[0].index
@@ -303,10 +324,15 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         for pose in target_path:
                             [x, y] = pose.position[:2]
                             theta = pose.position[2]
+                            pose_config = self.dock_config.get(str(pose.graph_index))
+                            if pose_config is not None:
+                                theta = pose_config
+                                
                             speed_limit = self.get_speed_limit(pose)
                             waypoints_path.append([x, y, theta, speed_limit])
                             # self.node.get_logger().info(
-                            #     f"POS_path: x: {x}, y: {y}, yaw: {theta} /////////////"
+                            #     f"POS_path: x: {x}, y: {y}, yaw: {theta},  "
+                            #     f"POS_index: {pose.graph_index} /////////////"
                             # )                            
 
                         # self.node.get_logger().info(f"Wayppoins path: {waypoints_path}")
@@ -412,13 +438,34 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     timedelta(seconds=duration)
                                 )
 
-                if (not self.remaining_waypoints) \
-                        and self.state == RobotState.IDLE:
-                    path_finished_callback()
-                    self.node.get_logger().info(
-                        f"Robot {self.name} has successfully navigated along "
-                        f"requested path."
-                    )
+                if (not self.remaining_waypoints):
+                    if self.state == RobotState.IDLE:
+                        self.node.get_logger().info(
+                            f"Robot {self.name} has successfully navigated along "
+                            f"requested path."
+                        )
+                        path_finished_callback()
+
+                    elif self.state == RobotState.REQUEST_ERROR:
+                        self.node.get_logger().error(
+                            f"Robot {self.name} has ERROR navigated along requested path "
+                            f"with task_id: {self.update_handle.current_task_id()}."
+                        )
+                        self.update_handle.kill_task(
+                            self.update_handle.current_task_id(),
+                            ["kill_task"],
+                            self.on_kill
+                        )
+                    elif self.state == RobotState.EMERGENCY:
+                        self.node.get_logger().warn(
+                            f"Robot {self.name} has EMERGENCY_STOP navigated along requested path."
+                            f"with task_id: {self.update_handle.current_task_id()}."
+                        )
+                        self.update_handle.kill_task(
+                            self.update_handle.current_task_id(),
+                            ["kill_task"],
+                            self.on_kill
+                        )
 
             self._follow_path_thread = threading.Thread(
                 target=_follow_path)
@@ -451,91 +498,152 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             self.dock_waypoint_index = dock_waypoint.index
 
             def _dock():
-                dock_mode = self.search_mode_docking(self.dock_name)
-                if dock_mode is None:
-                    self.node.get_logger().error(
-                        f"Can't find mode dock in dock_name: {self.dock_name}. "
-                        f"Please ensure, dock_name liked that *****--mode_dock!"
-                    )
-                    return
-                
-                dock_position = dock_waypoint.location
-                if self.on_waypoint is not None:
-                    current_pos = self.graph.get_waypoint(self.on_waypoint).location
-                    dock_yaw = self.calc_yaw(dock_position, current_pos)
-
-                    if (dock_mode == "pickup"
-                        or dock_mode == "dropoff"):
-                        self.dock_waypoint_index = self.on_waypoint
-
+                # Check before run docking if robot is error with last request of EMERGENCY
+                self.get_mode_from_robot()
+                if (self.state == RobotState.REQUEST_ERROR 
+                    or self.state == RobotState.EMERGENCY):
+                    with self._lock:
+                        self.dock_waypoint_index = None
+                        self.node.get_logger().error(
+                            f"Robot {self.name} has ERROR from last requested "
+                            f"with task_id: {self.update_handle.current_task_id()}."
+                        )
+                        self.update_handle.kill_task(
+                            self.update_handle.current_task_id(),
+                            ["kill_task"],
+                            self.on_kill
+                        )
                 else:
-                    self.node.get_logger().error(
-                        f"Can't find yaw dock with dock_name: {self.dock_name}!"
-                    )
-                    return
-            
-                self.node.get_logger().info(
-                    f"Dock position: x: {dock_position[0]}, y: {dock_position[1]}, yaw: {dock_yaw}"
-                )
+                    error = False
+                    dock_mode = self.search_mode_docking(self.dock_name)
+                    if dock_mode is None:
+                        self.node.get_logger().error(
+                            f"Can't find mode dock in dock_name: {self.dock_name}. "
+                            f"Please ensure, dock_name liked that *****--mode_dock!"
+                        )
+                        return
+                    
+                    dock_position = dock_waypoint.location
+                    if self.on_waypoint is not None:
+                        current_pos = self.graph.get_waypoint(self.on_waypoint).location
+                        dock_yaw = self.calc_yaw(dock_position, current_pos)
 
-                process = {'mode': dock_mode,
-                           'location': [dock_position[0], dock_position[1], dock_yaw]}
+                        if (dock_mode == "pickup"
+                            or dock_mode == "dropoff"):
+                            self.dock_waypoint_index = self.on_waypoint
 
-                # Request the robot to start the relevant process
-                cmd_id = self.next_cmd_id()
-
-                while not self.api.start_process(
-                    self.name, cmd_id, self.map_name, process
-                ):
+                    else:
+                        self.node.get_logger().error(
+                            f"Can't find yaw dock with dock_name: {self.dock_name}!"
+                        )
+                        return
+                
                     self.node.get_logger().info(
-                        f"Requesting robot {self.name} to dock at "
-                        f"{self.dock_name}"
+                        f"Dock position: x: {dock_position[0]}, y: {dock_position[1]}, yaw: {dock_yaw}"
                     )
-                    if self._quit_dock_event.wait(1.0):
-                        break
 
-                with self._lock:
-                    self.on_waypoint = None
-                    self.on_lane = None
+                    process = {'mode': dock_mode,
+                            'dock_name': self.dock_name,
+                            'location': [dock_position[0], dock_position[1], dock_yaw]}
 
-                self.node.get_logger().info(
-                    f"Robot {self.name} is docking at {self.dock_name}..."
-                )
+                    # Request the robot to start the relevant process
+                    cmd_id = self.next_cmd_id()
 
-                while not self.api.process_completed(self.name, cmd_id):
-                    # if len(positions) < 1:
-                    #     break
+                    while not self.api.start_process(
+                        self.name, cmd_id, self.map_name, process
+                    ):
+                        self.node.get_logger().info(
+                            f"Requesting robot {self.name} to dock at "
+                            f"{self.dock_name}"
+                        )
+                        if self._quit_dock_event.wait(1.0):
+                            break
+                    
+                    self.state = RobotState.DOCKING
 
-                    # traj = schedule.make_trajectory(
-                    #     self.vehicle_traits,
-                    #     self.adapter.now(),
-                    #     positions
-                    # )
-                    # itinerary = schedule.Route(self.map_name, traj)
-                    # if self.update_handle is not None:
-                    #     participant = \
-                    #         self.update_handle.get_unstable_participant()
-                    #     participant.set_itinerary([itinerary])
+                    with self._lock:
+                        self.on_waypoint = None
+                        self.on_lane = None
 
                     self.node.get_logger().info(
                         f"Robot {self.name} is docking at {self.dock_name}..."
                     )
 
-                    # Check if we need to abort
-                    if self._quit_dock_event.wait(0.1):
-                        self.node.get_logger().info("Aborting docking")
-                        return
+                    while not self.api.process_completed(self.name, cmd_id):
+                        # if len(positions) < 1:
+                        #     break
 
-                with self._lock:
-                    self.on_waypoint = self.dock_waypoint_index
-                    self.dock_waypoint_index = None
-                    docking_finished_callback()
-                    self.node.get_logger().info(
-                        f"Robot {self.name} has completed docking"
-                    )
+                        # traj = schedule.make_trajectory(
+                        #     self.vehicle_traits,
+                        #     self.adapter.now(),
+                        #     positions
+                        # )
+                        # itinerary = schedule.Route(self.map_name, traj)
+                        # if self.update_handle is not None:
+                        #     participant = \
+                        #         self.update_handle.get_unstable_participant()
+                        #     participant.set_itinerary([itinerary])
+
+                        self.node.get_logger().info(
+                            f"Robot {self.name} is docking at {self.dock_name}..."
+                        )
+
+                        self.get_mode_from_robot()
+                        if (self.state == RobotState.REQUEST_ERROR
+                            or self.state == RobotState.EMERGENCY):
+                            error = True
+                            break
+
+                        # Check if we need to abort
+                        if self._quit_dock_event.wait(0.1):
+                            self.node.get_logger().info("Aborting docking")
+                            return
+                    if not error:
+                        self.state = RobotState.IDLE
+
+                    with self._lock:
+                        if self.state == RobotState.IDLE:
+                            self.node.get_logger().info(
+                                f"Robot {self.name} has completed docking"
+                            )
+                            self.on_waypoint = self.dock_waypoint_index
+                            self.dock_waypoint_index = None
+                            docking_finished_callback()
+                        else:
+                            if self.state == RobotState.REQUEST_ERROR:
+                                self.node.get_logger().error(
+                                    f"Robot {self.name} has some error docking "
+                                    f"with task_id: {self.update_handle.current_task_id()}."
+                                )
+                                
+                            elif self.state == RobotState.EMERGENCY:
+                                self.node.get_logger().error(
+                                    f"Robot {self.name} has EMERGENCY_STOP when docking "
+                                    f"with task_id: {self.update_handle.current_task_id()}."
+                                )
+
+                            self.on_waypoint = self.dock_waypoint_index
+                            self.dock_waypoint_index = None
+                            self.update_handle.kill_task(
+                                self.update_handle.current_task_id(),
+                                ["kill_task"],
+                                self.on_kill
+                            )
 
             self._dock_thread = threading.Thread(target=_dock)
             self._dock_thread.start()
+
+    def get_mode_from_robot(self):
+        mode = self.api.robot_mode(self.name)
+        if mode is not None:
+            if mode == RobotState.EMERGENCY:
+                self.state = RobotState.EMERGENCY
+            elif mode == RobotState.REQUEST_ERROR:
+                self.state = RobotState.REQUEST_ERROR
+        else:
+            self.node.get_logger().error(
+                "Unable to retrieve robot_mode from robot.")
+        return
 
     def get_position(self):
         ''' This helper function returns the live position of the robot in the
@@ -795,6 +903,11 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             return
         if msg.mode.mode == RobotState.IDLE:
             self.complete_robot_action()
+
+    def on_kill(self, killed):
+        self.node.get_logger().info(f"on_kill result {killed} ")
+        if not killed:
+            self.node.get_logger().error(f"on_kill with error")
 
     def search_mode_docking(self, dock_name: str):
         match = re.search(r'--(.+)',dock_name)

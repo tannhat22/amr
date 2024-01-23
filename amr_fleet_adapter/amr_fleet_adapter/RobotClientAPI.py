@@ -41,6 +41,23 @@ class RobotAPI:
             return False
         return True
 
+    def robot_mode(self, robot_name: str):
+        ''' Return robot state or None if any errors are encountered'''   
+        response = self.data(robot_name)
+        if response is not None:
+            if self.debug:
+                print(f'Response: {response}')
+            if not response['success']:
+                print(f'Response for {robot_name} was not successful')
+                return None
+            
+            robot_mode = response['data']['robot_mode']
+            return robot_mode
+        
+        print(f'No response received for {robot_name}')
+        return None
+
+
     def position(self, robot_name: str):
         ''' Return [x, y, theta] expressed in the robot's coordinate frame or
             None if any errors are encountered'''

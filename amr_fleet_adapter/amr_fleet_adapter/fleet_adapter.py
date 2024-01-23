@@ -208,8 +208,17 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
     # Initialize robots for this fleet
     robots = {}
     missing_robots = config_yaml['robots']
+    dock_config = config_yaml['docks']
 
     def _add_fleet_robots():
+        dock_config_index = {}
+        if dock_config is not None:
+            for dock in dock_config:
+                dock_check = nav_graph.find_waypoint(dock_config[dock]['front_dock'])
+                assert dock_check , f"Front_dock waypoint of {dock} \
+                    does not exist in the navigation graph"
+                dock_config_index[str(dock_check.index)] = dock_config[dock]['orientation']
+                
         while len(missing_robots) > 0:
             time.sleep(0.2)
             for robot_name in list(missing_robots.keys()):
@@ -278,6 +287,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
                         start=starts[0],
                         position=position,
                         charger_waypoint=rmf_config['charger']['waypoint'],
+                        dock_config=dock_config_index,
                         update_frequency=rmf_config.get(
                             'robot_state_update_frequency', 1),
                         lane_merge_distance=lane_merge_distance,

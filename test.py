@@ -9,25 +9,34 @@
 # a = None
 # print(a == False)
 
-import re
+# import re
 
-chuoi = "TTR_line55"
+# chuoi = "TTR_line55"
 
-# Sử dụng biểu thức chính quy (regex) để lấy chuỗi bắt đầu từ sau kí tự --
-match = re.search(r'--(.+)', chuoi)
+# # Sử dụng biểu thức chính quy (regex) để lấy chuỗi bắt đầu từ sau kí tự --
+# match = re.search(r'--(.+)', chuoi)
 
-if match:
-    ket_qua = match.group(1)
-    print(ket_qua)
-else:
-    print("Không tìm thấy chuỗi phù hợp.")
+# if match:
+#     ket_qua = match.group(1)
+#     print(ket_qua)
+# else:
+#     print("Không tìm thấy chuỗi phù hợp.")
 
-def search_mode_docking(dock_name: str):
-    match = re.search(r'--(.+)',dock_name)
-    if match:
-        result = match.group(1)
-        return result
-    else:
-        return None
+# def search_mode_docking(dock_name: str):
+#     match = re.search(r'--(.+)',dock_name)
+#     if match:
+#         result = match.group(1)
+#         return result
+#     else:
+#         return None
 
-print(search_mode_docking(chuoi))
+# print(search_mode_docking(chuoi))
+import enum
+
+a = {'a': 1, 'b': 2, 'c': 3}
+print(a.get('a'))
+for i in a:
+    if i == 'a':
+        continue
+    print(i)
+
