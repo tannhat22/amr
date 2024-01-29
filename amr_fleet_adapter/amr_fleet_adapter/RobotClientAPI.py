@@ -297,7 +297,10 @@ class RobotAPI:
         if response is not None:
             data = response.get('data')
             if data is not None:
-                return data['last_completed_request'] == cmd_id
+                completed = data['last_completed_request'] == cmd_id
+                if self.debug:
+                    print(f'Response navigation_completed: {completed}')
+                return completed
 
         return False
     
@@ -309,7 +312,10 @@ class RobotAPI:
     def process_completed(self, robot_name: str, cmd_id: int):
         ''' Return True if the robot has successfully completed its previous
             process request. Else False.'''
-        return self.navigation_completed(robot_name, cmd_id)
+        resp = self.navigation_completed(robot_name, cmd_id)
+        if self.debug:
+            print(f'Response process_completed: {resp}')
+        return resp
 
     def battery_soc(self, robot_name: str):
         ''' Return the state of charge of the robot as a value between 0.0

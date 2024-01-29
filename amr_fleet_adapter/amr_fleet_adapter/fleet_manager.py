@@ -95,7 +95,7 @@ class State:
 
 class FleetManager(Node):
     def __init__(self, config, nav_path):
-        self.debug = False
+        self.debug = True
         self.config = config
         self.fleet_name = self.config["rmf_fleet"]["name"]
 
@@ -402,8 +402,8 @@ class FleetManager(Node):
                 return response
 
             robot = self.robots[robot_name]
-            custom_dock = False
             rotate_to_dock = 0
+            custom_dock = False
             rotate_angle = 0
             rotate_orientation = 0
 
@@ -426,13 +426,14 @@ class FleetManager(Node):
                 dock_config = self.docks[task.task["dock_name"]]
                 for conf in dock_config:
                     if conf == 'custom_dock':
-                        custom_dock = dock_config[conf]
+                        custom_dock = True
+                        for custom in dock_config['custom_dock']:
+                            if custom == 'rotate_angle':
+                                rotate_angle = dock_config['custom_dock']['rotate_angle']
+                            elif custom == 'rotate_orientation':
+                                rotate_orientation = dock_config['custom_dock']['rotate_orientation']
                     elif conf == 'rotate_to_dock':
                         rotate_to_dock = dock_config[conf]
-                    elif conf == 'rotate_angle':
-                        rotate_angle = dock_config[conf]
-                    elif conf == 'rotate_orientation':
-                        rotate_orientation = dock_config[conf]
                     else:
                         continue
                 

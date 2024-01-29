@@ -82,7 +82,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                  adapter,
                  api):
         adpt.RobotCommandHandle.__init__(self)
-        self.debug = False
+        self.debug = True
         self.name = name
         self.fleet_name = fleet_name
         self.config = config
@@ -311,7 +311,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                     self.get_mode_from_robot()
                     if (self.state == RobotState.EMERGENCY
                         or self.state == RobotState.REQUEST_ERROR):
-                        self.remaining_waypoints = []
+                        self.remaining_waypoints = []                        
 
                     elif (self.state == RobotState.IDLE or target_path is None):
                         # Assign the next waypoint
@@ -584,9 +584,9 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         #         self.update_handle.get_unstable_participant()
                         #     participant.set_itinerary([itinerary])
 
-                        self.node.get_logger().info(
-                            f"Robot {self.name} is docking at {self.dock_name}..."
-                        )
+                        # self.node.get_logger().info(
+                        #     f"Robot {self.name} is docking at {self.dock_name}..."
+                        # )
 
                         self.get_mode_from_robot()
                         if (self.state == RobotState.REQUEST_ERROR

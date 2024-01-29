@@ -1,0 +1,21 @@
+{ 
+  "world_name" : "TP2 layout",
+  "valid_task" : ["Loop", "Delivery"],
+  "task": {
+    "Delivery": {},
+    "Loop": {
+      "places": [
+        "dock1",
+        "park1",
+        "park2",
+        "park3",
+        "point1",
+        "point2"
+      ]
+    },
+    "Station": {},
+    "Patrol": {
+    },
+    "Charging": {}
+  }
+}

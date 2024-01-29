@@ -75,91 +75,91 @@ docks:
   # Configuration for clr55--dropoff:
   clr55--dropoff:
     front_dock: "clr55DOFD"
-    orientation: 1.57199
-    custom_dock: true
+    orientation: -1.57199
     rotate_to_dock: 180
-    rotate_angle: 45
-    rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
+    custom_dock: 
+      rotate_angle: 45
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Configuration for clr56--dropoff:
   clr56--dropoff:
     front_dock: "clr56DOFD"
-    orientation: 1.57199
-    custom_dock: false
+    orientation: -1.57199
     rotate_to_dock: 180
-    rotate_angle: 45
-    rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+    # custom_dock: 
+    #   rotate_angle: 45
+    #   rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Configuration for clr55--pickup:
   clr55--pickup:
     front_dock: "clr55PKFD"
-    orientation: -3.14
-    custom_dock: false
-    rotate_to_dock: 0
-    rotate_angle: 30
-    rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+    orientation: 1.571
+    rotate_to_dock: -90
+    # custom_dock: 
+    #   rotate_angle: 30
+    #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
   
   # Configuration for clr56--pickup:
   clr56--pickup:
     front_dock: "clr56PKFD"
-    orientation: -3.14
-    custom_dock: false
-    rotate_to_dock: 0
-    rotate_angle: 30
-    rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+    orientation: 1.571
+    rotate_to_dock: -90
+    # custom_dock: 
+    #   rotate_angle: 30
+    #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Configuration for line55--dropoff:
   line55--dropoff:
     front_dock: "line55DOFD"
-    orientation: 1.57199
-    custom_dock: false
+    orientation: -1.57199
     rotate_to_dock: 90
-    rotate_angle: 30
-    rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+    # custom_dock: 
+    #   rotate_angle: 30
+    #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Configuration for line55--pickup:
   line55--pickup:
     front_dock: "line55PKFD"
-    orientation: -1.57199
-    custom_dock: false
+    orientation: 1.57199
     rotate_to_dock: -90
-    rotate_angle: 30
-    rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+    # custom_dock: 
+    #   rotate_angle: 30
+    #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Configuration for line56--dropoff:
   line56--dropoff:
     front_dock: "line56DOFD"
-    orientation: 1.57199
-    custom_dock: true
+    orientation: -1.57199
     rotate_to_dock: -90
-    rotate_angle: 45
-    rotate_orientation: 0 # 0: both, 1: counter clockwise, 2: clockwise
+    custom_dock: 
+      rotate_angle: 45
+      rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Configuration for line56--pickup:
   line56--pickup:
     front_dock: "line56PKFD"
-    orientation: 1.57199
-    custom_dock: false
+    orientation: -1.57199
     rotate_to_dock: -90
-    rotate_angle: 30
-    rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
+    # custom_dock: 
+    #   rotate_angle: 30
+    #   rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Configuration for amr_001--charger:
   amr001--charger:
     front_dock: "amr001_start"
     orientation: 0.00
-    custom_dock: false
     rotate_to_dock: 90
-    rotate_angle: 45
-    rotate_orientation: 0 # 0: both, 1: counter clockwise, 2: clockwise
+    # custom_dock: 
+    #   rotate_angle: 30
+    #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Configuration for amr_002--charger:
   amr002--charger:
     front_dock: "amr002_start"
     orientation: 0.00
-    custom_dock: false
     rotate_to_dock: 90
-    rotate_angle: 45
-    rotate_orientation: 0 # 0: both, 1: counter clockwise, 2: clockwise
+    # custom_dock: 
+    #   rotate_angle: 30
+    #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
 
