@@ -98,7 +98,8 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
 
         self.dock_config = dock_config
 
-        self.node.get_logger().info(f"WAYPOINTS DOCKS: {self.dock_config}")
+        if self.debug:
+            self.node.get_logger().info(f"WAYPOINTS DOCKS: {self.dock_config}")
 
 
         self.update_frequency = update_frequency
@@ -537,10 +538,11 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             f"Can't find yaw dock with dock_name: {self.dock_name}!"
                         )
                         return
-                
-                    self.node.get_logger().info(
-                        f"Dock position: x: {dock_position[0]}, y: {dock_position[1]}, yaw: {dock_yaw}"
-                    )
+
+                    if self.debug:
+                        self.node.get_logger().info(
+                            f"Dock position: x: {dock_position[0]}, y: {dock_position[1]}, yaw: {dock_yaw}"
+                        )
 
                     process = {'mode': dock_mode,
                             'dock_name': self.dock_name,
@@ -615,6 +617,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     f"Robot {self.name} has some error docking "
                                     f"with task_id: {self.update_handle.current_task_id()}."
                                 )
+
                                 
                             elif self.state == RobotState.EMERGENCY:
                                 self.node.get_logger().error(
@@ -622,7 +625,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     f"with task_id: {self.update_handle.current_task_id()}."
                                 )
 
-                            self.on_waypoint = self.dock_waypoint_index
+                            self.on_waypoint = None
                             self.dock_waypoint_index = None
                             self.update_handle.kill_task(
                                 self.update_handle.current_task_id(),
