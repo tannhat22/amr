@@ -9,7 +9,7 @@ rmf_fleet:
     user: "some_user"
     password: "some_password"
   limits:
-    linear: [0.5, 0.75] # velocity, acceleration
+    linear: [0.7, 1.5] # velocity, acceleration
     angular: [0.7, 2.0] # velocity, acceleration
   profile: # Robot profile is modelled as a circle
     footprint: 0.2 # radius in m
@@ -51,7 +51,7 @@ robots:
       robot_state_update_frequency: 5.0
       start:
         map_name: "L1"
-        waypoint: "amr001_start"
+        # waypoint: "amr001_start"
         orientation: 0.0 # radians
       charger:
         waypoint: "amr001--charger"
@@ -64,7 +64,7 @@ robots:
       robot_state_update_frequency: 5.0
       start:
         map_name: "L1"
-        waypoint: "amr002_start"
+        # waypoint: "amr002_start"
         orientation: 0.0 # radians
       charger:
         waypoint: "amr002--charger"

@@ -336,7 +336,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             #     f"POS_index: {pose.graph_index} /////////////"
                             # )                            
 
-                        # self.node.get_logger().info(f"Wayppoins path: {waypoints_path}")
+                        self.node.get_logger().info(f"Wayppoins path: {waypoints_path}")
 
                         response = self.api.follow_path(
                             self.name,
@@ -374,7 +374,9 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     self.remaining_waypoints=self.remaining_waypoints[n:]
                                     self.target_waypoint = self.remaining_waypoints[0]
                                     path_index = self.remaining_waypoints[0].index
-                                    target_pose = self.target_waypoint.position                                    
+                                    target_pose = self.target_waypoint.position
+                                    self.node.get_logger().info(f"Remaining waypoint: {len(self.remaining_waypoints)} waypoints")
+                                    self.node.get_logger().info(f"Target waypoint: {target_pose}")       
                             elif remaining_path_length == False:
                                 self.node.get_logger().error(
                                 f"Robot {self.name} failed to request for "
@@ -438,7 +440,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     path_index,
                                     timedelta(seconds=duration)
                                 )
-
+                
                 if (not self.remaining_waypoints):
                     if self.state == RobotState.IDLE:
                         self.node.get_logger().info(
@@ -446,27 +448,27 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             f"requested path."
                         )
                         path_finished_callback()
+                    else:
+                        if self.state == RobotState.REQUEST_ERROR:
+                            self.node.get_logger().error(
+                                f"Robot {self.name} has ERROR navigated along requested path "
+                                f"with task_id: {self.update_handle.current_task_id()}."
+                            )
 
-                    elif self.state == RobotState.REQUEST_ERROR:
-                        self.node.get_logger().error(
-                            f"Robot {self.name} has ERROR navigated along requested path "
-                            f"with task_id: {self.update_handle.current_task_id()}."
-                        )
+                        elif self.state == RobotState.EMERGENCY:
+                            self.node.get_logger().warn(
+                                f"Robot {self.name} has EMERGENCY_STOP navigated along requested path."
+                                f"with task_id: {self.update_handle.current_task_id()}."
+                            )
+
                         self.update_handle.kill_task(
                             self.update_handle.current_task_id(),
                             ["kill_task"],
                             self.on_kill
                         )
-                    elif self.state == RobotState.EMERGENCY:
-                        self.node.get_logger().warn(
-                            f"Robot {self.name} has EMERGENCY_STOP navigated along requested path."
-                            f"with task_id: {self.update_handle.current_task_id()}."
-                        )
-                        self.update_handle.kill_task(
-                            self.update_handle.current_task_id(),
-                            ["kill_task"],
-                            self.on_kill
-                        )
+                        with self._lock:
+                            self.on_waypoint = None
+                            self.on_lane = None
 
             self._follow_path_thread = threading.Thread(
                 target=_follow_path)
