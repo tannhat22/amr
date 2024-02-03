@@ -6,6 +6,7 @@
   <arg name="use_sim_time" default="false"/>
   <arg name="server_uri" default="http://localhost:8000/_internal" description="Name of the rmf_demos map to simulate" />
   <!-- <arg name="server_uri" default="http://10.7.11.9:8000/_internal" description="Name of the rmf_demos map to simulate" /> -->
+  <!-- <arg name="server_uri" default="http://192.168.116.183:8000/_internal" description="Name of the rmf_demos map to simulate" /> -->
   <!-- <arg name="server_uri" default="" description="Name of the rmf_demos map to simulate" /> -->
 
   <!-- Common launch -->

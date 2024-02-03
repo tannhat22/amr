@@ -23,6 +23,8 @@ import copy
 import argparse
 
 import rclpy
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import qos_profile_system_default
 
@@ -134,11 +136,14 @@ class FleetManager(Node):
         self.vehicle_traits.differential.reversible =\
             self.config['rmf_fleet']['reversible']
 
+        client_cb_group = MutuallyExclusiveCallbackGroup()
+
         self.create_subscription(
             FleetState,
             'fleet_states',
             self.fleet_states_cb,
-            100
+            100,
+            callback_group=client_cb_group
         )
 
         transient_qos = QoSProfile(
@@ -500,8 +505,9 @@ class FleetManager(Node):
 
     def fleet_states_cb(self, msg: FleetState):
         if (msg.name == self.fleet_name):
-            for robotMsg in msg.robots:
-                if (robotMsg.name in self.robots):
+            dataRobot = msg.robots
+            for robotMsg in dataRobot:
+                if (robotMsg.name in self.robots.keys()):
                     robot = self.robots[robotMsg.name]
                     if not robot.is_expected_task_id(robotMsg.task_id) and \
                             not robot.mode_teleop:
@@ -523,12 +529,14 @@ class FleetManager(Node):
                                 self.dock_pub.publish(robot.last_request)
                             elif type(robot.last_request is CancelRequest):
                                 self.cancel_pub.publish(robot.last_request)
-                        return
+                        continue
 
                     robot.state = robotMsg
+                    # self.get_logger().warn(f'robot "{robotMsg.name}":  {robot.state.location}')
+                    
                     # Check if robot has reached destination
                     if robot.destination is None:
-                        return
+                        continue
 
                     if (
                         (
@@ -537,7 +545,7 @@ class FleetManager(Node):
                         )
                         and len(robotMsg.path) == 0
                     ):
-                        robot = self.robots[robotMsg.name]
+                        # robot = self.robots[robotMsg.name]
                         robot.destination = None
                         robot.path = None
                         completed_request = int(robotMsg.task_id)
@@ -548,6 +556,9 @@ class FleetManager(Node):
                                     f'{completed_request}'
                                 )
                         robot.last_completed_request = completed_request
+                else:
+                    self.get_logger().warn(f'Detect robot "{robotMsg.name}" is not in config file, pleascheck!')
+
 
     def dock_summary_cb(self, msg):
         return
@@ -653,6 +664,8 @@ def main(argv=sys.argv):
         config = yaml.safe_load(f)
 
     fleet_manager = FleetManager(config, args.nav_graph)
+    executor = MultiThreadedExecutor()
+    executor.add_node(fleet_manager)
 
     spin_thread = threading.Thread(target=rclpy.spin, args=(fleet_manager,))
     spin_thread.start()
@@ -663,7 +676,6 @@ def main(argv=sys.argv):
         port=config['rmf_fleet']['fleet_manager']['port'],
         log_level='warning'
     )
-
 
 if __name__ == '__main__':
     main(sys.argv)

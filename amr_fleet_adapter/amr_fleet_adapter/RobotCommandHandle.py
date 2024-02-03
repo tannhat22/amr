@@ -82,7 +82,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                  adapter,
                  api):
         adpt.RobotCommandHandle.__init__(self)
-        self.debug = True
+        self.debug = False
         self.name = name
         self.fleet_name = fleet_name
         self.config = config
@@ -321,15 +321,20 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         target_pose = self.target_waypoint.position
                         # Move robot with list waypoint
                         target_path = self.remaining_waypoints
+                        target_path_length = len(target_path)
                         waypoints_path = []
-                        for pose in target_path:
-                            [x, y] = pose.position[:2]
-                            theta = pose.position[2]
-                            pose_config = self.dock_config.get(str(pose.graph_index))
+                        for i in range(target_path_length):
+                            [x, y] = target_path[i].position[:2]
+                            theta = target_path[i].position[2]
+                            pose_config = self.dock_config.get(str(target_path[i].graph_index))
                             if pose_config is not None:
                                 theta = pose_config
-                                
-                            speed_limit = self.get_speed_limit(pose)
+                            elif i == (target_path_length - 1):
+                                if (x == target_path[i-1].position[0]
+                                    and y == target_path[i-1].position[1]):
+                                    theta = target_path[i-1].position[2]
+                                    
+                            speed_limit = self.get_speed_limit(target_path[i])
                             waypoints_path.append([x, y, theta, speed_limit])
                             # self.node.get_logger().info(
                             #     f"POS_path: x: {x}, y: {y}, yaw: {theta},  "
@@ -375,8 +380,8 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     self.target_waypoint = self.remaining_waypoints[0]
                                     path_index = self.remaining_waypoints[0].index
                                     target_pose = self.target_waypoint.position
-                                    self.node.get_logger().info(f"Remaining waypoint: {len(self.remaining_waypoints)} waypoints")
-                                    self.node.get_logger().info(f"Target waypoint: {target_pose}")       
+                                    # self.node.get_logger().info(f"Remaining waypoint: {len(self.remaining_waypoints)} waypoints")
+                                    # self.node.get_logger().info(f"Target waypoint: {target_pose}")       
                             elif remaining_path_length == False:
                                 self.node.get_logger().error(
                                 f"Robot {self.name} failed to request for "
