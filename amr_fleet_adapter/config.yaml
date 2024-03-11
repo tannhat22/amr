@@ -28,14 +28,14 @@ rmf_fleet:
   tool_system:
     power: 0.0 # W
   recharge_threshold: 0.10 # Battery level below which robots in this fleet will not operate
-  recharge_soc: 1.0 # Battery level to which robots in this fleet should be charged up to during recharging tasks
+  recharge_soc: 0.80 # Battery level to which robots in this fleet should be charged up to during recharging tasks
   publish_fleet_state: 5.0 # Publish frequency for fleet state, ensure that it is same as robot_state_update_frequency
   account_for_battery_drain: True
   task_capabilities: # Specify the types of RMF Tasks that robots in this fleet are capable of performing
     loop: True
     delivery: True
     clean: False
-    finishing_request: "nothing" # [park, charge, nothing]
+    finishing_request: "park" # [park, charge, nothing]
     # action_categories: ["custom_mission_1"]
 
 # TinyRobot CONFIG =================================================================
@@ -51,7 +51,7 @@ robots:
       robot_state_update_frequency: 5.0
       start:
         map_name: "L1"
-        # waypoint: "amr001_start"
+        waypoint: "amr001--charger"
         orientation: 0.0 # radians
       charger:
         waypoint: "amr001--charger"
@@ -64,7 +64,7 @@ robots:
       robot_state_update_frequency: 5.0
       start:
         map_name: "L1"
-        # waypoint: "amr002_start"
+        # waypoint: "amr002--charger"
         orientation: 0.0 # radians
       charger:
         waypoint: "amr002--charger"
@@ -75,8 +75,8 @@ docks:
   # Configuration for clr55--dropoff:
   clr55--dropoff:
     front_dock: "clr55DOFD"
-    orientation: -1.57199
-    rotate_to_dock: 180
+    orientation: 0.0 #-1.57199
+    rotate_to_dock: 90
     custom_dock: 
       rotate_angle: 45
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
@@ -84,8 +84,8 @@ docks:
   # Configuration for clr56--dropoff:
   clr56--dropoff:
     front_dock: "clr56DOFD"
-    orientation: -1.57199
-    rotate_to_dock: 180
+    orientation: 0.0 #-1.57199
+    rotate_to_dock: 90
     # custom_dock: 
     #   rotate_angle: 45
     #   rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
@@ -145,21 +145,21 @@ docks:
     #   rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Configuration for amr_001--charger:
-  amr001--charger:
-    front_dock: "amr001_start"
-    orientation: 0.00
-    rotate_to_dock: 90
-    # custom_dock: 
-    #   rotate_angle: 30
-    #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+  # amr001--charger:
+  #   front_dock: "amr001_start"
+  #   orientation: 0.00
+  #   rotate_to_dock: 90
+  #   custom_dock: 
+  #     rotate_angle: 30
+  #     rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Configuration for amr_002--charger:
-  amr002--charger:
-    front_dock: "amr002_start"
-    orientation: 0.00
-    rotate_to_dock: 90
-    # custom_dock: 
-    #   rotate_angle: 30
-    #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+  # amr002--charger:
+  #   front_dock: "amr002_start"
+  #   orientation: 0.00
+  #   rotate_to_dock: 90
+  #   custom_dock: 
+  #     rotate_angle: 30
+  #     rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
 

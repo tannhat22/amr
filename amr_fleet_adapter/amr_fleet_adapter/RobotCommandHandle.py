@@ -326,14 +326,50 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         for i in range(target_path_length):
                             [x, y] = target_path[i].position[:2]
                             theta = target_path[i].position[2]
+                            # Gán hướng theta khi tới điểm docking:
                             pose_config = self.dock_config.get(str(target_path[i].graph_index))
-                            if pose_config is not None:
+                            if (i == (target_path_length - 1)
+                                and pose_config is not None
+                                and target_path_length > 1):
                                 theta = pose_config
+                                self.node.get_logger().info(f"Theta_endpoint[{self.name}]: docking_config: {pose_config},"
+                                                            f" wp_index start: {self.on_waypoint}")
+                            elif target_path_length == 1:
+                                if (self.on_waypoint is not None):
+                                    current_pos = self.graph.get_waypoint(self.on_waypoint).location
+                                    if (current_pos[0] == x
+                                        and current_pos[1] == y):
+                                        [x, y] = self.position[:2]
+                                        theta = self.position[2]
+                                        self.node.get_logger().info(f"Theta_endpoint[{self.name}]: rotation in place is cancel")
+                                    else:
+                                        theta = self.calc_yaw([x, y], self.position[:2])
+                                        self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from now position to target position, "
+                                                                    f"wp_index start: {self.on_waypoint}")
+                                else:
+                                    # theta = self.calc_yaw([x, y], self.position[:2])
+                                    # self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from now position to target position, "
+                                    #                             f"wp_index start: {self.on_waypoint}")
+                                    [x, y] = self.position[:2]
+                                    theta = self.position[2]
+                                    self.node.get_logger().info(f"Theta_endpoint[{self.name}]: will no rotate or move because don't know state of robot")
                             elif i == (target_path_length - 1):
-                                if (x == target_path[i-1].position[0]
-                                    and y == target_path[i-1].position[1]):
-                                    theta = target_path[i-1].position[2]
-                                    
+                                j = i - 1
+                                while True:
+                                    if (j < 0):
+                                        newTheta = self.calc_yaw([x, y], self.position[:2])
+                                        self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from {theta} to {newTheta}")
+                                        theta = newTheta
+                                        break
+                                    elif (x == target_path[j].position[0]
+                                        and y == target_path[j].position[1]):
+                                        j -= 1
+                                    else:
+                                        startPos = target_path[j].position[:2]
+                                        newTheta = self.calc_yaw([x,y], startPos)
+                                        self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from {theta} to {newTheta}")
+                                        theta = newTheta
+                                        break
                             speed_limit = self.get_speed_limit(target_path[i])
                             waypoints_path.append([x, y, theta, speed_limit])
                             # self.node.get_logger().info(
@@ -341,7 +377,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             #     f"POS_index: {pose.graph_index} /////////////"
                             # )                            
 
-                        self.node.get_logger().info(f"Wayppoins path: {waypoints_path}")
+                        self.node.get_logger().info(f"Wayppoins_path[{self.name}]: {waypoints_path}")
 
                         response = self.api.follow_path(
                             self.name,
@@ -534,7 +570,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                     dock_position = dock_waypoint.location
                     if self.on_waypoint is not None:
                         current_pos = self.graph.get_waypoint(self.on_waypoint).location
-                        dock_yaw = self.calc_yaw(dock_position, current_pos)
+                        dock_yaw = self.calc_yaw(current_pos, dock_position)
 
                         if (dock_mode == "pickup"
                             or dock_mode == "dropoff"):
