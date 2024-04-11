@@ -36,6 +36,9 @@ from rclpy.qos import QoSReliabilityPolicy as Reliability
 from rmf_fleet_msgs.msg import FleetState, RobotState, Location, PathRequest, \
     DockRequest, ModeRequest, CancelRequest, DockSummary, RobotMode, DockMode
 
+from charger_fleet_msgs.msg import ModeRequest as ModeChargerRequest, \
+    ChargeMode, ChargerMode, ChargerState
+
 import rmf_adapter as adpt
 import rmf_adapter.vehicletraits as traits
 import rmf_adapter.geometry as geometry
@@ -176,6 +179,12 @@ class FleetManager(Node):
         self.cancel_pub = self.create_publisher(
             CancelRequest,
             'robot_cancel_requests',
+            qos_profile=qos_profile_system_default)
+        
+
+        self.mode_charger_pub = self.create_publisher(
+            ModeChargerRequest,
+            'mode_charger_request',
             qos_profile=qos_profile_system_default)
 
 
@@ -469,6 +478,31 @@ class FleetManager(Node):
 
             response['success'] = True
             return response
+
+        @app.post('/vdm-rmf/cmd/charger_trigger/', response_model=Response)
+        async def charger_trigger(charger_name: str, cmd_id: int, task: Request):
+            response = {'success': False, 'msg': ''}
+
+            mode_charger_request = ModeChargerRequest()
+            if task.task["mode"] == "charge":
+                mode_charger_request.mode.mode = ChargeMode.MODE_CHARGE
+            elif task.task["mode"] == "uncharge":
+                mode_charger_request.mode.mode = ChargeMode.MODE_UNCHARGE
+            else:
+                response["msg"] = "Mode charge does not support. Please check mode!"
+                return response
+
+            mode_charger_request.fleet_name = self.fleet_name
+            mode_charger_request.charger_name = charger_name
+            mode_charger_request.task_id = str(cmd_id)
+
+            self.mode_charger_pub.publish(mode_charger_request)
+
+            if self.debug:
+                print(f'Sending process request for {charger_name}: {cmd_id}')
+
+            response['success'] = True
+            return response   
 
 
         @app.post('/vdm-rmf/cmd/toggle_action/',

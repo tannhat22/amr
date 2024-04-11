@@ -35,8 +35,10 @@ rmf_fleet:
     loop: True
     delivery: True
     clean: False
-    finishing_request: "park" # [park, charge, nothing]
+    finishing_request: "nothing" # [park, charge, nothing]
     # action_categories: ["custom_mission_1"]
+  
+  server_charger_running: True  # Server charge is running or not
 
 # TinyRobot CONFIG =================================================================
 
@@ -67,7 +69,7 @@ robots:
         # waypoint: "amr002--charger"
         orientation: 0.0 # radians
       charger:
-        waypoint: "amr002--charger"
+        waypoint: "charger001--charge"
 
 # Docks config:
 docks:
@@ -154,12 +156,9 @@ docks:
   #     rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Configuration for amr_002--charger:
-  # amr002--charger:
-  #   front_dock: "amr002_start"
-  #   orientation: 0.00
-  #   rotate_to_dock: 90
-  #   custom_dock: 
-  #     rotate_angle: 30
-  #     rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+  charger001--charge:
+    front_dock: "chargerFD001"
+    orientation: 1.571
+    rotate_to_dock: 0
 
 

@@ -1,8 +1,11 @@
-import math
-import numpy as np
+import re
 
-a = math.atan(0.1/(-0.4))
-print(math.degrees(a))
-print(-0.4*math.tan(a))
-
-print(np.sign(-0.12))
+def search_mode_docking(dock_name: str):
+    match = re.search(r'--(.+)',dock_name)
+    if match:
+        result = match.group(1)
+        return result
+    else:
+        return None
+    
+print(search_mode_docking("charger001--charge"))

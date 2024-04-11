@@ -68,6 +68,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
     def __init__(self,
                  name,
                  fleet_name,
+                 server_charger,
                  config,
                  node,
                  graph,
@@ -85,6 +86,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
         self.debug = False
         self.name = name
         self.fleet_name = fleet_name
+        self.server_charger = server_charger
         self.config = config
         self.node = node
         self.graph = graph
@@ -572,8 +574,8 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         current_pos = self.graph.get_waypoint(self.on_waypoint).location
                         dock_yaw = self.calc_yaw(current_pos, dock_position)
 
-                        if (dock_mode == "pickup"
-                            or dock_mode == "dropoff"):
+                        if (dock_mode == "pickup" or
+                            dock_mode == "dropoff"):
                             self.dock_waypoint_index = self.on_waypoint
 
                     else:
@@ -590,6 +592,10 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                     process = {'mode': dock_mode,
                             'dock_name': self.dock_name,
                             'location': [dock_position[0], dock_position[1], dock_yaw]}
+                    
+                    processCharger = {
+                        'mode': dock_mode,
+                    }
 
                     # Request the robot to start the relevant process
                     cmd_id = self.next_cmd_id()
@@ -653,6 +659,20 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             )
                             self.on_waypoint = self.dock_waypoint_index
                             self.dock_waypoint_index = None
+
+                            # Gọi client trigger trạm sạc:
+                            if (dock_mode == "charge" and
+                                self.server_charger):
+                                while not self.api.charger_trigger(
+                                    self.dock_name, cmd_id, process
+                                ):
+                                    self.node.get_logger().info(
+                                        f"Requesting charger {self.dock_name} trigger CHARGE " 
+                                        f"for {self.name}"
+                                    )
+                                    if self._quit_dock_event.wait(1.0):
+                                        break
+                        
                             docking_finished_callback()
                         else:
                             if self.state == RobotState.REQUEST_ERROR:
@@ -962,3 +982,4 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             return result
         else:
             return None
+        

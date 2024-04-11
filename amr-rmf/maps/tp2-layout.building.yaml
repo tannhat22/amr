@@ -85,6 +85,8 @@ levels:
       - [109, 108, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
       - [114, 115, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
       - [113, 116, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [72, 117, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [117, 118, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
     layers:
       amr_scan:
         color: [1, 0, 0, 0.5]
@@ -212,10 +214,12 @@ levels:
       - [3212.54, 727.76999999999998, 0, ""]
       - [3126.982, 1570.0219999999999, 0, ""]
       - [3152.2049999999999, 1608.1110000000001, 0, ""]
-      - [1795, 795, 0, amr001--charger, {is_charger: [4, true], is_parking_spot: [4, true]}]
-      - [1795, 850, 0, amr002--charger, {is_charger: [4, true], is_parking_spot: [4, true]}]
+      - [1795, 795, 0, amr001--park, {is_charger: [4, false], is_parking_spot: [4, true]}]
+      - [1795, 850, 0, amr002--park, {is_charger: [4, false], is_parking_spot: [4, true]}]
       - [1770, 850, 0, ""]
       - [1770, 795, 0, ""]
+      - [1715, 678, 0, chargerFD001]
+      - [1715, 655.91999999999996, 0, charger001--charge, {dock_name: [1, charger001--charge], is_charger: [4, true], is_parking_spot: [4, true]}]
     walls:
       - [4, 5, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
       - [5, 6, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]

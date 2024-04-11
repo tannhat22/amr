@@ -24,6 +24,10 @@
   <include file="$(find-pkg-share amr-rmf)/launch/amr_ff_server.launch.xml">
   </include>
 
+  <!-- Charger server -->
+  <include file="$(find-pkg-share amr-rmf)/launch/charger_server.launch.xml">
+  </include>
+
   <!-- Workcells adapter -->
   <include file="$(find-pkg-share amr_workcells_adapter)/launch/workcells_adapter.launch.xml">
   </include>

@@ -90,6 +90,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
 
     # Adapter
     fleet_name = fleet_config['name']
+    server_charger = fleet_config['server_charger_running']
     adapter = adpt.Adapter.make(f'{fleet_name}_fleet_adapter')
     assert adapter, ("Unable to initialize fleet adapter. Please ensure "
                      "RMF Schedule Node is running")
@@ -282,6 +283,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
                     robot = RobotCommandHandle(
                         name=robot_name,
                         fleet_name=fleet_name,
+                        server_charger=server_charger,
                         config=robot_config,
                         node=node,
                         graph=nav_graph,

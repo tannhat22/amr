@@ -191,6 +191,29 @@ class RobotAPI:
             print(f'Other error: {err}')
         return False
 
+    def charger_trigger(self,
+                      charger_name: str,
+                      cmd_id: int,
+                      process: dict):
+        ''' Request the charger to begin a process
+            Return True if the charger has accepted the request, else False'''
+        url = self.prefix +\
+            f"/vdm-rmf/cmd/charger_trigger?charger_name={charger_name}" \
+            f"&cmd_id={cmd_id}"
+        # data fields: task, map_name, destination{}, data{}
+        data = {'task': process}
+        try:
+            response = requests.post(url, timeout=self.timeout, json=data)
+            response.raise_for_status()
+            if self.debug:
+                print(f'Response: {response.json()}')
+            return response.json()['success']
+        except HTTPError as http_err:
+            print(f'HTTP error: {http_err}')
+        except Exception as err:
+            print(f'Other error: {err}')
+        return False
+
     def pause(self, robot_name: str, cmd_id: int):
         ''' Command the robot to pause.
             Return True if robot has successfully paused. Else False'''
