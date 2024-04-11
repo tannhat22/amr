@@ -11,6 +11,7 @@
 
   <depend>rclpy</depend>
   <depend>rmf_fleet_msgs</depend>
+  <depend>charger_fleet_msgs</depend>
   <depend>rmf_task_msgs</depend>
 
   <test_depend>ament_copyright</test_depend>
