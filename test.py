@@ -7,5 +7,7 @@ def search_mode_docking(dock_name: str):
         return result
     else:
         return None
-    
+a = "charger001--charge"
+b = a.split("--")[0]
+print(b)
 print(search_mode_docking("charger001--charge"))

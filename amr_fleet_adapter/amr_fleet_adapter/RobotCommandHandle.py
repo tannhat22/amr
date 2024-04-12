@@ -592,10 +592,6 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                     process = {'mode': dock_mode,
                             'dock_name': self.dock_name,
                             'location': [dock_position[0], dock_position[1], dock_yaw]}
-                    
-                    processCharger = {
-                        'mode': dock_mode,
-                    }
 
                     # Request the robot to start the relevant process
                     cmd_id = self.next_cmd_id()
@@ -661,13 +657,18 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             self.dock_waypoint_index = None
 
                             # Gọi client trigger trạm sạc:
-                            if (dock_mode == "charge" and
-                                self.server_charger):
+                            if (dock_mode == "charge" and self.server_charger):
+                                chargerName = self.dock_name.split("--")[0]
+                                processCharger = {
+                                    'charger_name': chargerName,
+                                    'mode': dock_mode,
+                                }
+                
                                 while not self.api.charger_trigger(
-                                    self.dock_name, cmd_id, process
+                                    self.name, cmd_id, processCharger
                                 ):
                                     self.node.get_logger().info(
-                                        f"Requesting charger {self.dock_name} trigger CHARGE " 
+                                        f"Requesting charger {chargerName} trigger CHARGE " 
                                         f"for {self.name}"
                                     )
                                     if self._quit_dock_event.wait(1.0):

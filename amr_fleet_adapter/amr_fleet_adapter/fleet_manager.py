@@ -36,8 +36,7 @@ from rclpy.qos import QoSReliabilityPolicy as Reliability
 from rmf_fleet_msgs.msg import FleetState, RobotState, Location, PathRequest, \
     DockRequest, ModeRequest, CancelRequest, DockSummary, RobotMode, DockMode
 
-from charger_fleet_msgs.msg import ModeRequest as ModeChargerRequest, \
-    ChargeMode, ChargerMode, ChargerState
+from charger_fleet_msgs.msg import ChargerRequest, ChargerMode, ChargerState
 
 import rmf_adapter as adpt
 import rmf_adapter.vehicletraits as traits
@@ -182,9 +181,9 @@ class FleetManager(Node):
             qos_profile=qos_profile_system_default)
         
 
-        self.mode_charger_pub = self.create_publisher(
-            ModeChargerRequest,
-            'mode_charger_request',
+        self.charger_pub = self.create_publisher(
+            ChargerRequest,
+            'charger_request',
             qos_profile=qos_profile_system_default)
 
 
@@ -480,26 +479,27 @@ class FleetManager(Node):
             return response
 
         @app.post('/vdm-rmf/cmd/charger_trigger/', response_model=Response)
-        async def charger_trigger(charger_name: str, cmd_id: int, task: Request):
+        async def charger_trigger(robot_name: str, cmd_id: int, task: Request):
             response = {'success': False, 'msg': ''}
 
-            mode_charger_request = ModeChargerRequest()
+            charger_request = ChargerRequest()
             if task.task["mode"] == "charge":
-                mode_charger_request.mode.mode = ChargeMode.MODE_CHARGE
+                charger_request.charger_mode.mode = ChargerMode.MODE_CHARGE
             elif task.task["mode"] == "uncharge":
-                mode_charger_request.mode.mode = ChargeMode.MODE_UNCHARGE
+                charger_request.charger_mode.mode = ChargerMode.MODE_UNCHARGE
             else:
-                response["msg"] = "Mode charge does not support. Please check mode!"
+                response["msg"] = "Mode charger does not support. Please check mode!"
                 return response
 
-            mode_charger_request.fleet_name = self.fleet_name
-            mode_charger_request.charger_name = charger_name
-            mode_charger_request.task_id = str(cmd_id)
+            charger_request.fleet_name = self.fleet_name
+            charger_request.charger_name = task.task["charger_name"]
+            charger_request.robot_name = robot_name
+            charger_request.request_id = str(cmd_id)
 
-            self.mode_charger_pub.publish(mode_charger_request)
+            self.charger_pub.publish(charger_request)
 
             if self.debug:
-                print(f'Sending process request for {charger_name}: {cmd_id}')
+                print(f'Sending charger request for {task.task["charger_name"]}: {cmd_id}')
 
             response['success'] = True
             return response   

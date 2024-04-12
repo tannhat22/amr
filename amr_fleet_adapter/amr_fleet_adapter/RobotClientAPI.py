@@ -192,13 +192,13 @@ class RobotAPI:
         return False
 
     def charger_trigger(self,
-                      charger_name: str,
+                      robot_name: str,
                       cmd_id: int,
                       process: dict):
         ''' Request the charger to begin a process
             Return True if the charger has accepted the request, else False'''
         url = self.prefix +\
-            f"/vdm-rmf/cmd/charger_trigger?charger_name={charger_name}" \
+            f"/vdm-rmf/cmd/charger_trigger?robot_name={robot_name}" \
             f"&cmd_id={cmd_id}"
         # data fields: task, map_name, destination{}, data{}
         data = {'task': process}

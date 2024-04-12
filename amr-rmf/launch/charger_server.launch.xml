@@ -10,11 +10,11 @@
     <param name="fleet_name" value="amr_vdm"/>
     <!-- ros topic -->
     <param name="fleet_state_topic" value="fleet_charger_state"/>
-    <param name="mode_request_topic" value="mode_charger_request"/>
+    <param name="charger_request_topic" value="charger_request"/>
     <!-- dds topic -->
     <param name="dds_domain" value="52"/>
     <param name="dds_charger_state_topic" value="charger_state"/>
-    <param name="dds_mode_request_topic" value="mode_charger_request"/>
+    <param name="dds_charger_request_topic" value="charger_request"/>
     <param name="update_state_frequency" value="5.0"/>
     <param name="publish_state_frequency" value="1.0"/>
 
