@@ -616,24 +616,27 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         f"Robot {self.name} is docking at {self.dock_name}..."
                     )
 
+                    # Gán position để cập nhập lịch trình khi docking
+                    positions = [self.position, dock_position]
+
                     while not self.api.process_completed(self.name, cmd_id):
-                        # if len(positions) < 1:
-                        #     break
+                        if len(positions) < 1:
+                            break
 
-                        # traj = schedule.make_trajectory(
-                        #     self.vehicle_traits,
-                        #     self.adapter.now(),
-                        #     positions
-                        # )
-                        # itinerary = schedule.Route(self.map_name, traj)
-                        # if self.update_handle is not None:
-                        #     participant = \
-                        #         self.update_handle.get_unstable_participant()
-                        #     participant.set_itinerary([itinerary])
+                        traj = schedule.make_trajectory(
+                            self.vehicle_traits,
+                            self.adapter.now(),
+                            positions
+                        )
+                        itinerary = schedule.Route(self.map_name, traj)
+                        if self.update_handle is not None:
+                            participant = \
+                                self.update_handle.get_unstable_participant()
+                            participant.set_itinerary([itinerary])
 
-                        # self.node.get_logger().info(
-                        #     f"Robot {self.name} is docking at {self.dock_name}..."
-                        # )
+                        self.node.get_logger().info(
+                            f"Robot {self.name} is docking at {self.dock_name}..."
+                        )
 
                         self.get_mode_from_robot()
                         if (self.state == RobotState.REQUEST_ERROR
@@ -668,12 +671,15 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     self.name, cmd_id, processCharger
                                 ):
                                     self.node.get_logger().info(
-                                        f"Requesting charger {chargerName} trigger CHARGE " 
+                                        f"Requesting charger: {chargerName} trigger CHARGE " 
                                         f"for {self.name}"
                                     )
                                     if self._quit_dock_event.wait(1.0):
                                         break
-                        
+
+                                self.node.get_logger().info(
+                                    f"Requested charger: {chargerName} succeed"
+                                )
                             docking_finished_callback()
                         else:
                             if self.state == RobotState.REQUEST_ERROR:
