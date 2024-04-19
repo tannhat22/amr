@@ -617,7 +617,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                     )
 
                     # Gán position để cập nhập lịch trình khi docking
-                    positions = [self.position, dock_position]
+                    positions = [self.position, [dock_position[0], dock_position[1], dock_yaw]]
 
                     while not self.api.process_completed(self.name, cmd_id):
                         if len(positions) < 1:
@@ -634,9 +634,9 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                 self.update_handle.get_unstable_participant()
                             participant.set_itinerary([itinerary])
 
-                        self.node.get_logger().info(
-                            f"Robot {self.name} is docking at {self.dock_name}..."
-                        )
+                        # self.node.get_logger().info(
+                        #     f"Robot {self.name} is docking at {self.dock_name}..."
+                        # )
 
                         self.get_mode_from_robot()
                         if (self.state == RobotState.REQUEST_ERROR
