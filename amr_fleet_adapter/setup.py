@@ -27,6 +27,7 @@ setup(
         'console_scripts': [
             'fleet_adapter=amr_fleet_adapter.fleet_adapter:main',
             'fleet_manager=amr_fleet_adapter.fleet_manager:main',
+            'fleet_conflicts=amr_fleet_adapter.fleet_conflicts_handle:main',
         ],
     },
 )

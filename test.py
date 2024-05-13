@@ -1,13 +1,13 @@
-import re
+import uuid
 
-def search_mode_docking(dock_name: str):
-    match = re.search(r'--(.+)',dock_name)
-    if match:
-        result = match.group(1)
-        return result
-    else:
-        return None
-a = "charger001--charge"
-b = a.split("--")[0]
-print(b)
-print(search_mode_docking("charger001--charge"))
+def generate_task_id():
+    # Tạo một UUID ngẫu nhiên
+    new_uuid = uuid.uuid4()
+    # Lấy một phần của UUID (ví dụ: 8 ký tự đầu tiên)
+    task_id = str(new_uuid)[:6]
+    return str(task_id)
+
+# Sử dụng hàm để tạo một task ID
+task_id = generate_task_id()
+print("Task ID:", task_id)
+print(0==None)

@@ -357,10 +357,32 @@ class FleetManager(Node):
             response['success'] = True
             return response
 
+        @app.get('/vdm-rmf/cmd/wait_robot/',
+                 response_model=Response)
+        async def wait(robot_name: str, cmd_id: str):
+            response = {'success': False, 'msg': ''}
+            if robot_name not in self.robots:
+                return response
+
+            robot = self.robots[robot_name]
+            mode_request = ModeRequest()
+            mode_request.fleet_name = self.fleet_name
+            mode_request.robot_name = robot_name
+            mode_request.mode.mode = RobotMode.MODE_WAITING
+
+            mode_request.task_id = str(cmd_id)
+            self.mode_pub.publish(mode_request)
+
+            if self.debug:
+                print(f'Sending wait request for {robot_name}: {cmd_id}')
+            robot.last_request = mode_request
+
+            response['success'] = True
+            return response
 
         @app.get('/vdm-rmf/cmd/resume_robot/',
                  response_model=Response)
-        async def resume(robot_name: str, cmd_id: int):
+        async def resume(robot_name: str, cmd_id: str):
             response = {'success': False, 'msg': ''}
             if robot_name not in self.robots:
                 return response
@@ -652,8 +674,8 @@ class FleetManager(Node):
 
         data['last_completed_request'] = robot.last_completed_request
         if (
-            robot.state.mode.mode == RobotMode.MODE_WAITING
-            or robot.state.mode.mode == RobotMode.MODE_ADAPTER_ERROR
+            # robot.state.mode.mode == RobotMode.MODE_WAITING
+            robot.state.mode.mode == RobotMode.MODE_ADAPTER_ERROR
         ):
             # The name of MODE_WAITING is not very intuitive, but the slotcar
             # plugin uses it to indicate when another robot is blocking its

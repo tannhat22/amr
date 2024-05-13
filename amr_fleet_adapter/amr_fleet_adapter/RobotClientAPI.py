@@ -232,7 +232,25 @@ class RobotAPI:
             print(f'Other error: {err}')
         return False
 
-    def resume(self, robot_name: str, cmd_id: int):
+    def wait(self, robot_name: str, cmd_id: str):
+        ''' Command the robot to wait.
+            Return True if robot has successfully waited. Else False'''
+        url = self.prefix +\
+            f'/vdm-rmf/cmd/wait_robot?robot_name={robot_name}' \
+            f'&cmd_id={cmd_id}'
+        try:
+            response = requests.get(url, self.timeout)
+            response.raise_for_status()
+            if self.debug:
+                print(f'Response: {response.json()}')
+            return response.json()['success']
+        except HTTPError as http_err:
+            print(f'HTTP error: {http_err}')
+        except Exception as err:
+            print(f'Other error: {err}')
+        return False
+
+    def resume(self, robot_name: str, cmd_id: str):
         ''' Command the robot to resume.
             Return True if robot has successfully resumed. Else False'''
         url = self.prefix +\

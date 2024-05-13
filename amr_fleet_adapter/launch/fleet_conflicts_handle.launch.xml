@@ -1,0 +1,17 @@
+<?xml version='1.0' ?>
+
+<launch>
+
+  <arg name="config_file" default="$(find-pkg-share amr_fleet_adapter)/config.yaml" description="The config file that provides important parameters for setting up the adapter"/>
+  <arg name="output" default="screen"/>
+
+  <!-- Fleet manager -->
+  <node pkg="amr_fleet_adapter"
+        exec="fleet_conflicts"
+        args="--config_file $(var config_file)"
+        output="$(var output)">
+
+    <param name="conflicts_distance" type="float" value="4.0"/>
+    <param name="debug" type="bool" value="true"/>
+  </node>
+</launch>

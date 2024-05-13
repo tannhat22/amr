@@ -74,91 +74,102 @@ robots:
 # Docks config:
 docks:
   # Here the user is expected to append the configuration for each dock in the fleet
+
+  # /******************** TP2 *********************/
   # Configuration for clr55--dropoff:
-  clr55--dropoff:
-    front_dock: "clr55DOFD"
-    orientation: 0.0 #-1.57199
-    rotate_to_dock: 90
-    custom_dock: 
-      rotate_angle: 45
-      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  # Configuration for clr56--dropoff:
-  clr56--dropoff:
-    front_dock: "clr56DOFD"
-    orientation: 0.0 #-1.57199
-    rotate_to_dock: 90
-    # custom_dock: 
-    #   rotate_angle: 45
-    #   rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  # Configuration for clr55--pickup:
-  clr55--pickup:
-    front_dock: "clr55PKFD"
-    orientation: 1.571
-    rotate_to_dock: -90
-    # custom_dock: 
-    #   rotate_angle: 30
-    #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
-  
-  # Configuration for clr56--pickup:
-  clr56--pickup:
-    front_dock: "clr56PKFD"
-    orientation: 1.571
-    rotate_to_dock: -90
-    # custom_dock: 
-    #   rotate_angle: 30
-    #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  # Configuration for line55--dropoff:
-  line55--dropoff:
-    front_dock: "line55DOFD"
-    orientation: -1.57199
-    rotate_to_dock: 90
-    # custom_dock: 
-    #   rotate_angle: 30
-    #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  # Configuration for line55--pickup:
-  line55--pickup:
-    front_dock: "line55PKFD"
-    orientation: 1.57199
-    rotate_to_dock: -90
-    # custom_dock: 
-    #   rotate_angle: 30
-    #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  # Configuration for line56--dropoff:
-  line56--dropoff:
-    front_dock: "line56DOFD"
-    orientation: -1.57199
-    rotate_to_dock: -90
-    custom_dock: 
-      rotate_angle: 45
-      rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  # Configuration for line56--pickup:
-  line56--pickup:
-    front_dock: "line56PKFD"
-    orientation: -1.57199
-    rotate_to_dock: -90
-    # custom_dock: 
-    #   rotate_angle: 30
-    #   rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  # Configuration for amr_001--charger:
-  # amr001--charger:
-  #   front_dock: "amr001_start"
-  #   orientation: 0.00
+  # clr55--dropoff:
+  #   front_dock: "clr55DOFD"
+  #   orientation: 0.0 #-1.57199
   #   rotate_to_dock: 90
   #   custom_dock: 
-  #     rotate_angle: 30
-  #     rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+  #     rotate_angle: 45
+  #     rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
-  # Configuration for amr_002--charger:
-  charger001--charge:
-    front_dock: "chargerFD001"
-    orientation: 1.571
-    rotate_to_dock: 0
+  # # Configuration for clr56--dropoff:
+  # clr56--dropoff:
+  #   front_dock: "clr56DOFD"
+  #   orientation: 0.0 #-1.57199
+  #   rotate_to_dock: 90
+  #   # custom_dock: 
+  #   #   rotate_angle: 45
+  #   #   rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  # # Configuration for clr55--pickup:
+  # clr55--pickup:
+  #   front_dock: "clr55PKFD"
+  #   orientation: 1.571
+  #   rotate_to_dock: -90
+  #   # custom_dock: 
+  #   #   rotate_angle: 30
+  #   #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+  
+  # # Configuration for clr56--pickup:
+  # clr56--pickup:
+  #   front_dock: "clr56PKFD"
+  #   orientation: 1.571
+  #   rotate_to_dock: -90
+  #   # custom_dock: 
+  #   #   rotate_angle: 30
+  #   #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  # # Configuration for line55--dropoff:
+  # line55--dropoff:
+  #   front_dock: "line55DOFD"
+  #   orientation: -1.57199
+  #   rotate_to_dock: 90
+  #   # custom_dock: 
+  #   #   rotate_angle: 30
+  #   #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  # # Configuration for line55--pickup:
+  # line55--pickup:
+  #   front_dock: "line55PKFD"
+  #   orientation: 1.57199
+  #   rotate_to_dock: -90
+  #   # custom_dock: 
+  #   #   rotate_angle: 30
+  #   #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  # # Configuration for line56--dropoff:
+  # line56--dropoff:
+  #   front_dock: "line56DOFD"
+  #   orientation: -1.57199
+  #   rotate_to_dock: -90
+  #   custom_dock: 
+  #     rotate_angle: 45
+  #     rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  # # Configuration for line56--pickup:
+  # line56--pickup:
+  #   front_dock: "line56PKFD"
+  #   orientation: -1.57199
+  #   rotate_to_dock: -90
+  #   # custom_dock: 
+  #   #   rotate_angle: 30
+  #   #   rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  # # Configuration for amr_002--charger:
+  # charger001--charge:
+  #   front_dock: "chargerFD001"
+  #   orientation: 1.571
+  #   rotate_to_dock: 0
 
 
+  # /******************** LK1 *********************/
+  # Configuration for nqvlm104--pickup:
+  nqvlm104--pickup:
+    front_dock: "nqvlm104PKFD"
+    orientation: 1.57199
+    rotate_to_dock: 90
+    custom_dock: 
+      rotate_angle: 90
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  # Configuration for nqvlm104--pickup:
+  nqvlm104--dropoff:
+    front_dock: "nqvlm104DOFD"
+    orientation: 1.57199
+    rotate_to_dock: -90
+    custom_dock: 
+      rotate_angle: 90
+      rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise

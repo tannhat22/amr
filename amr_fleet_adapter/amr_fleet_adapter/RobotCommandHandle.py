@@ -112,7 +112,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
         self.position = position  # (x,y,theta) in RMF crs (meters,radians)
         self.initialized = False
         self.state = RobotState.IDLE
-        self.dock_name = ""
+        self.dock_name = None
         # TODO(YV): Remove self.adapter. This is only being used for time point
         # comparison with Plan::Waypoint::time
         self.adapter = adapter
@@ -137,6 +137,11 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
         self.action_waypoint_index = None
         self.current_cmd_id = 0
         self.started_action = False
+
+        # Pause variable:
+        self.paused = False
+        self.paused_path = []
+        self.paused_dock = None
 
         # Threading variables
         self._lock = threading.Lock()
@@ -171,7 +176,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             'dock_summary',
             self.dock_summary_cb,
             qos_profile=transient_qos)
-
+        
         self.node.create_subscription(
             ModeRequest,
             'action_execution_notice',
@@ -207,6 +212,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
     def clear(self):
         self.requested_waypoints = []
         self.remaining_waypoints = []
+        self.dock_name = None
         self.state = RobotState.IDLE
 
     def interrupt(self):
@@ -231,10 +237,48 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             if self._stopping_thread.is_alive():
                 self._stopping_thread.join()
 
-    # def pause(self):
-    #     if self.debug:
-    #         plan_id = self.update_handle.unstable_current_plan_id()
-    #         print(f'pause for {self.name} with PlanId {plan_id}')
+    def pause(self):
+        """Set pause flag and hold on to any requested paths."""
+        self.paused = True
+
+        if self.remaining_waypoints:
+            if self.api.pause(self.name, self.next_cmd_id()):
+                self.node.get_logger().info(
+                    '[PAUSE] {self.name}: Current path saved!'
+                )
+                self.paused_path = self.remaining_waypoints
+                self.remaining_waypoints = []
+        elif self.dock_name:
+            if self.api.pause(self.name, self.next_cmd_id()):
+                self.node.get_logger().info(
+                    '[PAUSE] {self.name}: Current dock_name saved!'
+                )
+                self.paused_dock = self.dock_name
+                self.dock_name = None
+
+    def resume(self):
+        """Unset pause flag and substitute paused paths if no paths exist."""
+        if self.paused:
+            if self.api.resume(self.name, self.next_cmd_id()):
+                self.paused = False
+
+                if (self.remaining_waypoints or
+                    self.dock_name):
+                    return
+                elif self.paused_path:
+                    self.remaining_waypoints = self.paused_path
+                    self.paused_path = []
+                    self.node.get_logger().info(
+                        '[RESUME] {self.name}: Saved path restored!'
+                    )
+                elif self.paused_dock:
+                    self.dock_name = self.paused_dock
+                    self.paused_dock = None
+                    self.node.get_logger().info(
+                        '[RESUME] {self.name}: Saved dock_name restored!'
+                    )
+        else:
+            return
 
     def stop(self):
         if self.debug:
@@ -295,8 +339,9 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                 target_pose = None
                 target_path = None
                 path_index = 0
-                while self.remaining_waypoints \
-                        or self.state == RobotState.MOVING:
+                while (self.remaining_waypoints or 
+                       self.state == RobotState.MOVING or
+                       self.paused):
                     # Save the current_cmd_id before checking if we need to
                     # abort. We should always be told to abort before the
                     # current_cmd_id gets modified, so whatever the value of
@@ -311,178 +356,181 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         )
                         return
                     # State machine
-                    self.get_mode_from_robot()
-                    if (self.state == RobotState.EMERGENCY
-                        or self.state == RobotState.REQUEST_ERROR):
-                        self.remaining_waypoints = []                        
+                    if not self.paused:
+                        self.get_mode_from_robot()
+                        if (self.state == RobotState.EMERGENCY
+                            or self.state == RobotState.REQUEST_ERROR):
+                            self.remaining_waypoints = []                        
 
-                    elif (self.state == RobotState.IDLE or target_path is None):
-                        # Assign the next waypoint
-                        self.target_waypoint = self.remaining_waypoints[0]
-                        path_index = self.remaining_waypoints[0].index
-                        target_pose = self.target_waypoint.position
-                        # Move robot with list waypoint
-                        target_path = self.remaining_waypoints
-                        target_path_length = len(target_path)
-                        waypoints_path = []
-                        for i in range(target_path_length):
-                            [x, y] = target_path[i].position[:2]
-                            theta = target_path[i].position[2]
-                            # Gán hướng theta khi tới điểm docking:
-                            pose_config = self.dock_config.get(str(target_path[i].graph_index))
-                            if (i == (target_path_length - 1)
-                                and pose_config is not None
-                                and target_path_length > 1):
-                                theta = pose_config
-                                self.node.get_logger().info(f"Theta_endpoint[{self.name}]: docking_config: {pose_config},"
-                                                            f" wp_index start: {self.on_waypoint}")
-                            elif target_path_length == 1:
-                                if (self.on_waypoint is not None):
-                                    current_pos = self.graph.get_waypoint(self.on_waypoint).location
-                                    if (current_pos[0] == x
-                                        and current_pos[1] == y):
+                        elif (self.state == RobotState.IDLE or target_path is None):
+                            # Assign the next waypoint
+                            self.target_waypoint = self.remaining_waypoints[0]
+                            path_index = self.remaining_waypoints[0].index
+                            target_pose = self.target_waypoint.position
+                            # Move robot with list waypoint
+                            target_path = self.remaining_waypoints
+                            target_path_length = len(target_path)
+                            waypoints_path = []
+                            for i in range(target_path_length):
+                                [x, y] = target_path[i].position[:2]
+                                theta = target_path[i].position[2]
+                                # Gán hướng theta khi tới điểm docking:
+                                pose_config = self.dock_config.get(str(target_path[i].graph_index))
+                                if (i == (target_path_length - 1)
+                                    and pose_config is not None
+                                    and target_path_length > 1):
+                                    theta = pose_config
+                                    self.node.get_logger().info(f"Theta_endpoint[{self.name}]: docking_config: {pose_config},"
+                                                                f" wp_index start: {self.on_waypoint}")
+                                elif target_path_length == 1:
+                                    if (self.on_waypoint is not None):
+                                        current_pos = self.graph.get_waypoint(self.on_waypoint).location
+                                        if (current_pos[0] == x
+                                            and current_pos[1] == y):
+                                            [x, y] = self.position[:2]
+                                            theta = self.position[2]
+                                            self.node.get_logger().info(f"Theta_endpoint[{self.name}]: rotation in place is cancel")
+                                        else:
+                                            theta = self.calc_yaw([x, y], self.position[:2])
+                                            self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from now position to target position, "
+                                                                        f"wp_index start: {self.on_waypoint}")
+                                    else:
+                                        # theta = self.calc_yaw([x, y], self.position[:2])
+                                        # self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from now position to target position, "
+                                        #                             f"wp_index start: {self.on_waypoint}")
                                         [x, y] = self.position[:2]
                                         theta = self.position[2]
-                                        self.node.get_logger().info(f"Theta_endpoint[{self.name}]: rotation in place is cancel")
-                                    else:
-                                        theta = self.calc_yaw([x, y], self.position[:2])
-                                        self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from now position to target position, "
-                                                                    f"wp_index start: {self.on_waypoint}")
-                                else:
-                                    # theta = self.calc_yaw([x, y], self.position[:2])
-                                    # self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from now position to target position, "
-                                    #                             f"wp_index start: {self.on_waypoint}")
-                                    [x, y] = self.position[:2]
-                                    theta = self.position[2]
-                                    self.node.get_logger().info(f"Theta_endpoint[{self.name}]: will no rotate or move because don't know state of robot")
-                            elif i == (target_path_length - 1):
-                                j = i - 1
-                                while True:
-                                    if (j < 0):
-                                        newTheta = self.calc_yaw([x, y], self.position[:2])
-                                        self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from {theta} to {newTheta}")
-                                        theta = newTheta
-                                        break
-                                    elif (x == target_path[j].position[0]
-                                        and y == target_path[j].position[1]):
-                                        j -= 1
-                                    else:
-                                        startPos = target_path[j].position[:2]
-                                        newTheta = self.calc_yaw([x,y], startPos)
-                                        self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from {theta} to {newTheta}")
-                                        theta = newTheta
-                                        break
-                            speed_limit = self.get_speed_limit(target_path[i])
-                            waypoints_path.append([x, y, theta, speed_limit])
-                            # self.node.get_logger().info(
-                            #     f"POS_path: x: {x}, y: {y}, yaw: {theta},  "
-                            #     f"POS_index: {pose.graph_index} /////////////"
-                            # )                            
+                                        self.node.get_logger().info(f"Theta_endpoint[{self.name}]: will no rotate or move because don't know state of robot")
+                                elif i == (target_path_length - 1):
+                                    j = i - 1
+                                    while True:
+                                        if (j < 0):
+                                            newTheta = self.calc_yaw([x, y], self.position[:2])
+                                            self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from {theta} to {newTheta}")
+                                            theta = newTheta
+                                            break
+                                        elif (x == target_path[j].position[0]
+                                            and y == target_path[j].position[1]):
+                                            j -= 1
+                                        else:
+                                            startPos = target_path[j].position[:2]
+                                            newTheta = self.calc_yaw([x,y], startPos)
+                                            self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from {theta} to {newTheta}")
+                                            theta = newTheta
+                                            break
+                                speed_limit = self.get_speed_limit(target_path[i])
+                                waypoints_path.append([x, y, theta, speed_limit])
+                                # self.node.get_logger().info(
+                                #     f"POS_path: x: {x}, y: {y}, yaw: {theta},  "
+                                #     f"POS_index: {pose.graph_index} /////////////"
+                                # )                            
 
-                        self.node.get_logger().info(f"Wayppoins_path[{self.name}]: {waypoints_path}")
+                            self.node.get_logger().info(f"Wayppoins_path[{self.name}]: {waypoints_path}")
 
-                        response = self.api.follow_path(
-                            self.name,
-                            self.next_cmd_id(),
-                            waypoints_path,
-                            self.map_name,
-                        )
-
-                        # time.sleep(60)
-
-                        if response:
-                            self.state = RobotState.MOVING
-                        else:
-                            self.node.get_logger().info(
-                                f"Robot {self.name} failed to request "
-                                f"follow path to "
-                                f"[{x:.0f}, {y:.0f}, {theta:.0f}]."
-                                f"Retrying...")
-                            self._quit_path_event.wait(0.1)
-
-                    elif self.state == RobotState.MOVING:
-                
-                        if self.api.requires_replan(self.name):
-                            self.replan()
-
-                        if self._quit_path_event.wait(0.1):
-                            return
-
-                        # Check if we have reached the target
-                        with self._lock:
-                            remaining_path_length = self.api.remaining_path_length(self.name)
-                            if remaining_path_length:
-                                n = len(self.remaining_waypoints) - remaining_path_length
-                                if (n > 0):
-                                    self.remaining_waypoints=self.remaining_waypoints[n:]
-                                    self.target_waypoint = self.remaining_waypoints[0]
-                                    path_index = self.remaining_waypoints[0].index
-                                    target_pose = self.target_waypoint.position
-                                    # self.node.get_logger().info(f"Remaining waypoint: {len(self.remaining_waypoints)} waypoints")
-                                    # self.node.get_logger().info(f"Target waypoint: {target_pose}")       
-                            elif remaining_path_length == False:
-                                self.node.get_logger().error(
-                                f"Robot {self.name} failed to request for "
-                                f"information remaining path. "
-                                f"Retrying...")
-                                continue
-
-                            if self.api.process_completed(
-                                    self.name, cmd_id):
-                                self.node.get_logger().info(
-                                    f"Robot [{self.name}] has reached the "
-                                    f"destination for cmd_id {cmd_id}"
-                                )
-                                self.state = RobotState.IDLE
-
-                                self.target_waypoint = self.remaining_waypoints[-1]
-                                path_index = self.remaining_waypoints[-1].index
-                                target_pose = self.target_waypoint.position
-                                self.remaining_waypoints = []
-
-                                graph_index = self.target_waypoint.graph_index
-                                if graph_index is not None:
-                                    self.on_waypoint = graph_index
-                                    self.last_known_waypoint_index = \
-                                        graph_index
-                                else:
-                                    self.on_waypoint = None  # still on a lane
-                            else:
-                                # Update the lane the robot is on
-                                lane = self.get_current_lane()
-                                if lane is not None:
-                                    self.on_waypoint = None
-                                    self.on_lane = lane
-                                else:
-                                    # The robot may either be on the previous
-                                    # waypoint or the target one
-                                    if self.target_waypoint.graph_index is \
-                                        not None \
-                                        and self.dist(
-                                            self.position, target_pose) < 0.5:
-                                        self.on_waypoint =\
-                                            self.target_waypoint.graph_index
-                                    elif self.last_known_waypoint_index is \
-                                            not None and self.dist(
-                                            self.position,
-                                            self.graph.get_waypoint(
-                                                self.last_known_waypoint_index
-                                            ).location) < 0.5:
-                                        self.on_waypoint =\
-                                            self.last_known_waypoint_index
-                                    else:
-                                        # update_off_grid()
-                                        self.on_lane = None
-                                        self.on_waypoint = None
-                            duration = self.api.navigation_remaining_duration(
-                                self.name, cmd_id
+                            response = self.api.follow_path(
+                                self.name,
+                                self.next_cmd_id(),
+                                waypoints_path,
+                                self.map_name,
                             )
 
-                            if path_index is not None and duration is not None:
-                                next_arrival_estimator(
-                                    path_index,
-                                    timedelta(seconds=duration)
+                            # time.sleep(60)
+
+                            if response:
+                                self.state = RobotState.MOVING
+                            else:
+                                self.node.get_logger().info(
+                                    f"Robot {self.name} failed to request "
+                                    f"follow path to "
+                                    f"[{x:.0f}, {y:.0f}, {theta:.0f}]."
+                                    f"Retrying...")
+                                self._quit_path_event.wait(0.1)
+
+                        elif self.state == RobotState.MOVING:
+                    
+                            if self.api.requires_replan(self.name):
+                                self.replan()
+
+                            if self._quit_path_event.wait(0.1):
+                                return
+
+                            # Check if we have reached the target
+                            with self._lock:
+                                remaining_path_length = self.api.remaining_path_length(self.name)
+                                if remaining_path_length:
+                                    n = len(self.remaining_waypoints) - remaining_path_length
+                                    if (n > 0):
+                                        self.remaining_waypoints=self.remaining_waypoints[n:]
+                                        self.target_waypoint = self.remaining_waypoints[0]
+                                        path_index = self.remaining_waypoints[0].index
+                                        target_pose = self.target_waypoint.position
+                                        # self.node.get_logger().info(f"Remaining waypoint: {len(self.remaining_waypoints)} waypoints")
+                                        # self.node.get_logger().info(f"Target waypoint: {target_pose}")       
+                                elif remaining_path_length == False:
+                                    self.node.get_logger().error(
+                                    f"Robot {self.name} failed to request for "
+                                    f"information remaining path. "
+                                    f"Retrying...")
+                                    continue
+
+                                if self.api.process_completed(
+                                        self.name, cmd_id):
+                                    self.node.get_logger().info(
+                                        f"Robot [{self.name}] has reached the "
+                                        f"destination for cmd_id {cmd_id}"
+                                    )
+                                    self.state = RobotState.IDLE
+
+                                    self.target_waypoint = self.remaining_waypoints[-1]
+                                    path_index = self.remaining_waypoints[-1].index
+                                    target_pose = self.target_waypoint.position
+                                    self.remaining_waypoints = []
+
+                                    graph_index = self.target_waypoint.graph_index
+                                    if graph_index is not None:
+                                        self.on_waypoint = graph_index
+                                        self.last_known_waypoint_index = \
+                                            graph_index
+                                    else:
+                                        self.on_waypoint = None  # still on a lane
+                                else:
+                                    # Update the lane the robot is on
+                                    lane = self.get_current_lane()
+                                    if lane is not None:
+                                        self.on_waypoint = None
+                                        self.on_lane = lane
+                                    else:
+                                        # The robot may either be on the previous
+                                        # waypoint or the target one
+                                        if self.target_waypoint.graph_index is \
+                                            not None \
+                                            and self.dist(
+                                                self.position, target_pose) < 0.5:
+                                            self.on_waypoint =\
+                                                self.target_waypoint.graph_index
+                                        elif self.last_known_waypoint_index is \
+                                                not None and self.dist(
+                                                self.position,
+                                                self.graph.get_waypoint(
+                                                    self.last_known_waypoint_index
+                                                ).location) < 0.5:
+                                            self.on_waypoint =\
+                                                self.last_known_waypoint_index
+                                        else:
+                                            # update_off_grid()
+                                            self.on_lane = None
+                                            self.on_waypoint = None
+                                duration = self.api.navigation_remaining_duration(
+                                    self.name, cmd_id
                                 )
+
+                                if path_index is not None and duration is not None:
+                                    next_arrival_estimator(
+                                        path_index,
+                                        timedelta(seconds=duration)
+                                    )
+                    else:
+                        self._quit_path_event.wait(0.1)
                 
                 if (not self.remaining_waypoints):
                     if self.state == RobotState.IDLE:
@@ -567,6 +615,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             f"Can't find mode dock in dock_name: {self.dock_name}. "
                             f"Please ensure, dock_name liked that *****--mode_dock!"
                         )
+                        self.dock_name = None
                         return
                     
                     dock_position = dock_waypoint.location
@@ -582,6 +631,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         self.node.get_logger().error(
                             f"Can't find yaw dock with dock_name: {self.dock_name}!"
                         )
+                        self.dock_name = None
                         return
 
                     if self.debug:
@@ -620,6 +670,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                     positions = [self.position, [dock_position[0], dock_position[1], dock_yaw]]
 
                     while not self.api.process_completed(self.name, cmd_id):
+                        cmd_id = self.current_cmd_id
                         if len(positions) < 1:
                             break
 
@@ -702,6 +753,9 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                 ["kill_task"],
                                 self.on_kill
                             )
+
+                # Reset dock_name 
+                self.dock_name = None
 
             self._dock_thread = threading.Thread(target=_dock)
             self._dock_thread.start()
@@ -970,12 +1024,16 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                 for dock in fleet.params:
                     self.docks[dock.start] = dock.path
 
-    def mode_request_cb(self, msg):
-        if msg.fleet_name is None or msg.fleet_name != self.fleet_name or\
-                msg.robot_name is None:
+    def mode_request_cb(self, msg: ModeRequest):
+        if (msg.fleet_name != self.fleet_name or
+            msg.robot_name != self.name):
             return
         if msg.mode.mode == RobotState.IDLE:
             self.complete_robot_action()
+        elif msg.mode.mode == RobotState.PAUSED:
+            self.pause()
+        elif msg.mode.mode == RobotState.MOVING:
+            self.resume()
 
     def on_kill(self, killed):
         self.node.get_logger().info(f"on_kill result {killed} ")
