@@ -37,6 +37,7 @@ from rmf_fleet_msgs.msg import FleetState, RobotState, Location, PathRequest, \
     DockRequest, ModeRequest, CancelRequest, DockSummary, RobotMode, DockMode
 
 from charger_fleet_msgs.msg import ChargerRequest, ChargerMode, ChargerState
+from machine_fleet_msgs.msg import MachineRequest, MachineMode
 
 import rmf_adapter as adpt
 import rmf_adapter.vehicletraits as traits
@@ -184,6 +185,11 @@ class FleetManager(Node):
         self.charger_pub = self.create_publisher(
             ChargerRequest,
             'charger_request',
+            qos_profile=qos_profile_system_default)
+
+        self.machine_pub = self.create_publisher(
+            MachineRequest,
+            'machine_request',
             qos_profile=qos_profile_system_default)
 
 
@@ -437,12 +443,12 @@ class FleetManager(Node):
                 return response
 
             robot = self.robots[robot_name]
+            machine = False
+            distance_go_out = 0.0
             rotate_to_dock = 0
             custom_dock = False
             rotate_angle = 0
             rotate_orientation = 0
-
-
 
             dock_request = DockRequest()
             if task.task["mode"] == "charge":
@@ -453,6 +459,8 @@ class FleetManager(Node):
                 dock_request.dock_mode.mode = DockMode.MODE_DROPOFF
             elif task.task["mode"] == "undock":
                 dock_request.dock_mode.mode = DockMode.MODE_UNDOCK
+            elif task.task["mode"] == "goout":
+                dock_request.dock_mode.mode = DockMode.MODE_GOOUT
             else:
                 response["msg"] = "Mode dock does not support. Please check mode!"
                 return response
@@ -460,7 +468,11 @@ class FleetManager(Node):
             if task.task["dock_name"] in self.docks:
                 dock_config = self.docks[task.task["dock_name"]]
                 for conf in dock_config:
-                    if conf == 'custom_dock':
+                    if conf == 'machine':
+                        machine = True
+                    elif conf == 'distance_go_out':
+                        distance_go_out = dock_config['distance_go_out']
+                    elif conf == 'custom_dock':
                         custom_dock = True
                         for custom in dock_config['custom_dock']:
                             if custom == 'rotate_angle':
@@ -484,6 +496,8 @@ class FleetManager(Node):
             dock_request.destination = destination
             dock_request.fleet_name = self.fleet_name
             dock_request.robot_name = robot_name
+            dock_request.machine = machine
+            dock_request.distance_go_out = distance_go_out
             dock_request.custom_docking = custom_dock
             dock_request.rotate_to_dock = rotate_to_dock
             dock_request.rotate_angle = rotate_angle
@@ -499,6 +513,36 @@ class FleetManager(Node):
 
             response['success'] = True
             return response
+
+        @app.post('/vdm-rmf/cmd/machine_trigger/', response_model=Response)
+        async def machine_trigger(robot_name: str, cmd_id: int, task: Request):
+            response = {'success': False, 'msg': ''}
+
+            machine_request = MachineRequest()
+            if task.task["mode"] == "mcpickup":
+                if task.task["action"] == "clamp":
+                    machine_request.mode.mode = MachineMode.MODE_PK_CLAMP
+                elif task.task["action"] == "release":
+                    machine_request.mode.mode = MachineMode.MODE_PK_RELEASE
+            elif task.task["mode"] == "mcdropoff":
+                if task.task["action"] == "clamp":
+                    machine_request.mode.mode = MachineMode.MODE_DF_CLAMP
+                elif task.task["action"] == "release":
+                    machine_request.mode.mode = MachineMode.MODE_DF_RELEASE
+            else:
+                response["msg"] = "Mode machine does not support. Please check mode!"
+                return response
+
+            machine_request.fleet_name = self.fleet_name
+            machine_request.machine_name = task.task["machine_name"]
+            machine_request.request_id = str(cmd_id)
+            self.machine_pub.publish(machine_request)
+
+            if self.debug:
+                print(f'Sending machine request for {task.task["machine_name"]}: {cmd_id}')
+
+            response['success'] = True
+            return response 
 
         @app.post('/vdm-rmf/cmd/charger_trigger/', response_model=Response)
         async def charger_trigger(robot_name: str, cmd_id: int, task: Request):

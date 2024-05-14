@@ -158,6 +158,8 @@ docks:
   # /******************** LK1 *********************/
   # Configuration for nqvlm104--pickup:
   nqvlm104--pickup:
+    machine: true  # Vị trí docking này là máy hay trạm thô
+    distance_go_out: 1.0
     front_dock: "nqvlm104PKFD"
     orientation: 1.57199
     rotate_to_dock: 90
@@ -167,9 +169,14 @@ docks:
 
   # Configuration for nqvlm104--pickup:
   nqvlm104--dropoff:
+    machine: true # Vị trí docking này là máy hay trạm thô
+    distance_go_out: 1.0
     front_dock: "nqvlm104DOFD"
     orientation: 1.57199
     rotate_to_dock: -90
     custom_dock: 
       rotate_angle: 90
       rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+
+machines: ["nqvlm104"]
+stations: ["station1", "station2"]

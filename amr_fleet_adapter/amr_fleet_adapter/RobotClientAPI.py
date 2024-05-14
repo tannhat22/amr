@@ -191,6 +191,28 @@ class RobotAPI:
             print(f'Other error: {err}')
         return False
 
+    def machine_trigger(self,
+                      robot_name: str,
+                      cmd_id: int,
+                      process: dict):
+        ''' Request the machine to begin a process
+            Return True if the machine has accepted the request, else False'''
+        url = self.prefix +\
+            f"/vdm-rmf/cmd/machine_trigger?robot_name={robot_name}" \
+            f"&cmd_id={cmd_id}"
+        data = {'task': process}
+        try:
+            response = requests.post(url, timeout=self.timeout, json=data)
+            response.raise_for_status()
+            if self.debug:
+                print(f'Response: {response.json()}')
+            return response.json()['success']
+        except HTTPError as http_err:
+            print(f'HTTP error: {http_err}')
+        except Exception as err:
+            print(f'Other error: {err}')
+        return False
+
     def charger_trigger(self,
                       robot_name: str,
                       cmd_id: int,
@@ -344,7 +366,7 @@ class RobotAPI:
                 return completed
 
         return False
-    
+
     # def task_completed(self, robot_name: str):
     #     ''' Return True if the last request the robot successfully completed
     #         matches cmd_id. Else False.'''

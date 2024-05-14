@@ -50,6 +50,7 @@ class RobotState(enum.IntEnum):
     EMERGENCY = 5 
     DOCKING = 7
     REQUEST_ERROR = 10
+    WAITING_MACHINE = 11
 
 
 # Custom wrapper for Plan::Waypoint. We use this to modify position of
@@ -142,6 +143,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
         self.paused = False
         self.paused_path = []
         self.paused_dock = None
+        self.undock_name = None
 
         # Threading variables
         self._lock = threading.Lock()
@@ -363,6 +365,58 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             self.remaining_waypoints = []                        
 
                         elif (self.state == RobotState.IDLE or target_path is None):
+                            # Go out dock if docked to machine before
+                            if self.undock_name is not None:
+                                error = False
+                                dock_mode = "goout"
+                                machine_name = self.undock_name.split("--")[0]
+                                process = {'mode': dock_mode,
+                                           'dock_name': self.undock_name,
+                                           'location': [0.0, 0.0, 0.0]}
+
+                                # Request the robot to start the relevant process
+                                cmd_id = self.next_cmd_id()
+
+                                while not self.api.start_process(
+                                    self.name, cmd_id, self.map_name, process
+                                ):
+                                    self.node.get_logger().info(
+                                        f"Requesting robot {self.name} go out dock at "
+                                        f"{self.dock_name}"
+                                    )
+                                    if self._quit_path_event.wait(1.0):
+                                        break
+
+                                while not self.api.process_completed(self.name, cmd_id):
+                                    cmd_id = self.current_cmd_id
+
+                                    self.get_mode_from_robot()
+                                    if (self.state == RobotState.REQUEST_ERROR
+                                        or self.state == RobotState.EMERGENCY):
+                                        error = True
+                                        break
+
+                                    # Check if we need to abort
+                                    if self._quit_path_event.wait(0.1):
+                                        self.node.get_logger().info("Aborting go out dock from machine")
+                                        return
+
+                                if not error:
+                                    process = {
+                                        'machine_name': machine_name,
+                                        'mode': self.undock_name.split("--")[1],
+                                        'action': 'clamp'
+                                    }
+                                    self.undock_name = None
+                                    while not self.api.machine_trigger(
+                                        self.name, cmd_id, process
+                                    ):
+                                        self.node.get_logger().info(
+                                            f"Send complete request for machine: {machine_name}"
+                                        )
+                                        if self._quit_path_event.wait(1.0):
+                                            break
+
                             # Assign the next waypoint
                             self.target_waypoint = self.remaining_waypoints[0]
                             path_index = self.remaining_waypoints[0].index
@@ -731,6 +785,15 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                 self.node.get_logger().info(
                                     f"Requested charger: {chargerName} succeed"
                                 )
+                            
+                            # Pickup with machine:
+                            elif (dock_mode == "mcpickup" or
+                                  dock_mode == "mcdropoff"):
+                                self.undock_name = self.dock_name
+                            
+                            else:
+                                self.undock_name = None
+
                             docking_finished_callback()
                         else:
                             if self.state == RobotState.REQUEST_ERROR:
@@ -739,7 +802,6 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     f"with task_id: {self.update_handle.current_task_id()}."
                                 )
 
-                                
                             elif self.state == RobotState.EMERGENCY:
                                 self.node.get_logger().error(
                                     f"Robot {self.name} has EMERGENCY_STOP when docking "
