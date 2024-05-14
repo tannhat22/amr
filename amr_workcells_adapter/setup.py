@@ -26,6 +26,7 @@ setup(
         'console_scripts': [
             'dispenser_adapter=amr_workcells_adapter.dispenser_adapter:main',
             'ingestor_adapter=amr_workcells_adapter.ingestor_adapter:main',
+            'workcells_adapter=amr_workcells_adapter.workcells_adapter:main',
         ],
     },
 )

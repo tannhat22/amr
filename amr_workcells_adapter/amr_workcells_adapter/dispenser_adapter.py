@@ -54,7 +54,7 @@ class DispenserHandle(Node):
 
         # timer_period = 0.5
         # self.timer = self.create_timer(timer_period, self.timer_callback, callback_group=timer_cb_group)
-        self.get_logger().info('Beginning dispenser_manager node, shut down with CTRL-C')
+        # self.get_logger().info('Beginning dispenser_manager node, shut down with CTRL-C')
         # self.get_logger().info(f'Fleet name: {self.fleet_name}')
         
 

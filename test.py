@@ -1,5 +1,26 @@
+import json
 a = {
-    "nhat": 123,
-    "mk": 123
+  "type": "dispatch_task_request",
+  "request": {
+    "category": "delivery",
+    "description": {
+      "pickup": {
+        "place": "pantry",
+        "handler": "coke_dispenser",
+        "payload": [
+          {"sku": "coke",
+           "quantity": 1}
+        ]
+      },
+      "dropoff": {
+        "place": "hardware_2",
+        "handler": "coke_ingestor",
+        "payload": [
+          {"sku": "coke",
+           "quantity": 1}
+        ]
+      }
+    }
+  }
 }
-print(list(a.keys())[0])
+print(type(json.dumps(a)))

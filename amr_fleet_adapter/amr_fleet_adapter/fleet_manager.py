@@ -453,9 +453,11 @@ class FleetManager(Node):
             dock_request = DockRequest()
             if task.task["mode"] == "charge":
                 dock_request.dock_mode.mode = DockMode.MODE_CHARGE
-            elif task.task["mode"] == "pickup":
+            elif (task.task["mode"] == "pickup" or
+                  task.task["mode"] == "mcpickup"):
                 dock_request.dock_mode.mode = DockMode.MODE_PICKUP
-            elif task.task["mode"] == "dropoff":
+            elif (task.task["mode"] == "dropoff" or
+                  task.task["mode"] == "mcdropoff"):
                 dock_request.dock_mode.mode = DockMode.MODE_DROPOFF
             elif task.task["mode"] == "undock":
                 dock_request.dock_mode.mode = DockMode.MODE_UNDOCK
