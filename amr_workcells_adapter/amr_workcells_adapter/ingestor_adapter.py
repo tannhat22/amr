@@ -49,6 +49,7 @@ class IngestorHandle(Node):
         self.fleet_name = self.config["rmf_fleet"]["name"]
         self.stations = self.config["stations"]
         self.machines = {}
+        self.request_guid = None
 
         for machine_name in self.config["machines"]:
             self.machines[machine_name] = State()
@@ -61,38 +62,45 @@ class IngestorHandle(Node):
         
 
     def handle_request_cb(self, msg: IngestorRequest):
-        self.get_logger().info(f'Receive ingestor_requests: {msg.request_guid}, '
-                               f'will publish success for this request')
-        
-        name = msg.target_guid
-        if name in self.machines:
-            msgMR = MachineRequest()
-            msgMR.fleet_name = self.fleet_name
-            msgMR.machine_name = name
-            msgMR.request_id = str(uuid4())[0:8]
-            msgMR.mode.mode = MachineMode.MODE_DF_RELEASE
-            self.machineRequestPub.publish(msgMR)
-            while not self.machines[name].last_completed_request == msgMR.request_id:
-                self.get_logger().info(f"Waiting machine completed request!")
-                time.sleep(0.5)
-                continue
+        if self.request_guid != msg.request_guid:
+            self.request_guid = msg.request_guid
+            self.get_logger().info(f'Receive ingestor_requests: {msg.request_guid}, '
+                                   f'will publish success for this request')
+            
+            name = msg.target_guid
+            if name in self.machines:
+                msgMR = MachineRequest()
+                msgMR.fleet_name = self.fleet_name
+                msgMR.machine_name = name
+                msgMR.request_id = str(uuid4())[0:8]
+                msgMR.mode.mode = MachineMode.MODE_DF_CLAMP
+                self.machineRequestPub.publish(msgMR)
+                while not self.machines[name].last_completed_request == msgMR.request_id:
+                    self.get_logger().info(f"Waiting machine completed request!")
+                    self.get_logger().info(f"Request ID: {msgMR.request_id}")
+                    self.get_logger().info(f"Machine-[{name}]--last_completed_request: {self.machines[name].last_completed_request}")
+                    time.sleep(1.0)
+                    continue
 
-        elif name in self.stations:
-            msgSR = StationRequest()
-            msgSR.fleet_name = self.fleet_name
-            msgSR.machine_name = "nqvlm104"
-            msgSR.station_name = name
-            msgSR.request_id = str(uuid4())[0:8]
-            msgSR.mode.mode = StationMode.MODE_FILLED
-            self.stationRequestPub.publish(msgSR)     
+            elif name in self.stations:
+                msgSR = StationRequest()
+                msgSR.fleet_name = self.fleet_name
+                msgSR.machine_name = "nqvlm104"
+                msgSR.station_name = name
+                msgSR.request_id = str(uuid4())[0:8]
+                msgSR.mode.mode = StationMode.MODE_FILLED
+                self.stationRequestPub.publish(msgSR)     
 
-        result_msg = IngestorResult()
-        t = self.get_clock().now().to_msg()
-        result_msg.time = t
-        result_msg.request_guid = msg.request_guid
-        result_msg.source_guid = msg.target_guid
-        result_msg.status = IngestorResult.SUCCESS
-        self.ingestor_result_pub.publish(result_msg)
+            else:            
+                self.get_logger().warn(f"Ingestor name not found in machines or stations, please check!")
+
+            result_msg = IngestorResult()
+            t = self.get_clock().now().to_msg()
+            result_msg.time = t
+            result_msg.request_guid = msg.request_guid
+            result_msg.source_guid = msg.target_guid
+            result_msg.status = IngestorResult.SUCCESS
+            self.ingestor_result_pub.publish(result_msg)
         return
 
     def machine_states_cb(self, msg: FleetMachineState):

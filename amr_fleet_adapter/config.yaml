@@ -9,8 +9,10 @@ rmf_fleet:
     user: "some_user"
     password: "some_password"
   limits:
-    linear: [0.7, 1.5] # velocity, acceleration
-    angular: [0.7, 2.0] # velocity, acceleration
+    # linear: [0.7, 1.5] # velocity, acceleration
+    # angular: [0.7, 2.0] # velocity, acceleration
+    linear: [1.2, 2.5] # velocity, acceleration
+    angular: [1.2, 3.0] # velocity, acceleration
   profile: # Robot profile is modelled as a circle
     footprint: 1.0 # radius in m
     vicinity: 1.2 # radius in m
@@ -35,7 +37,7 @@ rmf_fleet:
     loop: True
     delivery: True
     clean: False
-    finishing_request: "nothing" # [park, charge, nothing]
+    finishing_request: "park" # [park, charge, nothing]
     # action_categories: ["custom_mission_1"]
   
   server_charger_running: True  # Server charge is running or not
@@ -157,20 +159,20 @@ docks:
 
   # /******************** LK1 *********************/
   # Configuration for nqvlm104--pickup:
-  nqvlm104--pickup:
-    machine: true  # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 1.0
+  nqvlm104--mcpickup:
+    machine: True  # Vị trí docking này là máy hay trạm thô
+    distance_go_out: 1.1
     front_dock: "nqvlm104PKFD"
     orientation: 1.57199
     rotate_to_dock: 90
     custom_dock: 
-      rotate_angle: 90
+      rotate_angle: 45
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Configuration for nqvlm104--pickup:
-  nqvlm104--dropoff:
-    machine: true # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 1.0
+  nqvlm104--mcdropoff:
+    machine: True # Vị trí docking này là máy hay trạm thô
+    distance_go_out: 1.06
     front_dock: "nqvlm104DOFD"
     orientation: 1.57199
     rotate_to_dock: -90
@@ -178,5 +180,51 @@ docks:
       rotate_angle: 90
       rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
+  # Configuration for tramlay1--pickup:
+  tramlay1--pickup:
+    machine: False  # Vị trí docking này là máy hay trạm thô
+    distance_go_out: 1.0
+    front_dock: "tramlay1PKFD"
+    orientation: 0.0
+    rotate_to_dock: 90
+
+  # Configuration for tramlay2--pickup:
+  tramlay2--pickup:
+    machine: False  # Vị trí docking này là máy hay trạm thô
+    distance_go_out: 0.90
+    front_dock: "tramlay2PKFD"
+    orientation: 0.0
+    rotate_to_dock: 90
+
+  # Configuration for tramlay3--pickup:
+  tramlay3--pickup:
+    machine: False  # Vị trí docking này là máy hay trạm thô
+    distance_go_out: 0.90
+    front_dock: "tramlay3PKFD"
+    orientation: 0.0
+    rotate_to_dock: 90
+
+  # Configuration for tramtha1--dropoff:
+  tramtha1--dropoff:
+    machine: False  # Vị trí docking này là máy hay trạm thô
+    distance_go_out: 0.62
+    front_dock: "tramtha1DOFD"
+    orientation: 3.14
+    rotate_to_dock: -90
+    custom_dock:
+      rotate_angle: 30
+      rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  # Configuration for tramtha2--dropoff:
+  tramtha2--dropoff:
+    machine: False  # Vị trí docking này là máy hay trạm thô
+    distance_go_out: 0.62
+    front_dock: "tramtha2DOFD"
+    orientation: 3.14
+    rotate_to_dock: -90
+    custom_dock: 
+      rotate_angle: 30
+      rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+
 machines: ["nqvlm104"]
-stations: ["station1", "station2"]
+stations: ["tramlay1", "tramlay2", "tramlay3", "tramtha1", "tramtha2"]

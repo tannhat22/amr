@@ -21,25 +21,51 @@ levels:
     elevation: 0
     floors:
       - parameters: {ceiling_scale: [3, 1], ceiling_texture: [1, blue_linoleum], indoor: [2, 0], texture_name: [1, blue_linoleum], texture_rotation: [3, 0], texture_scale: [3, 1]}
-        vertices: [21, 20, 19, 18, 17, 16, 22]
+        vertices: [19, 18, 17, 16, 15, 14, 20]
     lanes:
       - [8, 9, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.20000000000000001]}]
       - [10, 11, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.20000000000000001]}]
       - [11, 9, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.29999999999999999]}]
       - [9, 12, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.40000000000000002]}]
-      - [13, 14, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
-      - [14, 15, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
-      - [15, 12, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [21, 22, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [24, 23, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [25, 26, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [27, 28, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [29, 30, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [12, 30, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [13, 31, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [32, 12, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [32, 26, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [32, 24, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [32, 22, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [12, 27, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [31, 34, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [13, 33, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [32, 30, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [32, 27, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [35, 36, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [13, 37, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [37, 32, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [37, 35, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
     layers:
-      scan:
+      new_scan:
         color: [1, 0, 0, 0.5]
+        filename: lk1_map/scan/lk1-nqvl.png
+        transform:
+          scale: 0.050799999999999998
+          translation_x: 9.2200000000000006
+          translation_y: -2.6000000000000001
+          yaw: 0
+        visible: true
+      scan:
+        color: [0, 1, 0, 0.5]
         filename: lk1_map/edited_map/lk1_map.png
         transform:
           scale: 0.052999999999999999
           translation_x: 32.119999999999997
           translation_y: 34.950000000000003
           yaw: 3.1223940318178558
-        visible: true
+        visible: false
     measurements:
       - [0, 1, {distance: [3, 35.18]}]
       - [2, 3, {distance: [3, 44.149999999999999]}]
@@ -54,14 +80,12 @@ levels:
       - [272.09800000000001, 1177.6020000000001, 0, ""]
       - [441.59800000000001, 1148.075, 0, ""]
       - [1483.0630000000001, 1148.075, 0, ""]
-      - [486.22000000000003, 499.30000000000001, 0, nqvlm104--pickup, {dock_name: [1, nqvlm104--pickup], pickup_dispenser: [1, nqvlm104]}]
-      - [451.53199999999998, 499.30000000000001, 0, nqvlm104PKFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
-      - [486.22000000000003, 478, 0, nqvlm104--dropoff, {dock_name: [1, nqvlm104--dropoff], dropoff_ingestor: [1, nqvlm104]}]
-      - [451.53199999999998, 478, 0, nqvlm104DOFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
-      - [464.19, 529.83199999999999, 0, ""]
-      - [567.24000000000001, 551.11099999999999, 0, charger001--charge, {is_charger: [4, true], is_holding_point: [4, true], is_parking_spot: [4, true]}]
-      - [534.72900000000004, 551.11099999999999, 0, test1]
-      - [495.32100000000003, 551.11099999999999, 0, test2]
+      - [477, 503, 0, nqvlm104--mcpickup, {dock_name: [1, nqvlm104--mcpickup], pickup_dispenser: [1, nqvlm104]}]
+      - [447, 503, 0, nqvlm104PKFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
+      - [477, 481, 0, nqvlm104--mcdropoff, {dock_name: [1, nqvlm104--mcdropoff], dropoff_ingestor: [1, nqvlm104]}]
+      - [447, 481, 0, nqvlm104DOFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
+      - [464.19, 535, 0, ""]
+      - [565, 551.11099999999999, 0, test1, {is_charger: [4, false], is_holding_point: [4, false], is_parking_spot: [4, false]}]
       - [273.05599999999998, 1101.319, 0, ""]
       - [1461.4770000000001, 1101.319, 0, ""]
       - [1461.4770000000001, 971.17700000000002, 0, ""]
@@ -69,13 +93,30 @@ levels:
       - [1483.586, 125.39, 0, ""]
       - [270.58199999999999, 125.39, 0, ""]
       - [270.58199999999999, 1101.4280000000001, 0, ""]
+      - [520, 583, 0, tramlay1--pickup, {dock_name: [1, tramlay1--pickup], pickup_dispenser: [1, tramlay1]}]
+      - [520, 567, 0, tramlay1PKFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
+      - [511, 583, 0, tramlay2--pickup, {dock_name: [1, tramlay2--pickup], pickup_dispenser: [1, tramlay2]}]
+      - [511, 567, 0, tramlay2PKFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
+      - [501, 583, 0, tramlay3--pickup, {dock_name: [1, tramlay3--pickup], pickup_dispenser: [1, tramlay3]}]
+      - [501, 567, 0, tramlay3PKFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
+      - [466, 556, 0, tramtha1DOFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
+      - [466, 583, 0, tramtha1--dropoff, {dock_name: [1, tramtha1--dropoff], dropoff_ingestor: [1, tramtha1]}]
+      - [455, 583, 0, tramtha2--dropoff, {dock_name: [1, tramtha2--dropoff], dropoff_ingestor: [1, tramtha2]}]
+      - [455, 556, 0, tramtha2DOFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
+      - [611.32600000000002, 551.11099999999999, 0, test2]
+      - [510, 551.11099999999999, 0, ""]
+      - [565, 583, 0, charger_test, {is_charger: [4, false], is_holding_point: [4, false], is_parking_spot: [4, false]}]
+      - [644.61900000000003, 551.11099999999999, 0, ""]
+      - [545, 526, 0, ""]
+      - [538, 526, 0, charger001--charge, {is_charger: [4, true], is_holding_point: [4, true], is_parking_spot: [4, true]}]
+      - [545, 551.11099999999999, 0, ""]
     walls:
+      - [14, 15, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [15, 16, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
       - [16, 17, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
       - [17, 18, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
       - [18, 19, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
       - [19, 20, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
-      - [20, 21, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
-      - [21, 22, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
-      - [22, 16, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [20, 14, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
 lifts: {}
 name: lk1-layout

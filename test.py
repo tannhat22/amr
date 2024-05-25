@@ -23,4 +23,4 @@ a = {
     }
   }
 }
-print(type(json.dumps(a)))
+print(json.dumps(a, ensure_ascii=False))

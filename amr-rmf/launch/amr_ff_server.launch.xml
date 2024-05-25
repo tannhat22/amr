@@ -33,11 +33,17 @@
     <param name="rotation" value="0.0"/>
     <param name="scale" value="0.99404"/> -->
 
-    <!-- LK1 -->
-    <param name="translation_x" value="30.92927"/>
+    <!-- LK1 scan_old-->
+    <!-- <param name="translation_x" value="30.92927"/>
     <param name="translation_y" value="-10.98390"/>
     <param name="rotation" value="-3.12239"/>
-    <param name="scale" value="0.94340"/>
+    <param name="scale" value="0.94340"/> -->
+
+    <!-- LK1 scan_new-->
+    <param name="translation_x" value="-9.07480"/>
+    <param name="translation_y" value="49.59094"/>
+    <param name="rotation" value="0.0"/>
+    <param name="scale" value="0.98425"/>
 
   </node>
 

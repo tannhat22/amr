@@ -191,6 +191,26 @@ class RobotAPI:
             print(f'Other error: {err}')
         return False
 
+    # ///////////////////////////////////////////////////////////////////////////
+    # ///////////////////////////////////////////////////////////////////////////
+    def machine_data(self, machine_name=None):
+        if machine_name is None:
+            url = self.prefix + f'/vdm-rmf/machine_data/status/'
+        else:
+            url = self.prefix +\
+                f'/vdm-rmf/machine_data/status?machine_name={machine_name}'
+        try:
+            response = requests.get(url, timeout=self.timeout)
+            response.raise_for_status()
+            if not self.debug:
+                print(f'Response: {response.json()}')
+            return response.json()
+        except HTTPError as http_err:
+            print(f'HTTP error: {http_err}')
+        except Exception as err:
+            print(f'Other error: {err}')
+        return None
+
     def machine_trigger(self,
                       robot_name: str,
                       cmd_id: int,
@@ -212,6 +232,44 @@ class RobotAPI:
         except Exception as err:
             print(f'Other error: {err}')
         return False
+    
+    def station_trigger(self,
+                        robot_name: str,
+                        cmd_id: int,
+                        process: dict):
+        ''' Request the station to begin a process
+            Return True if the station has accepted the request, else False'''
+        url = self.prefix +\
+            f"/vdm-rmf/cmd/station_trigger?robot_name={robot_name}" \
+            f"&cmd_id={cmd_id}"
+        data = {'task': process}
+        try:
+            response = requests.post(url, timeout=self.timeout, json=data)
+            response.raise_for_status()
+            if self.debug:
+                print(f'Response: {response.json()}')
+            return response.json()['success']
+        except HTTPError as http_err:
+            print(f'HTTP error: {http_err}')
+        except Exception as err:
+            print(f'Other error: {err}')
+        return False
+
+    def machine_process_completed(self, machine_name: str, cmd_id: int):
+        ''' Return True if the machine has successfully completed its previous
+            process request. Else False.'''
+        response = self.machine_data(machine_name)
+        if response is not None:
+            data = response.get('data')
+            if data is not None:
+                completed = data['last_completed_request'] == str(cmd_id)
+                if self.debug:
+                    print(f'Response machine_process_completed: {completed}')
+                return completed
+        return False
+    # ///////////////////////////////////////////////////////////////////////////
+    # ///////////////////////////////////////////////////////////////////////////
+
 
     def charger_trigger(self,
                       robot_name: str,

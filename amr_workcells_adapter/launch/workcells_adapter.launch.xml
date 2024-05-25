@@ -30,8 +30,6 @@
       exec="workcells_adapter"
       name="workcells_adapter"
       output="$(var output)">
-
-    <!-- <param name="use_sim_time" value="$(var use_sim_time)"/> -->
   </node>
 
 </launch>

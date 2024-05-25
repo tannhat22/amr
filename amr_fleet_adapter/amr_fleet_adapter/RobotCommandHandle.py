@@ -214,6 +214,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
     def clear(self):
         self.requested_waypoints = []
         self.remaining_waypoints = []
+        self.target_waypoint = None
         self.dock_name = None
         self.state = RobotState.IDLE
 
@@ -365,58 +366,6 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             self.remaining_waypoints = []                        
 
                         elif (self.state == RobotState.IDLE or target_path is None):
-                            # Go out dock if docked to machine before
-                            if self.undock_name is not None:
-                                error = False
-                                dock_mode = "goout"
-                                machine_name = self.undock_name.split("--")[0]
-                                process = {'mode': dock_mode,
-                                           'dock_name': self.undock_name,
-                                           'location': [0.0, 0.0, 0.0]}
-
-                                # Request the robot to start the relevant process
-                                cmd_id = self.next_cmd_id()
-
-                                while not self.api.start_process(
-                                    self.name, cmd_id, self.map_name, process
-                                ):
-                                    self.node.get_logger().info(
-                                        f"Requesting robot {self.name} go out dock at "
-                                        f"{self.dock_name}"
-                                    )
-                                    if self._quit_path_event.wait(1.0):
-                                        break
-
-                                while not self.api.process_completed(self.name, cmd_id):
-                                    cmd_id = self.current_cmd_id
-
-                                    self.get_mode_from_robot()
-                                    if (self.state == RobotState.REQUEST_ERROR
-                                        or self.state == RobotState.EMERGENCY):
-                                        error = True
-                                        break
-
-                                    # Check if we need to abort
-                                    if self._quit_path_event.wait(0.1):
-                                        self.node.get_logger().info("Aborting go out dock from machine")
-                                        return
-
-                                if not error:
-                                    process = {
-                                        'machine_name': machine_name,
-                                        'mode': self.undock_name.split("--")[1],
-                                        'action': 'clamp'
-                                    }
-                                    self.undock_name = None
-                                    while not self.api.machine_trigger(
-                                        self.name, cmd_id, process
-                                    ):
-                                        self.node.get_logger().info(
-                                            f"Send complete request for machine: {machine_name}"
-                                        )
-                                        if self._quit_path_event.wait(1.0):
-                                            break
-
                             # Assign the next waypoint
                             self.target_waypoint = self.remaining_waypoints[0]
                             path_index = self.remaining_waypoints[0].index
@@ -444,6 +393,8 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                             [x, y] = self.position[:2]
                                             theta = self.position[2]
                                             self.node.get_logger().info(f"Theta_endpoint[{self.name}]: rotation in place is cancel")
+                                            path_finished_callback()
+                                            return
                                         else:
                                             theta = self.calc_yaw([x, y], self.position[:2])
                                             self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from now position to target position, "
@@ -478,6 +429,69 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                 #     f"POS_path: x: {x}, y: {y}, yaw: {theta},  "
                                 #     f"POS_index: {pose.graph_index} /////////////"
                                 # )                            
+                            
+                            #############################################################################
+                            # Go out dock if docked to machine before
+                            if self.undock_name is not None:
+                                error = False
+                                dock_mode = "goout"
+                                machine_name = self.undock_name.split("--")[0]
+                                process = {'mode': dock_mode,
+                                           'dock_name': self.undock_name,
+                                           'location': [0.0, 0.0, 0.0]}
+
+                                # Request the robot to start the relevant process
+                                cmd_id = self.next_cmd_id()
+
+                                while not self.api.start_process(
+                                    self.name, cmd_id, self.map_name, process
+                                ):
+                                    self.node.get_logger().info(
+                                        f"Requesting robot {self.name} go out dock at "
+                                        f"{self.dock_name}"
+                                    )
+                                    if self._quit_path_event.wait(1.0):
+                                        break
+                                
+                                duration_gooutdock = 30.0
+                                while not self.api.process_completed(self.name, cmd_id):
+                                    cmd_id = self.current_cmd_id
+
+                                    self.get_mode_from_robot()
+                                    if (self.state == RobotState.REQUEST_ERROR
+                                        or self.state == RobotState.EMERGENCY):
+                                        error = True
+                                        break
+
+                                    next_arrival_estimator(
+                                        path_index,
+                                        timedelta(seconds=duration_gooutdock)
+                                    )
+
+                                    duration_gooutdock -= 0.1
+                                    # Check if we need to abort
+                                    if self._quit_path_event.wait(0.1):
+                                        self.node.get_logger().info("Aborting go out dock from machine")
+                                        return
+
+                                if not error:
+                                    process = {
+                                        'machine_name': machine_name,
+                                        'mode': self.undock_name.split("--")[1],
+                                        'action': 'clamp'
+                                    }
+                                    self.undock_name = None
+                                    while not self.api.machine_trigger(
+                                        self.name, cmd_id, process
+                                    ):
+                                        self.node.get_logger().info(
+                                            f"Send complete request for machine: {machine_name}"
+                                        )
+                                        if self._quit_path_event.wait(1.0):
+                                            break
+
+                            #############################################################################
+                            #############################################################################
 
                             self.node.get_logger().info(f"Wayppoins_path[{self.name}]: {waypoints_path}")
 
@@ -678,7 +692,9 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         dock_yaw = self.calc_yaw(current_pos, dock_position)
 
                         if (dock_mode == "pickup" or
-                            dock_mode == "dropoff"):
+                            dock_mode == "dropoff" or
+                            dock_mode == "mcpickup" or
+                            dock_mode == "mcdropoff"):
                             self.dock_waypoint_index = self.on_waypoint
 
                     else:
@@ -693,6 +709,40 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             f"Dock position: x: {dock_position[0]}, y: {dock_position[1]}, yaw: {dock_yaw}"
                         )
 
+                    # Wait before start docking if dock_station is machine:
+                    if (dock_mode == "mcpickup" or
+                        dock_mode == "mcdropoff"):
+                        cmd_id = self.next_cmd_id()
+                        machine_name = self.dock_name.split("--")[0]
+                        mc_process = {
+                            'machine_name': machine_name,
+                            'mode': self.dock_name.split("--")[1],
+                        }
+                        if dock_mode == "mcpickup":
+                            mc_process['action'] = 'clamp'
+                        elif dock_mode == "mcdropoff":
+                            mc_process['action'] = 'release'                            
+                        
+                        while not self.api.machine_trigger(
+                            self.name, cmd_id, mc_process
+                        ):
+                            self.node.get_logger().info(
+                                f"Send machine request for machine: {machine_name}"
+                            )
+                            if self._quit_dock_event.wait(1.0):
+                                break
+
+                        self.node.get_logger().info(
+                            f"Machine `{machine_name}` is processing..."
+                        )
+
+                        while not self.api.machine_process_completed(machine_name, cmd_id):
+                            if self._quit_dock_event.wait(0.1):
+                                self.node.get_logger().info("Aborting machine request!")
+                                return
+                            
+
+                    # Start docking:
                     process = {'mode': dock_mode,
                             'dock_name': self.dock_name,
                             'location': [dock_position[0], dock_position[1], dock_yaw]}

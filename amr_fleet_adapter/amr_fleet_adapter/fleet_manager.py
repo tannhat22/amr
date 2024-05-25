@@ -37,7 +37,8 @@ from rmf_fleet_msgs.msg import FleetState, RobotState, Location, PathRequest, \
     DockRequest, ModeRequest, CancelRequest, DockSummary, RobotMode, DockMode
 
 from charger_fleet_msgs.msg import ChargerRequest, ChargerMode, ChargerState
-from machine_fleet_msgs.msg import MachineRequest, MachineMode
+from machine_fleet_msgs.msg import FleetMachineState, MachineRequest, MachineMode, \
+                                   MachineState, StationRequest, StationMode
 
 import rmf_adapter as adpt
 import rmf_adapter.vehicletraits as traits
@@ -96,6 +97,11 @@ class State:
             if task_id != self.last_request.task_id:
                 return False
         return True
+    
+class MCState:
+    def __init__(self, state: MachineState = None) -> None:
+        self.state = state
+        self.last_completed_request = None
 
 
 class FleetManager(Node):
@@ -117,6 +123,7 @@ class FleetManager(Node):
 
         self.robots = {}  # Map robot name to state
         self.docks = {} # Map dock name to waypoints
+        self.machines = {}
 
         if 'docks' in self.config:
             self.docks = self.config['docks']
@@ -125,6 +132,10 @@ class FleetManager(Node):
         for robot_name, robot_config in self.config["robots"].items():
             self.robots[robot_name] = State()
         assert(len(self.robots) > 0)
+
+        for machine_name in self.config["machines"]:
+            self.machines[machine_name] = MCState()
+        # assert(len(self.machines) > 0)
 
         profile = traits.Profile(geometry.make_final_convex_circle(
             self.config['rmf_fleet']['profile']['footprint']),
@@ -145,6 +156,14 @@ class FleetManager(Node):
             FleetState,
             'fleet_states',
             self.fleet_states_cb,
+            100,
+            callback_group=client_cb_group
+        )
+
+        self.create_subscription(
+            FleetMachineState,
+            'fleet_machine_state',
+            self.machine_states_cb,
             100,
             callback_group=client_cb_group
         )
@@ -191,6 +210,11 @@ class FleetManager(Node):
             MachineRequest,
             'machine_request',
             qos_profile=qos_profile_system_default)
+        
+        self.station_pub = self.create_publisher(
+            StationRequest,
+            'station_request',
+            qos_profile=qos_profile_system_default)
 
 
         @app.get('/vdm-rmf/data/status/',
@@ -216,6 +240,8 @@ class FleetManager(Node):
                 response['data'] = self.get_robot_state(state, robot_name)
             response['success'] = True
             return response
+        
+
 
 
         @app.post('/vdm-rmf/cmd/navigate/',
@@ -471,7 +497,7 @@ class FleetManager(Node):
                 dock_config = self.docks[task.task["dock_name"]]
                 for conf in dock_config:
                     if conf == 'machine':
-                        machine = True
+                        machine = dock_config['machine']
                     elif conf == 'distance_go_out':
                         distance_go_out = dock_config['distance_go_out']
                     elif conf == 'custom_dock':
@@ -516,6 +542,36 @@ class FleetManager(Node):
             response['success'] = True
             return response
 
+        # ///////////////////////////////////////////////////////////////////////
+        # ///////////////////////////////////////////////////////////////////////
+        # Lay du lieu machine
+        @app.get('/vdm-rmf/machine_data/status/',
+                 response_model=Response)
+        async def status(machine_name: Optional[str] = None):
+            response = {
+                'data': {},
+                'success': False,
+                'msg': ''
+            }
+            if not self.debug:
+                print(f'Receiv request get data machine: {machine_name}')
+            if machine_name is None:
+                response['data']['all_machines'] = []
+                for machine_name in self.machines:
+                    state = self.machines.get(machine_name)
+                    if state is None or state.state is None:
+                        return response
+                    response['data']['all_machines'].append(
+                        self.get_machine_state(state, machine_name))
+            else:
+                state = self.machines.get(machine_name)
+                if state is None or state.state is None:
+                    return response
+                response['data'] = self.get_machine_state(state, machine_name)
+            response['success'] = True
+            return response
+        
+        # Gui tin hieu cho machine thuc thi
         @app.post('/vdm-rmf/cmd/machine_trigger/', response_model=Response)
         async def machine_trigger(robot_name: str, cmd_id: int, task: Request):
             response = {'success': False, 'msg': ''}
@@ -526,11 +582,17 @@ class FleetManager(Node):
                     machine_request.mode.mode = MachineMode.MODE_PK_CLAMP
                 elif task.task["action"] == "release":
                     machine_request.mode.mode = MachineMode.MODE_PK_RELEASE
+                else:
+                    response["msg"] = "Mode mcpickup only support clamp or release action. Please check action!"
+                    return response           
             elif task.task["mode"] == "mcdropoff":
                 if task.task["action"] == "clamp":
                     machine_request.mode.mode = MachineMode.MODE_DF_CLAMP
                 elif task.task["action"] == "release":
                     machine_request.mode.mode = MachineMode.MODE_DF_RELEASE
+                else:
+                    response["msg"] = "Mode mcdropoff only support clamp or release action. Please check action!"
+                    return response 
             else:
                 response["msg"] = "Mode machine does not support. Please check mode!"
                 return response
@@ -545,6 +607,36 @@ class FleetManager(Node):
 
             response['success'] = True
             return response 
+
+        # Gui tin hieu cho station thuc thi    
+        @app.post('/vdm-rmf/cmd/station_trigger/', response_model=Response)
+        async def station_trigger(robot_name: str, cmd_id: int, task: Request):
+            response = {'success': False, 'msg': ''}
+
+            station_request = StationRequest()
+            if task.task["mode"] == "pickup":
+                station_request.mode.mode = StationMode.MODE_EMPTY
+            elif task.task["mode"] == "dropoff":
+                station_request.mode.mode = StationMode.MODE_FILLED
+            else:
+                response["msg"] = "Mode station does not support. Please check mode!"
+                return response
+
+            station_request.fleet_name = self.fleet_name
+            station_request.machine_name = "nqvlm104"
+            station_request.station_name = task.task["station_name"]
+            station_request.request_id = str(cmd_id)
+            self.station_pub.publish(station_request)
+
+            if self.debug:
+                print(f'Sending station request for {task.task["station_name"]}: {cmd_id}')
+
+            response['success'] = True
+            return response
+        # ///////////////////////////////////////////////////////////////////////
+        # ///////////////////////////////////////////////////////////////////////
+
+
 
         @app.post('/vdm-rmf/cmd/charger_trigger/', response_model=Response)
         async def charger_trigger(robot_name: str, cmd_id: int, task: Request):
@@ -661,6 +753,25 @@ class FleetManager(Node):
                 else:
                     self.get_logger().warn(f'Detect robot "{robotMsg.name}" is not in config file, pleascheck!')
 
+    def machine_states_cb(self, msg: FleetMachineState):
+        if (msg.name == self.fleet_name):
+            dataMachine = msg.machines
+            for machineMsg in dataMachine:
+                if (machineMsg.machine_name in self.machines.keys()):
+                    machine = self.machines[machineMsg.machine_name]
+                    machine.state = machineMsg
+
+                    if (machineMsg.mode.mode == MachineMode.MODE_IDLE):
+                        completed_request = machineMsg.request_id
+                        if machine.last_completed_request != completed_request:
+                            # if self.debug:
+                            #     print(
+                            #         f'Detecting completed request for {robotMsg.name}: '
+                            #         f'{completed_request}'
+                            #     )
+                            machine.last_completed_request = completed_request
+                else:
+                    self.get_logger().warn(f'Detect machine "{machineMsg.machine_name}" is not in config file, pleascheck!')
 
     def dock_summary_cb(self, msg):
         return
@@ -737,6 +848,14 @@ class FleetManager(Node):
 
         data['robot_mode'] = robot.state.mode.mode
 
+        return data
+
+    # Lay du lieu machine
+    def get_machine_state(self, machine: MCState, machine_name):
+        data = {}
+        data['machine_name'] = machine_name
+        data['last_completed_request'] = machine.last_completed_request
+        data['machine_mode'] = machine.state.mode.mode
         return data
 
     def disp(self, A, B):
