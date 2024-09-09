@@ -33,12 +33,28 @@ from rclpy.qos import QoSHistoryPolicy as History
 from rclpy.qos import QoSDurabilityPolicy as Durability
 from rclpy.qos import QoSReliabilityPolicy as Reliability
 
-from rmf_fleet_msgs.msg import FleetState, RobotState, Location, PathRequest, \
-    DockRequest, ModeRequest, CancelRequest, DockSummary, RobotMode, DockMode
+from rmf_fleet_msgs.msg import (
+    FleetState,
+    RobotState,
+    Location,
+    PathRequest,
+    DockRequest,
+    ModeRequest,
+    CancelRequest,
+    DockSummary,
+    RobotMode,
+    DockMode,
+)
 
 from charger_fleet_msgs.msg import ChargerRequest, ChargerMode, ChargerState
-from machine_fleet_msgs.msg import FleetMachineState, MachineRequest, MachineMode, \
-                                   MachineState, StationRequest, StationMode
+from machine_fleet_msgs.msg import (
+    FleetMachineState,
+    MachineRequest,
+    MachineMode,
+    MachineState,
+    StationRequest,
+    StationMode,
+)
 
 import rmf_adapter as adpt
 import rmf_adapter.vehicletraits as traits
@@ -53,6 +69,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 import threading
+
 app = FastAPI()
 
 
@@ -76,19 +93,20 @@ class Response(BaseModel):
 # Fleet Manager
 # ------------------------------------------------------------------------------
 class State:
-    def __init__(self, state: RobotState = None, destination: Location = None, path: list = None):
+    def __init__(
+        self, state: RobotState = None, destination: Location = None, path: list = None
+    ):
         self.state = state
         self.destination = destination
         self.path = path
         self.last_request = None
         self.last_completed_request = None
         self.mode_teleop = False
-        self.svy_transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3414')
+        self.svy_transformer = Transformer.from_crs("EPSG:4326", "EPSG:3414")
         self.gps_pos = [0, 0]
 
     def gps_to_xy(self, gps_json: dict):
-        svy21_xy = \
-            self.svy_transformer.transform(gps_json['lat'], gps_json['lon'])
+        svy21_xy = self.svy_transformer.transform(gps_json["lat"], gps_json["lon"])
         self.gps_pos[0] = svy21_xy[1]
         self.gps_pos[1] = svy21_xy[0]
 
@@ -97,7 +115,8 @@ class State:
             if task_id != self.last_request.task_id:
                 return False
         return True
-    
+
+
 class MCState:
     def __init__(self, state: MachineState = None) -> None:
         self.state = state
@@ -112,150 +131,141 @@ class FleetManager(Node):
 
         self.gps = False
         self.offset = [0, 0]
-        if 'reference_coordinates' in self.config and \
-                'offset' in self.config['reference_coordinates']:
-            assert len(self.config['reference_coordinates']['offset']) > 1, \
-                ('Please ensure that the offset provided is valid.')
+        if (
+            "reference_coordinates" in self.config
+            and "offset" in self.config["reference_coordinates"]
+        ):
+            assert (
+                len(self.config["reference_coordinates"]["offset"]) > 1
+            ), "Please ensure that the offset provided is valid."
             self.gps = True
-            self.offset = self.config['reference_coordinates']['offset']
+            self.offset = self.config["reference_coordinates"]["offset"]
 
-        super().__init__(f'{self.fleet_name}_fleet_manager')
+        super().__init__(f"{self.fleet_name}_fleet_manager")
 
         self.robots = {}  # Map robot name to state
-        self.docks = {} # Map dock name to waypoints
+        self.docks = {}  # Map dock name to waypoints
         self.machines = {}
 
-        if 'docks' in self.config:
-            self.docks = self.config['docks']
-        assert(len(self.docks) > 0)
+        if "docks" in self.config:
+            self.docks = self.config["docks"]
+        assert len(self.docks) > 0
 
         for robot_name, robot_config in self.config["robots"].items():
             self.robots[robot_name] = State()
-        assert(len(self.robots) > 0)
+        assert len(self.robots) > 0
 
         for machine_name in self.config["machines"]:
             self.machines[machine_name] = MCState()
         # assert(len(self.machines) > 0)
 
-        profile = traits.Profile(geometry.make_final_convex_circle(
-            self.config['rmf_fleet']['profile']['footprint']),
+        profile = traits.Profile(
             geometry.make_final_convex_circle(
-                self.config['rmf_fleet']['profile']['vicinity']))
+                self.config["rmf_fleet"]["profile"]["footprint"]
+            ),
+            geometry.make_final_convex_circle(
+                self.config["rmf_fleet"]["profile"]["vicinity"]
+            ),
+        )
         self.vehicle_traits = traits.VehicleTraits(
-            linear=traits.Limits(
-                *self.config['rmf_fleet']['limits']['linear']),
-            angular=traits.Limits(
-                *self.config['rmf_fleet']['limits']['angular']),
-            profile=profile)
-        self.vehicle_traits.differential.reversible =\
-            self.config['rmf_fleet']['reversible']
+            linear=traits.Limits(*self.config["rmf_fleet"]["limits"]["linear"]),
+            angular=traits.Limits(*self.config["rmf_fleet"]["limits"]["angular"]),
+            profile=profile,
+        )
+        self.vehicle_traits.differential.reversible = self.config["rmf_fleet"][
+            "reversible"
+        ]
 
         client_cb_group = MutuallyExclusiveCallbackGroup()
 
         self.create_subscription(
             FleetState,
-            'fleet_states',
+            "fleet_states",
             self.fleet_states_cb,
             100,
-            callback_group=client_cb_group
+            callback_group=client_cb_group,
         )
 
         self.create_subscription(
             FleetMachineState,
-            'fleet_machine_state',
+            "fleet_machine_state",
             self.machine_states_cb,
             100,
-            callback_group=client_cb_group
+            callback_group=client_cb_group,
         )
 
         transient_qos = QoSProfile(
             history=History.KEEP_LAST,
             depth=1,
-            reliability=Reliability.RELIABLE,   
-            durability=Durability.TRANSIENT_LOCAL)
+            reliability=Reliability.RELIABLE,
+            durability=Durability.TRANSIENT_LOCAL,
+        )
 
         self.create_subscription(
-            DockSummary,
-            'dock_summary',
-            self.dock_summary_cb,
-            qos_profile=transient_qos)
+            DockSummary, "dock_summary", self.dock_summary_cb, qos_profile=transient_qos
+        )
 
         self.path_pub = self.create_publisher(
-            PathRequest,
-            'robot_path_requests',
-            qos_profile=qos_profile_system_default)
+            PathRequest, "robot_path_requests", qos_profile=qos_profile_system_default
+        )
 
         self.dock_pub = self.create_publisher(
-            DockRequest,
-            'robot_dock_requests',
-            qos_profile=qos_profile_system_default)
+            DockRequest, "robot_dock_requests", qos_profile=qos_profile_system_default
+        )
 
         self.mode_pub = self.create_publisher(
-            ModeRequest,
-            'robot_mode_requests',
-            qos_profile=qos_profile_system_default)
-        
+            ModeRequest, "robot_mode_requests", qos_profile=qos_profile_system_default
+        )
+
         self.cancel_pub = self.create_publisher(
             CancelRequest,
-            'robot_cancel_requests',
-            qos_profile=qos_profile_system_default)
-        
+            "robot_cancel_requests",
+            qos_profile=qos_profile_system_default,
+        )
 
         self.charger_pub = self.create_publisher(
-            ChargerRequest,
-            'charger_request',
-            qos_profile=qos_profile_system_default)
+            ChargerRequest, "charger_request", qos_profile=qos_profile_system_default
+        )
 
         self.machine_pub = self.create_publisher(
-            MachineRequest,
-            'machine_request',
-            qos_profile=qos_profile_system_default)
-        
+            MachineRequest, "machine_request", qos_profile=qos_profile_system_default
+        )
+
         self.station_pub = self.create_publisher(
-            StationRequest,
-            'station_request',
-            qos_profile=qos_profile_system_default)
+            StationRequest, "station_request", qos_profile=qos_profile_system_default
+        )
 
-
-        @app.get('/vdm-rmf/data/status/',
-                 response_model=Response)
+        @app.get("/vdm-rmf/data/status/", response_model=Response)
         async def status(robot_name: Optional[str] = None):
-            response = {
-                'data': {},
-                'success': False,
-                'msg': ''
-            }
+            response = {"data": {}, "success": False, "msg": ""}
             if robot_name is None:
-                response['data']['all_robots'] = []
+                response["data"]["all_robots"] = []
                 for robot_name in self.robots:
                     state = self.robots.get(robot_name)
                     if state is None or state.state is None:
                         return response
-                    response['data']['all_robots'].append(
-                        self.get_robot_state(state, robot_name))
+                    response["data"]["all_robots"].append(
+                        self.get_robot_state(state, robot_name)
+                    )
             else:
                 state = self.robots.get(robot_name)
                 if state is None or state.state is None:
                     return response
-                response['data'] = self.get_robot_state(state, robot_name)
-            response['success'] = True
+                response["data"] = self.get_robot_state(state, robot_name)
+            response["success"] = True
             return response
-        
 
-
-
-        @app.post('/vdm-rmf/cmd/navigate/',
-                  response_model=Response)
+        @app.post("/vdm-rmf/cmd/navigate/", response_model=Response)
         async def navigate(robot_name: str, cmd_id: int, dest: Request):
-            response = {'success': False, 'msg': ''}
-            if (robot_name not in self.robots or len(dest.destination) < 1):
+            response = {"success": False, "msg": ""}
+            if robot_name not in self.robots or len(dest.destination) < 1:
                 return response
 
             robot = self.robots[robot_name]
 
-            target_x = dest.destination['x']
-            target_y = dest.destination['y']
-            target_yaw = dest.destination['yaw']
+            target_x = dest.destination["x"]
+            target_y = dest.destination["y"]
+            target_yaw = dest.destination["yaw"]
             target_map = dest.map_name
             target_speed_limit = dest.speed_limit
 
@@ -273,9 +283,10 @@ class FleetManager(Node):
             path_request.path.append(cur_loc)
 
             disp = self.disp([target_x, target_y], [cur_x, cur_y])
-            duration = int(disp/self.vehicle_traits.linear.nominal_velocity) +\
-                int(abs(abs(cur_yaw) - abs(target_yaw)) /
-                    self.vehicle_traits.rotational.nominal_velocity)
+            duration = int(disp / self.vehicle_traits.linear.nominal_velocity) + int(
+                abs(abs(cur_yaw) - abs(target_yaw))
+                / self.vehicle_traits.rotational.nominal_velocity
+            )
             t.sec = t.sec + duration
             target_loc = Location()
             target_loc.t = t
@@ -294,23 +305,21 @@ class FleetManager(Node):
             self.path_pub.publish(path_request)
 
             if self.debug:
-                print(f'Sending navigate request for {robot_name}: {cmd_id}')
+                print(f"Sending navigate request for {robot_name}: {cmd_id}")
             robot.last_request = path_request
             robot.destination = target_loc
 
-            response['success'] = True
+            response["success"] = True
             return response
 
-
-        @app.post('/vdm-rmf/cmd/follow_path/',
-                  response_model=Response)
+        @app.post("/vdm-rmf/cmd/follow_path/", response_model=Response)
         async def follow_path(robot_name: str, cmd_id: int, dest: Request):
-            response = {'success': False, 'msg': ''}
-            if (robot_name not in self.robots or len(dest.waypoints) < 1):
+            response = {"success": False, "msg": ""}
+            if robot_name not in self.robots or len(dest.waypoints) < 1:
                 return response
 
             robot = self.robots[robot_name]
-            
+
             duration = 0
             path_request = PathRequest()
             cur_x = robot.state.location.x
@@ -320,19 +329,22 @@ class FleetManager(Node):
             path_request.path.append(cur_loc)
             t = self.get_clock().now().to_msg()
             for destination in dest.waypoints:
-                target_x = destination['x']
-                target_y = destination['y']
-                target_yaw = destination['yaw']
-                target_speed_limit = destination['speed_limit']
+                target_x = destination["x"]
+                target_y = destination["y"]
+                target_yaw = destination["yaw"]
+                target_speed_limit = destination["speed_limit"]
                 target_map = dest.map_name
 
                 target_x -= self.offset[0]
                 target_y -= self.offset[1]
-            
+
                 disp = self.disp([target_x, target_y], [cur_x, cur_y])
-                duration = int(disp/self.vehicle_traits.linear.nominal_velocity) +\
-                    int(abs(abs(cur_yaw) - abs(target_yaw)) /
-                        self.vehicle_traits.rotational.nominal_velocity)
+                duration = int(
+                    disp / self.vehicle_traits.linear.nominal_velocity
+                ) + int(
+                    abs(abs(cur_yaw) - abs(target_yaw))
+                    / self.vehicle_traits.rotational.nominal_velocity
+                )
 
                 t.sec = t.sec + duration
                 target_loc = Location()
@@ -357,19 +369,17 @@ class FleetManager(Node):
             self.path_pub.publish(path_request)
 
             if self.debug:
-                print(f'Sending follow_path request for {robot_name}: {cmd_id}')
+                print(f"Sending follow_path request for {robot_name}: {cmd_id}")
             robot.last_request = path_request
             robot.destination = target_loc
             robot.path = path_request.path[1:]
-            
-            response['success'] = True
+
+            response["success"] = True
             return response
 
-
-        @app.get('/vdm-rmf/cmd/pause_robot/',
-                 response_model=Response)
+        @app.get("/vdm-rmf/cmd/pause_robot/", response_model=Response)
         async def pause(robot_name: str, cmd_id: int):
-            response = {'success': False, 'msg': ''}
+            response = {"success": False, "msg": ""}
             if robot_name not in self.robots:
                 return response
 
@@ -383,16 +393,15 @@ class FleetManager(Node):
             self.mode_pub.publish(mode_request)
 
             if self.debug:
-                print(f'Sending pause request for {robot_name}: {cmd_id}')
+                print(f"Sending pause request for {robot_name}: {cmd_id}")
             robot.last_request = mode_request
 
-            response['success'] = True
+            response["success"] = True
             return response
 
-        @app.get('/vdm-rmf/cmd/wait_robot/',
-                 response_model=Response)
+        @app.get("/vdm-rmf/cmd/wait_robot/", response_model=Response)
         async def wait(robot_name: str, cmd_id: str):
-            response = {'success': False, 'msg': ''}
+            response = {"success": False, "msg": ""}
             if robot_name not in self.robots:
                 return response
 
@@ -406,16 +415,15 @@ class FleetManager(Node):
             self.mode_pub.publish(mode_request)
 
             if self.debug:
-                print(f'Sending wait request for {robot_name}: {cmd_id}')
+                print(f"Sending wait request for {robot_name}: {cmd_id}")
             robot.last_request = mode_request
 
-            response['success'] = True
+            response["success"] = True
             return response
 
-        @app.get('/vdm-rmf/cmd/resume_robot/',
-                 response_model=Response)
+        @app.get("/vdm-rmf/cmd/resume_robot/", response_model=Response)
         async def resume(robot_name: str, cmd_id: str):
-            response = {'success': False, 'msg': ''}
+            response = {"success": False, "msg": ""}
             if robot_name not in self.robots:
                 return response
 
@@ -429,17 +437,15 @@ class FleetManager(Node):
             self.mode_pub.publish(mode_request)
 
             if self.debug:
-                print(f'Sending resume request for {robot_name}: {cmd_id}')
+                print(f"Sending resume request for {robot_name}: {cmd_id}")
             robot.last_request = mode_request
 
-            response['success'] = True
+            response["success"] = True
             return response
 
-
-        @app.get('/vdm-rmf/cmd/stop_robot/',
-                 response_model=Response)
+        @app.get("/vdm-rmf/cmd/stop_robot/", response_model=Response)
         async def stop(robot_name: str, cmd_id: int):
-            response = {'success': False, 'msg': ''}
+            response = {"success": False, "msg": ""}
             if robot_name not in self.robots:
                 return response
 
@@ -451,21 +457,18 @@ class FleetManager(Node):
             self.cancel_pub.publish(cancel_request)
 
             if self.debug:
-                print(f'Sending stop request for {robot_name}: {cmd_id}')
+                print(f"Sending stop request for {robot_name}: {cmd_id}")
             robot.last_request = cancel_request
             robot.destination = None
             robot.path = None
 
-            response['success'] = True
+            response["success"] = True
             return response
 
-
-        @app.post('/vdm-rmf/cmd/start_task/',
-                  response_model=Response)
+        @app.post("/vdm-rmf/cmd/start_task/", response_model=Response)
         async def start_process(robot_name: str, cmd_id: int, task: Request):
-            response = {'success': False, 'msg': ''}
-            if (robot_name not in self.robots or
-                    len(task.task) < 2):
+            response = {"success": False, "msg": ""}
+            if robot_name not in self.robots or len(task.task) < 2:
                 return response
 
             robot = self.robots[robot_name]
@@ -479,11 +482,9 @@ class FleetManager(Node):
             dock_request = DockRequest()
             if task.task["mode"] == "charge":
                 dock_request.dock_mode.mode = DockMode.MODE_CHARGE
-            elif (task.task["mode"] == "pickup" or
-                  task.task["mode"] == "mcpickup"):
+            elif task.task["mode"] == "pickup" or task.task["mode"] == "mcpickup":
                 dock_request.dock_mode.mode = DockMode.MODE_PICKUP
-            elif (task.task["mode"] == "dropoff" or
-                  task.task["mode"] == "mcdropoff"):
+            elif task.task["mode"] == "dropoff" or task.task["mode"] == "mcdropoff":
                 dock_request.dock_mode.mode = DockMode.MODE_DROPOFF
             elif task.task["mode"] == "undock":
                 dock_request.dock_mode.mode = DockMode.MODE_UNDOCK
@@ -496,22 +497,26 @@ class FleetManager(Node):
             if task.task["dock_name"] in self.docks:
                 dock_config = self.docks[task.task["dock_name"]]
                 for conf in dock_config:
-                    if conf == 'machine':
-                        machine = dock_config['machine']
-                    elif conf == 'distance_go_out':
-                        distance_go_out = dock_config['distance_go_out']
-                    elif conf == 'custom_dock':
+                    if conf == "machine":
+                        machine = dock_config["machine"]
+                    elif conf == "distance_go_out":
+                        distance_go_out = dock_config["distance_go_out"]
+                    elif conf == "custom_dock":
                         custom_dock = True
-                        for custom in dock_config['custom_dock']:
-                            if custom == 'rotate_angle':
-                                rotate_angle = dock_config['custom_dock']['rotate_angle']
-                            elif custom == 'rotate_orientation':
-                                rotate_orientation = dock_config['custom_dock']['rotate_orientation']
-                    elif conf == 'rotate_to_dock':
+                        for custom in dock_config["custom_dock"]:
+                            if custom == "rotate_angle":
+                                rotate_angle = dock_config["custom_dock"][
+                                    "rotate_angle"
+                                ]
+                            elif custom == "rotate_orientation":
+                                rotate_orientation = dock_config["custom_dock"][
+                                    "rotate_orientation"
+                                ]
+                    elif conf == "rotate_to_dock":
                         rotate_to_dock = dock_config[conf]
                     else:
                         continue
-                
+
             else:
                 response["msg"] = "Not found dock name in config!"
                 return response
@@ -535,46 +540,42 @@ class FleetManager(Node):
             self.dock_pub.publish(dock_request)
 
             if self.debug:
-                print(f'Sending process request for {robot_name}: {cmd_id}')
+                print(f"Sending process request for {robot_name}: {cmd_id}")
             robot.last_request = dock_request
             robot.destination = destination
 
-            response['success'] = True
+            response["success"] = True
             return response
 
         # ///////////////////////////////////////////////////////////////////////
         # ///////////////////////////////////////////////////////////////////////
         # Lay du lieu machine
-        @app.get('/vdm-rmf/machine_data/status/',
-                 response_model=Response)
+        @app.get("/vdm-rmf/machine_data/status/", response_model=Response)
         async def status(machine_name: Optional[str] = None):
-            response = {
-                'data': {},
-                'success': False,
-                'msg': ''
-            }
+            response = {"data": {}, "success": False, "msg": ""}
             if not self.debug:
-                print(f'Receiv request get data machine: {machine_name}')
+                print(f"Receiv request get data machine: {machine_name}")
             if machine_name is None:
-                response['data']['all_machines'] = []
+                response["data"]["all_machines"] = []
                 for machine_name in self.machines:
                     state = self.machines.get(machine_name)
                     if state is None or state.state is None:
                         return response
-                    response['data']['all_machines'].append(
-                        self.get_machine_state(state, machine_name))
+                    response["data"]["all_machines"].append(
+                        self.get_machine_state(state, machine_name)
+                    )
             else:
                 state = self.machines.get(machine_name)
                 if state is None or state.state is None:
                     return response
-                response['data'] = self.get_machine_state(state, machine_name)
-            response['success'] = True
+                response["data"] = self.get_machine_state(state, machine_name)
+            response["success"] = True
             return response
-        
+
         # Gui tin hieu cho machine thuc thi
-        @app.post('/vdm-rmf/cmd/machine_trigger/', response_model=Response)
+        @app.post("/vdm-rmf/cmd/machine_trigger/", response_model=Response)
         async def machine_trigger(robot_name: str, cmd_id: int, task: Request):
-            response = {'success': False, 'msg': ''}
+            response = {"success": False, "msg": ""}
 
             machine_request = MachineRequest()
             if task.task["mode"] == "mcpickup":
@@ -583,16 +584,20 @@ class FleetManager(Node):
                 elif task.task["action"] == "release":
                     machine_request.mode.mode = MachineMode.MODE_PK_RELEASE
                 else:
-                    response["msg"] = "Mode mcpickup only support clamp or release action. Please check action!"
-                    return response           
+                    response["msg"] = (
+                        "Mode mcpickup only support clamp or release action. Please check action!"
+                    )
+                    return response
             elif task.task["mode"] == "mcdropoff":
                 if task.task["action"] == "clamp":
                     machine_request.mode.mode = MachineMode.MODE_DF_CLAMP
                 elif task.task["action"] == "release":
                     machine_request.mode.mode = MachineMode.MODE_DF_RELEASE
                 else:
-                    response["msg"] = "Mode mcdropoff only support clamp or release action. Please check action!"
-                    return response 
+                    response["msg"] = (
+                        "Mode mcdropoff only support clamp or release action. Please check action!"
+                    )
+                    return response
             else:
                 response["msg"] = "Mode machine does not support. Please check mode!"
                 return response
@@ -603,15 +608,17 @@ class FleetManager(Node):
             self.machine_pub.publish(machine_request)
 
             if self.debug:
-                print(f'Sending machine request for {task.task["machine_name"]}: {cmd_id}')
+                print(
+                    f'Sending machine request for {task.task["machine_name"]}: {cmd_id}'
+                )
 
-            response['success'] = True
-            return response 
+            response["success"] = True
+            return response
 
-        # Gui tin hieu cho station thuc thi    
-        @app.post('/vdm-rmf/cmd/station_trigger/', response_model=Response)
+        # Gui tin hieu cho station thuc thi
+        @app.post("/vdm-rmf/cmd/station_trigger/", response_model=Response)
         async def station_trigger(robot_name: str, cmd_id: int, task: Request):
-            response = {'success': False, 'msg': ''}
+            response = {"success": False, "msg": ""}
 
             station_request = StationRequest()
             if task.task["mode"] == "pickup":
@@ -629,18 +636,19 @@ class FleetManager(Node):
             self.station_pub.publish(station_request)
 
             if self.debug:
-                print(f'Sending station request for {task.task["station_name"]}: {cmd_id}')
+                print(
+                    f'Sending station request for {task.task["station_name"]}: {cmd_id}'
+                )
 
-            response['success'] = True
+            response["success"] = True
             return response
+
         # ///////////////////////////////////////////////////////////////////////
         # ///////////////////////////////////////////////////////////////////////
 
-
-
-        @app.post('/vdm-rmf/cmd/charger_trigger/', response_model=Response)
+        @app.post("/vdm-rmf/cmd/charger_trigger/", response_model=Response)
         async def charger_trigger(robot_name: str, cmd_id: int, task: Request):
-            response = {'success': False, 'msg': ''}
+            response = {"success": False, "msg": ""}
 
             charger_request = ChargerRequest()
             if task.task["mode"] == "charge":
@@ -659,23 +667,22 @@ class FleetManager(Node):
             self.charger_pub.publish(charger_request)
 
             if self.debug:
-                print(f'Sending charger request for {task.task["charger_name"]}: {cmd_id}')
+                print(
+                    f'Sending charger request for {task.task["charger_name"]}: {cmd_id}'
+                )
 
-            response['success'] = True
-            return response   
+            response["success"] = True
+            return response
 
-
-        @app.post('/vdm-rmf/cmd/toggle_action/',
-                  response_model=Response)
+        @app.post("/vdm-rmf/cmd/toggle_action/", response_model=Response)
         async def toggle_teleop(robot_name: str, mode: Request):
-            response = {'success': False, 'msg': ''}
-            if (robot_name not in self.robots):
+            response = {"success": False, "msg": ""}
+            if robot_name not in self.robots:
                 return response
             # Toggle action mode
             self.robots[robot_name].mode_teleop = mode.toggle
-            response['success'] = True
+            response["success"] = True
             return response
-        
 
         # @app.get('/vdm-rmf/cmd/is_task_queue_finished/',
         #          response_model=Response)
@@ -696,24 +703,25 @@ class FleetManager(Node):
         #     response['success'] = True
         #     return response
 
-
     def fleet_states_cb(self, msg: FleetState):
-        if (msg.name == self.fleet_name):
+        if msg.name == self.fleet_name:
             dataRobot = msg.robots
             for robotMsg in dataRobot:
-                if (robotMsg.name in self.robots.keys()):
+                if robotMsg.name in self.robots.keys():
                     robot = self.robots[robotMsg.name]
-                    if not robot.is_expected_task_id(robotMsg.task_id) and \
-                            not robot.mode_teleop:
+                    if (
+                        not robot.is_expected_task_id(robotMsg.task_id)
+                        and not robot.mode_teleop
+                    ):
                         # This message is out of date, so disregard it.
                         if robot.last_request is not None:
                             # Resend the latest task request for this robot, in case
                             # the message was dropped.
                             if self.debug:
                                 print(
-                                    f'Republishing task request for {robotMsg.name}: '
-                                    f'{robot.last_request.task_id}, '
-                                    f'because it is currently following {robotMsg.task_id}'
+                                    f"Republishing task request for {robotMsg.name}: "
+                                    f"{robot.last_request.task_id}, "
+                                    f"because it is currently following {robotMsg.task_id}"
                                 )
                             if type(robot.last_request) is PathRequest:
                                 self.path_pub.publish(robot.last_request)
@@ -727,18 +735,15 @@ class FleetManager(Node):
 
                     robot.state = robotMsg
                     # self.get_logger().warn(f'robot "{robotMsg.name}":  {robot.state.location}')
-                    
+
                     # Check if robot has reached destination
                     if robot.destination is None:
                         continue
 
                     if (
-                        (
-                            robotMsg.mode.mode == RobotMode.MODE_IDLE
-                            or robotMsg.mode.mode == RobotMode.MODE_CHARGING
-                        )
-                        and len(robotMsg.path) == 0
-                    ):
+                        robotMsg.mode.mode == RobotMode.MODE_IDLE
+                        or robotMsg.mode.mode == RobotMode.MODE_CHARGING
+                    ) and len(robotMsg.path) == 0:
                         # robot = self.robots[robotMsg.name]
                         robot.destination = None
                         robot.path = None
@@ -746,22 +751,24 @@ class FleetManager(Node):
                         if robot.last_completed_request != completed_request:
                             if self.debug:
                                 print(
-                                    f'Detecting completed request for {robotMsg.name}: '
-                                    f'{completed_request}'
+                                    f"Detecting completed request for {robotMsg.name}: "
+                                    f"{completed_request}"
                                 )
                         robot.last_completed_request = completed_request
                 else:
-                    self.get_logger().warn(f'Detect robot "{robotMsg.name}" is not in config file, pleascheck!')
+                    self.get_logger().warn(
+                        f'Detect robot "{robotMsg.name}" is not in config file, pleascheck!'
+                    )
 
     def machine_states_cb(self, msg: FleetMachineState):
-        if (msg.name == self.fleet_name):
+        if msg.name == self.fleet_name:
             dataMachine = msg.machines
             for machineMsg in dataMachine:
-                if (machineMsg.machine_name in self.machines.keys()):
+                if machineMsg.machine_name in self.machines.keys():
                     machine = self.machines[machineMsg.machine_name]
                     machine.state = machineMsg
 
-                    if (machineMsg.mode.mode == MachineMode.MODE_IDLE):
+                    if machineMsg.mode.mode == MachineMode.MODE_IDLE:
                         completed_request = machineMsg.request_id
                         if machine.last_completed_request != completed_request:
                             # if self.debug:
@@ -771,12 +778,14 @@ class FleetManager(Node):
                             #     )
                             machine.last_completed_request = completed_request
                 else:
-                    self.get_logger().warn(f'Detect machine "{machineMsg.machine_name}" is not in config file, pleascheck!')
+                    self.get_logger().warn(
+                        f'Detect machine "{machineMsg.machine_name}" is not in config file, pleascheck!'
+                    )
 
     def dock_summary_cb(self, msg):
         return
         for fleet in msg.docks:
-            if(fleet.fleet_name == self.fleet_name):
+            if fleet.fleet_name == self.fleet_name:
                 for dock in fleet.params:
                     self.docks[dock.start] = dock.path
 
@@ -787,21 +796,21 @@ class FleetManager(Node):
         else:
             position = [robot.state.location.x, robot.state.location.y]
         angle = robot.state.location.yaw
-        data['robot_name'] = robot_name
-        data['map_name'] = robot.state.location.level_name
-        data['position'] =\
-            {'x': position[0], 'y': position[1], 'yaw': angle}
-        data['battery'] = robot.state.battery_percent
-        if (robot.destination is not None
+        data["robot_name"] = robot_name
+        data["map_name"] = robot.state.location.level_name
+        data["position"] = {"x": position[0], "y": position[1], "yaw": angle}
+        data["battery"] = robot.state.battery_percent
+        if (
+            robot.destination is not None
             and robot.last_request is not None
-            and robot.path is not None):
-            data['path_length'] = len(robot.path)
+            and robot.path is not None
+        ):
+            data["path_length"] = len(robot.path)
             # Sửa destination để nhận điểm đầu tiên trong path
             # destination = robot.destination
             destination = robot.path[0]
             n = len(robot.path) - len(robot.state.path)
-            if (len(robot.state.path) > 0
-                and n > 0):
+            if len(robot.state.path) > 0 and n > 0:
                 robot.path = robot.path[n:]
 
             # remove offset for calculation if using gps coords
@@ -809,30 +818,27 @@ class FleetManager(Node):
                 position[0] -= self.offset[0]
                 position[1] -= self.offset[1]
             # calculate arrival estimate
-            dist_to_target =\
-                self.disp(position, [destination.x, destination.y])
+            dist_to_target = self.disp(position, [destination.x, destination.y])
             ori_delta = abs(abs(angle) - abs(destination.yaw))
             if ori_delta > np.pi:
                 ori_delta = ori_delta - (2 * np.pi)
             if ori_delta < -np.pi:
                 ori_delta = (2 * np.pi) + ori_delta
-            duration = (dist_to_target /
-                        self.vehicle_traits.linear.nominal_velocity +
-                        ori_delta /
-                        self.vehicle_traits.rotational.nominal_velocity)
+            duration = (
+                dist_to_target / self.vehicle_traits.linear.nominal_velocity
+                + ori_delta / self.vehicle_traits.rotational.nominal_velocity
+            )
             cmd_id = int(robot.last_request.task_id)
-            data['destination_arrival'] = {
-                'cmd_id': cmd_id,
-                'duration': duration
-            }
+            data["destination_arrival"] = {"cmd_id": cmd_id, "duration": duration}
         else:
-            data['destination_arrival'] = None
-            data['path_length'] = None
+            data["destination_arrival"] = None
+            data["path_length"] = None
 
-        data['last_completed_request'] = robot.last_completed_request
+        data["last_completed_request"] = robot.last_completed_request
         if (
             # robot.state.mode.mode == RobotMode.MODE_WAITING
-            robot.state.mode.mode == RobotMode.MODE_ADAPTER_ERROR
+            robot.state.mode.mode
+            == RobotMode.MODE_ADAPTER_ERROR
         ):
             # The name of MODE_WAITING is not very intuitive, but the slotcar
             # plugin uses it to indicate when another robot is blocking its
@@ -842,24 +848,24 @@ class FleetManager(Node):
             # didn't make sense, i.e. the plan expected the robot was starting
             # very far from its real present location. When that happens we
             # should replan, so we'll set replan to true in that case as well.
-            data['replan'] = True
+            data["replan"] = True
         else:
-            data['replan'] = False
+            data["replan"] = False
 
-        data['robot_mode'] = robot.state.mode.mode
+        data["robot_mode"] = robot.state.mode.mode
 
         return data
 
     # Lay du lieu machine
     def get_machine_state(self, machine: MCState, machine_name):
         data = {}
-        data['machine_name'] = machine_name
-        data['last_completed_request'] = machine.last_completed_request
-        data['machine_mode'] = machine.state.mode.mode
+        data["machine_name"] = machine_name
+        data["last_completed_request"] = machine.last_completed_request
+        data["machine_mode"] = machine.state.mode.mode
         return data
 
     def disp(self, A, B):
-        return math.sqrt((A[0]-B[0])**2 + (A[1]-B[1])**2)
+        return math.sqrt((A[0] - B[0]) ** 2 + (A[1] - B[1]) ** 2)
 
 
 # ------------------------------------------------------------------------------
@@ -872,12 +878,22 @@ def main(argv=sys.argv):
     args_without_ros = rclpy.utilities.remove_ros_args(argv)
 
     parser = argparse.ArgumentParser(
-        prog="fleet_adapter",
-        description="Configure and spin up the fleet adapter")
-    parser.add_argument("-c", "--config_file", type=str, required=True,
-                        help="Path to the config.yaml file")
-    parser.add_argument("-n", "--nav_graph", type=str, required=True,
-                        help="Path to the nav_graph for this fleet adapter")
+        prog="fleet_adapter", description="Configure and spin up the fleet adapter"
+    )
+    parser.add_argument(
+        "-c",
+        "--config_file",
+        type=str,
+        required=True,
+        help="Path to the config.yaml file",
+    )
+    parser.add_argument(
+        "-n",
+        "--nav_graph",
+        type=str,
+        required=True,
+        help="Path to the nav_graph for this fleet adapter",
+    )
     args = parser.parse_args(args_without_ros[1:])
     print(f"Starting fleet manager...")
 
@@ -893,10 +909,11 @@ def main(argv=sys.argv):
 
     uvicorn.run(
         app,
-        host=config['rmf_fleet']['fleet_manager']['ip'],
-        port=config['rmf_fleet']['fleet_manager']['port'],
-        log_level='warning'
+        host=config["rmf_fleet"]["fleet_manager"]["ip"],
+        port=config["rmf_fleet"]["fleet_manager"]["port"],
+        log_level="warning",
     )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main(sys.argv)

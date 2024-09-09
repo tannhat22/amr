@@ -55,10 +55,10 @@ robots:
       robot_state_update_frequency: 5.0
       start:
         map_name: "L1"
-        waypoint: "amr001--charger"
+        waypoint: "amr-start"
         orientation: 0.0 # radians
       charger:
-        waypoint: "amr001--charger"
+        waypoint: "charger001--charger"
   
   # Configuration for robot2
   amr_002:
@@ -68,10 +68,11 @@ robots:
       robot_state_update_frequency: 5.0
       start:
         map_name: "L1"
-        # waypoint: "amr002--charger"
+        # waypoint: "amr-start"
         orientation: 0.0 # radians
       charger:
-        waypoint: "charger001--charge"
+        # waypoint: "charger001--charge"
+        waypoint: "amr-start"
 
 # Docks config:
 docks:
@@ -185,7 +186,7 @@ docks:
     machine: False  # Vị trí docking này là máy hay trạm thô
     distance_go_out: 1.0
     front_dock: "tramlay1PKFD"
-    orientation: 0.0
+    orientation: -0.15
     rotate_to_dock: 90
 
   # Configuration for tramlay2--pickup:
@@ -204,13 +205,21 @@ docks:
     orientation: 0.0
     rotate_to_dock: 90
 
+  # Configuration for tramlay4--pickup:
+  tramlay4--pickup:
+    machine: False  # Vị trí docking này là máy hay trạm thô
+    distance_go_out: 0.90
+    front_dock: "tramlay4PKFD"
+    orientation: 0.0
+    rotate_to_dock: 90
+
   # Configuration for tramtha1--dropoff:
   tramtha1--dropoff:
     machine: False  # Vị trí docking này là máy hay trạm thô
     distance_go_out: 0.62
     front_dock: "tramtha1DOFD"
-    orientation: 3.14
-    rotate_to_dock: -90
+    orientation: -1.59
+    rotate_to_dock: -180
     custom_dock:
       rotate_angle: 30
       rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
@@ -220,11 +229,19 @@ docks:
     machine: False  # Vị trí docking này là máy hay trạm thô
     distance_go_out: 0.62
     front_dock: "tramtha2DOFD"
-    orientation: 3.14
-    rotate_to_dock: -90
+    orientation: -1.57199
+    rotate_to_dock: -180
     custom_dock: 
       rotate_angle: 30
       rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
+  # Configuration for charger001--charge:
+  charger001--charge:
+    machine: False
+    front_dock: "chargerFD001"
+    orientation: 1.57199
+    rotate_to_dock: -90
+
+
 machines: ["nqvlm104"]
-stations: ["tramlay1", "tramlay2", "tramlay3", "tramtha1", "tramtha2"]
+stations: ["tramlay1", "tramlay2", "tramlay3", "tramlay4", "tramtha1", "tramtha2"]

@@ -47,7 +47,7 @@ class RobotState(enum.IntEnum):
     MOVING = 2
     PAUSED = 3
     WAITING = 4
-    EMERGENCY = 5 
+    EMERGENCY = 5
     DOCKING = 7
     REQUEST_ERROR = 10
     WAITING_MACHINE = 11
@@ -66,23 +66,25 @@ class PlanWaypoint:
 
 
 class RobotCommandHandle(adpt.RobotCommandHandle):
-    def __init__(self,
-                 name,
-                 fleet_name,
-                 server_charger,
-                 config,
-                 node,
-                 graph,
-                 vehicle_traits,
-                 map_name,
-                 start,
-                 position,
-                 charger_waypoint,
-                 dock_config,
-                 update_frequency,
-                 lane_merge_distance,
-                 adapter,
-                 api):
+    def __init__(
+        self,
+        name,
+        fleet_name,
+        server_charger,
+        config,
+        node,
+        graph,
+        vehicle_traits,
+        map_name,
+        start,
+        position,
+        charger_waypoint,
+        dock_config,
+        update_frequency,
+        lane_merge_distance,
+        adapter,
+        api,
+    ):
         adpt.RobotCommandHandle.__init__(self)
         self.debug = False
         self.name = name
@@ -95,7 +97,9 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
         self.map_name = map_name
         # Get the index of the charger waypoint
         waypoint = self.graph.find_waypoint(charger_waypoint)
-        assert waypoint, f"Charger waypoint {charger_waypoint} \
+        assert (
+            waypoint
+        ), f"Charger waypoint {charger_waypoint} \
           does not exist in the navigation graph"
         self.charger_waypoint_index = waypoint.index
 
@@ -103,7 +107,6 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
 
         if self.debug:
             self.node.get_logger().info(f"WAYPOINTS DOCKS: {self.dock_config}")
-
 
         self.update_frequency = update_frequency
         self.lane_merge_distance = lane_merge_distance
@@ -156,7 +159,8 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
 
         self.node.get_logger().info(
             f"The robot is starting at: [{self.position[0]:.2f}, "
-            f"{self.position[1]:.2f}, {self.position[2]:.2f}]")
+            f"{self.position[1]:.2f}, {self.position[2]:.2f}]"
+        )
 
         # Update tracking variables
         if start.lane is not None:  # If the robot is on a lane
@@ -171,19 +175,19 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             history=History.KEEP_LAST,
             depth=1,
             reliability=Reliability.RELIABLE,
-            durability=Durability.TRANSIENT_LOCAL)
+            durability=Durability.TRANSIENT_LOCAL,
+        )
 
         self.node.create_subscription(
-            DockSummary,
-            'dock_summary',
-            self.dock_summary_cb,
-            qos_profile=transient_qos)
-        
+            DockSummary, "dock_summary", self.dock_summary_cb, qos_profile=transient_qos
+        )
+
         self.node.create_subscription(
             ModeRequest,
-            'action_execution_notice',
+            "action_execution_notice",
             self.mode_request_cb,
-            qos_profile=qos_profile_system_default)
+            qos_profile=qos_profile_system_default,
+        )
 
         self.update_thread = threading.Thread(target=self.update)
         self.update_thread.start()
@@ -193,19 +197,16 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
     def next_cmd_id(self):
         self.current_cmd_id = self.current_cmd_id + 1
         if self.debug:
-            print(f'Issuing cmd_id for {self.name}: {self.current_cmd_id}')
+            print(f"Issuing cmd_id for {self.name}: {self.current_cmd_id}")
         return self.current_cmd_id
 
     def sleep_for(self, seconds):
-        goal_time =\
-          self.node.get_clock().now() + Duration(nanoseconds=1e9*seconds)
-        while (self.node.get_clock().now() <= goal_time):
+        goal_time = self.node.get_clock().now() + Duration(nanoseconds=1e9 * seconds)
+        while self.node.get_clock().now() <= goal_time:
             time.sleep(0.001)
 
     def wait_on(self, event: threading.Event, seconds):
-        goal_time = (
-            self.node.get_clock().now() + Duration(nanoseconds=1e9*seconds)
-        )
+        goal_time = self.node.get_clock().now() + Duration(nanoseconds=1e9 * seconds)
         while self.node.get_clock().now() <= goal_time:
             if event.wait(0.001):
                 return True
@@ -221,8 +222,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
     def interrupt(self):
         if self.debug:
             print(
-                f'Interrupting {self.name} '
-                f'(latest cmd_id is {self.current_cmd_id})'
+                f"Interrupting {self.name} " f"(latest cmd_id is {self.current_cmd_id})"
             )
         self._quit_dock_event.set()
         self._quit_path_event.set()
@@ -246,15 +246,13 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
 
         if self.remaining_waypoints:
             if self.api.pause(self.name, self.next_cmd_id()):
-                self.node.get_logger().info(
-                    '[PAUSE] {self.name}: Current path saved!'
-                )
+                self.node.get_logger().info("[PAUSE] {self.name}: Current path saved!")
                 self.paused_path = self.remaining_waypoints
                 self.remaining_waypoints = []
         elif self.dock_name:
             if self.api.pause(self.name, self.next_cmd_id()):
                 self.node.get_logger().info(
-                    '[PAUSE] {self.name}: Current dock_name saved!'
+                    "[PAUSE] {self.name}: Current dock_name saved!"
                 )
                 self.paused_dock = self.dock_name
                 self.dock_name = None
@@ -265,20 +263,19 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             if self.api.resume(self.name, self.next_cmd_id()):
                 self.paused = False
 
-                if (self.remaining_waypoints or
-                    self.dock_name):
+                if self.remaining_waypoints or self.dock_name:
                     return
                 elif self.paused_path:
                     self.remaining_waypoints = self.paused_path
                     self.paused_path = []
                     self.node.get_logger().info(
-                        '[RESUME] {self.name}: Saved path restored!'
+                        "[RESUME] {self.name}: Saved path restored!"
                     )
                 elif self.paused_dock:
                     self.dock_name = self.paused_dock
                     self.paused_dock = None
                     self.node.get_logger().info(
-                        '[RESUME] {self.name}: Saved dock_name restored!'
+                        "[RESUME] {self.name}: Saved dock_name restored!"
                     )
         else:
             return
@@ -286,7 +283,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
     def stop(self):
         if self.debug:
             plan_id = self.update_handle.unstable_current_plan_id()
-            print(f'stop for {self.name} with PlanId {plan_id}')
+            print(f"stop for {self.name} with PlanId {plan_id}")
 
         self.interrupt()
         # Stop the robot. Tracking variables should remain unchanged.
@@ -295,9 +292,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
 
             def _stop():
                 while not self._quit_stopping_event.is_set():
-                    self.node.get_logger().info(
-                        f"Requesting {self.name} to stop..."
-                    )
+                    self.node.get_logger().info(f"Requesting {self.name} to stop...")
                     if self.api.stop(self.name, self.next_cmd_id()):
                         break
                     self._quit_stopping_event.wait(0.1)
@@ -315,17 +310,15 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             self.last_replan_time = now
             self.update_handle.replan()
             self.node.get_logger().info(
-                f'Requesting replan for {self.name} because of an obstacle'
+                f"Requesting replan for {self.name} because of an obstacle"
             )
 
     def follow_new_path(
-            self,
-            waypoints,
-            next_arrival_estimator,
-            path_finished_callback):
+        self, waypoints, next_arrival_estimator, path_finished_callback
+    ):
         if self.debug:
             plan_id = self.update_handle.unstable_current_plan_id()
-            print(f'follow_new_path for {self.name} with PlanId {plan_id}')
+            print(f"follow_new_path for {self.name} with PlanId {plan_id}")
         self.interrupt()
         with self._lock:
             self._follow_path_thread = None
@@ -342,9 +335,11 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                 target_pose = None
                 target_path = None
                 path_index = 0
-                while (self.remaining_waypoints or 
-                       self.state == RobotState.MOVING or
-                       self.paused):
+                while (
+                    self.remaining_waypoints
+                    or self.state == RobotState.MOVING
+                    or self.paused
+                ):
                     # Save the current_cmd_id before checking if we need to
                     # abort. We should always be told to abort before the
                     # current_cmd_id gets modified, so whatever the value of
@@ -361,11 +356,13 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                     # State machine
                     if not self.paused:
                         self.get_mode_from_robot()
-                        if (self.state == RobotState.EMERGENCY
-                            or self.state == RobotState.REQUEST_ERROR):
-                            self.remaining_waypoints = []                        
+                        if (
+                            self.state == RobotState.EMERGENCY
+                            or self.state == RobotState.REQUEST_ERROR
+                        ):
+                            self.remaining_waypoints = []
 
-                        elif (self.state == RobotState.IDLE or target_path is None):
+                        elif self.state == RobotState.IDLE or target_path is None:
                             # Assign the next waypoint
                             self.target_waypoint = self.remaining_waypoints[0]
                             path_index = self.remaining_waypoints[0].index
@@ -378,49 +375,72 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                 [x, y] = target_path[i].position[:2]
                                 theta = target_path[i].position[2]
                                 # Gán hướng theta khi tới điểm docking:
-                                pose_config = self.dock_config.get(str(target_path[i].graph_index))
-                                if (i == (target_path_length - 1)
+                                pose_config = self.dock_config.get(
+                                    str(target_path[i].graph_index)
+                                )
+                                if (
+                                    i == (target_path_length - 1)
                                     and pose_config is not None
-                                    and target_path_length > 1):
+                                    and target_path_length > 1
+                                ):
                                     theta = pose_config
-                                    self.node.get_logger().info(f"Theta_endpoint[{self.name}]: docking_config: {pose_config},"
-                                                                f" wp_index start: {self.on_waypoint}")
+                                    self.node.get_logger().info(
+                                        f"Theta_endpoint[{self.name}]: docking_config: {pose_config},"
+                                        f" wp_index start: {self.on_waypoint}"
+                                    )
                                 elif target_path_length == 1:
-                                    if (self.on_waypoint is not None):
-                                        current_pos = self.graph.get_waypoint(self.on_waypoint).location
-                                        if (current_pos[0] == x
-                                            and current_pos[1] == y):
+                                    if self.on_waypoint is not None:
+                                        current_pos = self.graph.get_waypoint(
+                                            self.on_waypoint
+                                        ).location
+                                        if current_pos[0] == x and current_pos[1] == y:
                                             [x, y] = self.position[:2]
                                             theta = self.position[2]
-                                            self.node.get_logger().info(f"Theta_endpoint[{self.name}]: rotation in place is cancel")
+                                            self.node.get_logger().info(
+                                                f"Theta_endpoint[{self.name}]: rotation in place is cancel"
+                                            )
                                             path_finished_callback()
                                             return
                                         else:
-                                            theta = self.calc_yaw([x, y], self.position[:2])
-                                            self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from now position to target position, "
-                                                                        f"wp_index start: {self.on_waypoint}")
+                                            theta = self.calc_yaw(
+                                                [x, y], self.position[:2]
+                                            )
+                                            self.node.get_logger().info(
+                                                f"Theta_endpoint[{self.name}]: from now position to target position, "
+                                                f"wp_index start: {self.on_waypoint}"
+                                            )
                                     else:
                                         # theta = self.calc_yaw([x, y], self.position[:2])
                                         # self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from now position to target position, "
                                         #                             f"wp_index start: {self.on_waypoint}")
                                         [x, y] = self.position[:2]
                                         theta = self.position[2]
-                                        self.node.get_logger().info(f"Theta_endpoint[{self.name}]: will no rotate or move because don't know state of robot")
+                                        self.node.get_logger().info(
+                                            f"Theta_endpoint[{self.name}]: will no rotate or move because don't know state of robot"
+                                        )
                                 elif i == (target_path_length - 1):
                                     j = i - 1
                                     while True:
-                                        if (j < 0):
-                                            newTheta = self.calc_yaw([x, y], self.position[:2])
-                                            self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from {theta} to {newTheta}")
+                                        if j < 0:
+                                            newTheta = self.calc_yaw(
+                                                [x, y], self.position[:2]
+                                            )
+                                            self.node.get_logger().info(
+                                                f"Theta_endpoint[{self.name}]: from {theta} to {newTheta}"
+                                            )
                                             theta = newTheta
                                             break
-                                        elif (x == target_path[j].position[0]
-                                            and y == target_path[j].position[1]):
+                                        elif (
+                                            x == target_path[j].position[0]
+                                            and y == target_path[j].position[1]
+                                        ):
                                             j -= 1
                                         else:
                                             startPos = target_path[j].position[:2]
-                                            newTheta = self.calc_yaw([x,y], startPos)
-                                            self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from {theta} to {newTheta}")
+                                            newTheta = self.calc_yaw([x, y], startPos)
+                                            self.node.get_logger().info(
+                                                f"Theta_endpoint[{self.name}]: from {theta} to {newTheta}"
+                                            )
                                             theta = newTheta
                                             break
                                 speed_limit = self.get_speed_limit(target_path[i])
@@ -428,17 +448,19 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                 # self.node.get_logger().info(
                                 #     f"POS_path: x: {x}, y: {y}, yaw: {theta},  "
                                 #     f"POS_index: {pose.graph_index} /////////////"
-                                # )                            
-                            
+                                # )
+
                             #############################################################################
                             # Go out dock if docked to machine before
                             if self.undock_name is not None:
                                 error = False
                                 dock_mode = "goout"
                                 machine_name = self.undock_name.split("--")[0]
-                                process = {'mode': dock_mode,
-                                           'dock_name': self.undock_name,
-                                           'location': [0.0, 0.0, 0.0]}
+                                process = {
+                                    "mode": dock_mode,
+                                    "dock_name": self.undock_name,
+                                    "location": [0.0, 0.0, 0.0],
+                                }
 
                                 # Request the robot to start the relevant process
                                 cmd_id = self.next_cmd_id()
@@ -452,33 +474,37 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     )
                                     if self._quit_path_event.wait(1.0):
                                         break
-                                
+
                                 duration_gooutdock = 30.0
                                 while not self.api.process_completed(self.name, cmd_id):
                                     cmd_id = self.current_cmd_id
 
                                     self.get_mode_from_robot()
-                                    if (self.state == RobotState.REQUEST_ERROR
-                                        or self.state == RobotState.EMERGENCY):
+                                    if (
+                                        self.state == RobotState.REQUEST_ERROR
+                                        or self.state == RobotState.EMERGENCY
+                                    ):
                                         error = True
                                         break
 
                                     next_arrival_estimator(
                                         path_index,
-                                        timedelta(seconds=duration_gooutdock)
+                                        timedelta(seconds=duration_gooutdock),
                                     )
 
                                     duration_gooutdock -= 0.1
                                     # Check if we need to abort
                                     if self._quit_path_event.wait(0.1):
-                                        self.node.get_logger().info("Aborting go out dock from machine")
+                                        self.node.get_logger().info(
+                                            "Aborting go out dock from machine"
+                                        )
                                         return
 
                                 if not error:
                                     process = {
-                                        'machine_name': machine_name,
-                                        'mode': self.undock_name.split("--")[1],
-                                        'action': 'clamp'
+                                        "machine_name": machine_name,
+                                        "mode": self.undock_name.split("--")[1],
+                                        "action": "clamp",
                                     }
                                     self.undock_name = None
                                     while not self.api.machine_trigger(
@@ -493,7 +519,9 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             #############################################################################
                             #############################################################################
 
-                            self.node.get_logger().info(f"Wayppoins_path[{self.name}]: {waypoints_path}")
+                            self.node.get_logger().info(
+                                f"Wayppoins_path[{self.name}]: {waypoints_path}"
+                            )
 
                             response = self.api.follow_path(
                                 self.name,
@@ -511,11 +539,12 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     f"Robot {self.name} failed to request "
                                     f"follow path to "
                                     f"[{x:.0f}, {y:.0f}, {theta:.0f}]."
-                                    f"Retrying...")
+                                    f"Retrying..."
+                                )
                                 self._quit_path_event.wait(0.1)
 
                         elif self.state == RobotState.MOVING:
-                    
+
                             if self.api.requires_replan(self.name):
                                 self.replan()
 
@@ -524,25 +553,34 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
 
                             # Check if we have reached the target
                             with self._lock:
-                                remaining_path_length = self.api.remaining_path_length(self.name)
+                                remaining_path_length = self.api.remaining_path_length(
+                                    self.name
+                                )
                                 if remaining_path_length:
-                                    n = len(self.remaining_waypoints) - remaining_path_length
-                                    if (n > 0):
-                                        self.remaining_waypoints=self.remaining_waypoints[n:]
-                                        self.target_waypoint = self.remaining_waypoints[0]
+                                    n = (
+                                        len(self.remaining_waypoints)
+                                        - remaining_path_length
+                                    )
+                                    if n > 0:
+                                        self.remaining_waypoints = (
+                                            self.remaining_waypoints[n:]
+                                        )
+                                        self.target_waypoint = self.remaining_waypoints[
+                                            0
+                                        ]
                                         path_index = self.remaining_waypoints[0].index
                                         target_pose = self.target_waypoint.position
                                         # self.node.get_logger().info(f"Remaining waypoint: {len(self.remaining_waypoints)} waypoints")
-                                        # self.node.get_logger().info(f"Target waypoint: {target_pose}")       
+                                        # self.node.get_logger().info(f"Target waypoint: {target_pose}")
                                 elif remaining_path_length == False:
                                     self.node.get_logger().error(
-                                    f"Robot {self.name} failed to request for "
-                                    f"information remaining path. "
-                                    f"Retrying...")
+                                        f"Robot {self.name} failed to request for "
+                                        f"information remaining path. "
+                                        f"Retrying..."
+                                    )
                                     continue
 
-                                if self.api.process_completed(
-                                        self.name, cmd_id):
+                                if self.api.process_completed(self.name, cmd_id):
                                     self.node.get_logger().info(
                                         f"Robot [{self.name}] has reached the "
                                         f"destination for cmd_id {cmd_id}"
@@ -557,8 +595,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     graph_index = self.target_waypoint.graph_index
                                     if graph_index is not None:
                                         self.on_waypoint = graph_index
-                                        self.last_known_waypoint_index = \
-                                            graph_index
+                                        self.last_known_waypoint_index = graph_index
                                     else:
                                         self.on_waypoint = None  # still on a lane
                                 else:
@@ -570,20 +607,27 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     else:
                                         # The robot may either be on the previous
                                         # waypoint or the target one
-                                        if self.target_waypoint.graph_index is \
-                                            not None \
-                                            and self.dist(
-                                                self.position, target_pose) < 0.5:
-                                            self.on_waypoint =\
+                                        if (
+                                            self.target_waypoint.graph_index is not None
+                                            and self.dist(self.position, target_pose)
+                                            < 0.5
+                                        ):
+                                            self.on_waypoint = (
                                                 self.target_waypoint.graph_index
-                                        elif self.last_known_waypoint_index is \
-                                                not None and self.dist(
+                                            )
+                                        elif (
+                                            self.last_known_waypoint_index is not None
+                                            and self.dist(
                                                 self.position,
                                                 self.graph.get_waypoint(
                                                     self.last_known_waypoint_index
-                                                ).location) < 0.5:
-                                            self.on_waypoint =\
+                                                ).location,
+                                            )
+                                            < 0.5
+                                        ):
+                                            self.on_waypoint = (
                                                 self.last_known_waypoint_index
+                                            )
                                         else:
                                             # update_off_grid()
                                             self.on_lane = None
@@ -594,13 +638,12 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
 
                                 if path_index is not None and duration is not None:
                                     next_arrival_estimator(
-                                        path_index,
-                                        timedelta(seconds=duration)
+                                        path_index, timedelta(seconds=duration)
                                     )
                     else:
                         self._quit_path_event.wait(0.1)
-                
-                if (not self.remaining_waypoints):
+
+                if not self.remaining_waypoints:
                     if self.state == RobotState.IDLE:
                         self.node.get_logger().info(
                             f"Robot {self.name} has successfully navigated along "
@@ -623,27 +666,23 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         self.update_handle.kill_task(
                             self.update_handle.current_task_id(),
                             ["kill_task"],
-                            self.on_kill
+                            self.on_kill,
                         )
                         with self._lock:
                             self.on_waypoint = None
                             self.on_lane = None
 
-            self._follow_path_thread = threading.Thread(
-                target=_follow_path)
+            self._follow_path_thread = threading.Thread(target=_follow_path)
             self._follow_path_thread.start()
 
-    def dock(
-            self,
-            dock_name,
-            docking_finished_callback):
-        ''' Docking is very specific to each application. Hence, the user will
-            need to customize this function accordingly. In this example, we
-            assume the dock_name is the same as the name of the waypoints that
-            the robot is trying to dock into. We then call api.start_process()
-            to initiate the robot specific process. This could be to start a
-            cleaning process or load/unload a cart for delivery.
-        '''
+    def dock(self, dock_name, docking_finished_callback):
+        """Docking is very specific to each application. Hence, the user will
+        need to customize this function accordingly. In this example, we
+        assume the dock_name is the same as the name of the waypoints that
+        the robot is trying to dock into. We then call api.start_process()
+        to initiate the robot specific process. This could be to start a
+        cleaning process or load/unload a cart for delivery.
+        """
         self.interrupt()
         with self._lock:
             self._quit_dock_event.clear()
@@ -656,14 +695,16 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             #     f"Requested dock: {self.dock_name}, "
             #     f"Information dock: {dock_waypoint}"
             # )
-            assert(dock_waypoint)
+            assert dock_waypoint
             self.dock_waypoint_index = dock_waypoint.index
 
             def _dock():
                 # Check before run docking if robot is error with last request of EMERGENCY
                 self.get_mode_from_robot()
-                if (self.state == RobotState.REQUEST_ERROR 
-                    or self.state == RobotState.EMERGENCY):
+                if (
+                    self.state == RobotState.REQUEST_ERROR
+                    or self.state == RobotState.EMERGENCY
+                ):
                     with self._lock:
                         self.dock_waypoint_index = None
                         self.node.get_logger().error(
@@ -673,7 +714,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         self.update_handle.kill_task(
                             self.update_handle.current_task_id(),
                             ["kill_task"],
-                            self.on_kill
+                            self.on_kill,
                         )
                 else:
                     error = False
@@ -685,16 +726,18 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         )
                         self.dock_name = None
                         return
-                    
+
                     dock_position = dock_waypoint.location
                     if self.on_waypoint is not None:
                         current_pos = self.graph.get_waypoint(self.on_waypoint).location
                         dock_yaw = self.calc_yaw(current_pos, dock_position)
 
-                        if (dock_mode == "pickup" or
-                            dock_mode == "dropoff" or
-                            dock_mode == "mcpickup" or
-                            dock_mode == "mcdropoff"):
+                        if (
+                            dock_mode == "pickup"
+                            or dock_mode == "dropoff"
+                            or dock_mode == "mcpickup"
+                            or dock_mode == "mcdropoff"
+                        ):
                             self.dock_waypoint_index = self.on_waypoint
 
                     else:
@@ -710,19 +753,18 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         )
 
                     # Wait before start docking if dock_station is machine:
-                    if (dock_mode == "mcpickup" or
-                        dock_mode == "mcdropoff"):
+                    if dock_mode == "mcpickup" or dock_mode == "mcdropoff":
                         cmd_id = self.next_cmd_id()
                         machine_name = self.dock_name.split("--")[0]
                         mc_process = {
-                            'machine_name': machine_name,
-                            'mode': self.dock_name.split("--")[1],
+                            "machine_name": machine_name,
+                            "mode": self.dock_name.split("--")[1],
                         }
                         if dock_mode == "mcpickup":
-                            mc_process['action'] = 'clamp'
+                            mc_process["action"] = "clamp"
                         elif dock_mode == "mcdropoff":
-                            mc_process['action'] = 'release'                            
-                        
+                            mc_process["action"] = "release"
+
                         while not self.api.machine_trigger(
                             self.name, cmd_id, mc_process
                         ):
@@ -736,16 +778,19 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             f"Machine `{machine_name}` is processing..."
                         )
 
-                        while not self.api.machine_process_completed(machine_name, cmd_id):
+                        while not self.api.machine_process_completed(
+                            machine_name, cmd_id
+                        ):
                             if self._quit_dock_event.wait(0.1):
                                 self.node.get_logger().info("Aborting machine request!")
                                 return
-                            
 
                     # Start docking:
-                    process = {'mode': dock_mode,
-                            'dock_name': self.dock_name,
-                            'location': [dock_position[0], dock_position[1], dock_yaw]}
+                    process = {
+                        "mode": dock_mode,
+                        "dock_name": self.dock_name,
+                        "location": [dock_position[0], dock_position[1], dock_yaw],
+                    }
 
                     # Request the robot to start the relevant process
                     cmd_id = self.next_cmd_id()
@@ -759,7 +804,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         )
                         if self._quit_dock_event.wait(1.0):
                             break
-                    
+
                     self.state = RobotState.DOCKING
 
                     with self._lock:
@@ -771,7 +816,10 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                     )
 
                     # Gán position để cập nhập lịch trình khi docking
-                    positions = [self.position, [dock_position[0], dock_position[1], dock_yaw]]
+                    positions = [
+                        self.position,
+                        [dock_position[0], dock_position[1], dock_yaw],
+                    ]
 
                     while not self.api.process_completed(self.name, cmd_id):
                         cmd_id = self.current_cmd_id
@@ -779,14 +827,11 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             break
 
                         traj = schedule.make_trajectory(
-                            self.vehicle_traits,
-                            self.adapter.now(),
-                            positions
+                            self.vehicle_traits, self.adapter.now(), positions
                         )
                         itinerary = schedule.Route(self.map_name, traj)
                         if self.update_handle is not None:
-                            participant = \
-                                self.update_handle.get_unstable_participant()
+                            participant = self.update_handle.get_unstable_participant()
                             participant.set_itinerary([itinerary])
 
                         # self.node.get_logger().info(
@@ -794,8 +839,10 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         # )
 
                         self.get_mode_from_robot()
-                        if (self.state == RobotState.REQUEST_ERROR
-                            or self.state == RobotState.EMERGENCY):
+                        if (
+                            self.state == RobotState.REQUEST_ERROR
+                            or self.state == RobotState.EMERGENCY
+                        ):
                             error = True
                             break
 
@@ -815,18 +862,18 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             self.dock_waypoint_index = None
 
                             # Gọi client trigger trạm sạc:
-                            if (dock_mode == "charge" and self.server_charger):
+                            if dock_mode == "charge" and self.server_charger:
                                 chargerName = self.dock_name.split("--")[0]
                                 processCharger = {
-                                    'charger_name': chargerName,
-                                    'mode': dock_mode,
+                                    "charger_name": chargerName,
+                                    "mode": dock_mode,
                                 }
-                
+
                                 while not self.api.charger_trigger(
                                     self.name, cmd_id, processCharger
                                 ):
                                     self.node.get_logger().info(
-                                        f"Requesting charger: {chargerName} trigger CHARGE " 
+                                        f"Requesting charger: {chargerName} trigger CHARGE "
                                         f"for {self.name}"
                                     )
                                     if self._quit_dock_event.wait(1.0):
@@ -835,12 +882,11 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                 self.node.get_logger().info(
                                     f"Requested charger: {chargerName} succeed"
                                 )
-                            
+
                             # Pickup with machine:
-                            elif (dock_mode == "mcpickup" or
-                                  dock_mode == "mcdropoff"):
+                            elif dock_mode == "mcpickup" or dock_mode == "mcdropoff":
                                 self.undock_name = self.dock_name
-                            
+
                             else:
                                 self.undock_name = None
 
@@ -863,10 +909,10 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             self.update_handle.kill_task(
                                 self.update_handle.current_task_id(),
                                 ["kill_task"],
-                                self.on_kill
+                                self.on_kill,
                             )
 
-                # Reset dock_name 
+                # Reset dock_name
                 self.dock_name = None
 
             self._dock_thread = threading.Thread(target=_dock)
@@ -880,13 +926,12 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             elif mode == RobotState.REQUEST_ERROR:
                 self.state = RobotState.REQUEST_ERROR
         else:
-            self.node.get_logger().error(
-                "Unable to retrieve robot_mode from robot.")
+            self.node.get_logger().error("Unable to retrieve robot_mode from robot.")
         return
 
     def get_position(self):
-        ''' This helper function returns the live position of the robot in the
-        RMF coordinate frame'''
+        """This helper function returns the live position of the robot in the
+        RMF coordinate frame"""
         position = self.api.position(self.name)
         if position is not None:
             x, y = [position[0], position[1]]
@@ -899,8 +944,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                 theta = (2 * np.pi) + theta
             return [x, y, theta]
         else:
-            self.node.get_logger().error(
-                "Unable to retrieve position from robot.")
+            self.node.get_logger().error("Unable to retrieve position from robot.")
             return self.position
 
     def get_battery_soc(self):
@@ -908,8 +952,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
         if battery_soc is not None:
             return battery_soc
         else:
-            self.node.get_logger().error(
-                "Unable to retrieve battery data from robot.")
+            self.node.get_logger().error("Unable to retrieve battery data from robot.")
             return self.battery_soc
 
     def update(self):
@@ -918,17 +961,18 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             self.battery_soc = self.get_battery_soc()
             if self.update_handle is not None:
                 self.update_state()
-            sleep_duration = float(1.0/self.update_frequency)
+            sleep_duration = float(1.0 / self.update_frequency)
             self.sleep_for(sleep_duration)
 
     def update_state(self):
         self.update_handle.update_battery_soc(self.battery_soc)
         # Update position
         with self._lock:
-            if (self.on_waypoint is not None):  # if robot is on a waypoint
+            if self.on_waypoint is not None:  # if robot is on a waypoint
                 self.update_handle.update_current_waypoint(
-                    self.on_waypoint, self.position[2])
-            elif (self.on_lane is not None):  # if robot is on a lane
+                    self.on_waypoint, self.position[2]
+                )
+            elif self.on_lane is not None:  # if robot is on a lane
                 # We only keep track of the forward lane of the robot.
                 # However, when calling this update it is recommended to also
                 # pass in the reverse lane so that the planner does not assume
@@ -941,35 +985,36 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                 lane_indices = [self.on_lane]
                 if reverse_lane is not None:  # Unidirectional graph
                     lane_indices.append(reverse_lane.index)
-                self.update_handle.update_current_lanes(
-                    self.position, lane_indices)
-            elif (self.dock_waypoint_index is not None):
+                self.update_handle.update_current_lanes(self.position, lane_indices)
+            elif self.dock_waypoint_index is not None:
                 self.update_handle.update_off_grid_position(
-                    self.position, self.dock_waypoint_index)
+                    self.position, self.dock_waypoint_index
+                )
             # if robot is performing an action
-            elif (self.action_execution is not None):
+            elif self.action_execution is not None:
                 if not self.started_action:
                     self.started_action = True
                     self.api.toggle_action(self.name, self.started_action)
                 self.update_handle.update_off_grid_position(
-                    self.position, self.action_waypoint_index)
+                    self.position, self.action_waypoint_index
+                )
             # if robot is merging into a waypoint
-            elif (self.target_waypoint is not None and
-                    self.target_waypoint.graph_index is not None):
+            elif (
+                self.target_waypoint is not None
+                and self.target_waypoint.graph_index is not None
+            ):
                 self.update_handle.update_off_grid_position(
-                    self.position, self.target_waypoint.graph_index)
+                    self.position, self.target_waypoint.graph_index
+                )
             else:  # if robot is lost
                 self.update_handle.update_lost_position(
                     self.map_name,
                     self.position,
-                    max_merge_lane_distance=self.lane_merge_distance
+                    max_merge_lane_distance=self.lane_merge_distance,
                 )
 
     def get_current_lane(self):
-        def projection(current_position,
-                       target_position,
-                       lane_entry,
-                       lane_exit):
+        def projection(current_position, target_position, lane_entry, lane_exit):
             px, py, _ = current_position
             p = np.array([px, py])
             t = np.array(target_position)
@@ -996,11 +1041,11 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
         return None
 
     def dist(self, A, B):
-        ''' Euclidian distance between A(x,y) and B(x,y)'''
-        assert(len(A) > 1)
-        assert(len(B) > 1)
-        return math.sqrt((A[0] - B[0])**2 + (A[1] - B[1])**2)
-    
+        """Euclidian distance between A(x,y) and B(x,y)"""
+        assert len(A) > 1
+        assert len(B) > 1
+        return math.sqrt((A[0] - B[0]) ** 2 + (A[1] - B[1]) ** 2)
+
     def calc_yaw(self, start_point: list, end_point: list):
         delta_x = start_point[0] - end_point[0]
         delta_y = start_point[1] - end_point[1]
@@ -1021,9 +1066,9 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
         return approach_lane_limit if approach_lane_limit != np.inf else 0.0
 
     def filter_waypoints(self, wps: list):
-        ''' Return filtered PlanWaypoints'''
+        """Return filtered PlanWaypoints"""
 
-        assert(len(wps) > 0)
+        assert len(wps) > 0
         p = np.array([self.position[0], self.position[1]])
 
         waypoints = []
@@ -1033,9 +1078,9 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
         # If the robot is already in the middle of two waypoints, then we can
         # truncate all the waypoints that come before it.
         begin_at_index = 0
-        for i in reversed(range(len(waypoints)-1)):
+        for i in reversed(range(len(waypoints) - 1)):
             i0 = i
-            i1 = i+1
+            i1 = i + 1
             p0 = waypoints[i0].position
             p0 = np.array([p0[0], p0[1]])
             p1 = waypoints[i1].position
@@ -1044,7 +1089,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             lane_length = np.linalg.norm(dp_lane)
             if lane_length < 1e-3:
                 continue
-            n_lane = dp_lane/lane_length
+            n_lane = dp_lane / lane_length
             p_l = p - p0
             p_l_proj = np.dot(p_l, n_lane)
             if lane_length < p_l_proj:
@@ -1066,7 +1111,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                 # between the lane endpoints
                 continue
 
-            lane_dist = np.linalg.norm(p_l - p_l_proj*n_lane)
+            lane_dist = np.linalg.norm(p_l - p_l_proj * n_lane)
             if lane_dist <= self.lane_merge_distance:
                 begin_at_index = i1
                 break
@@ -1084,15 +1129,18 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             self.action_execution = None
             self.started_action = False
             self.api.toggle_action(self.name, self.started_action)
-            self.node.get_logger().info(f"Robot {self.name} has completed the"
-                                        f" action it was performing")
+            self.node.get_logger().info(
+                f"Robot {self.name} has completed the" f" action it was performing"
+            )
 
     def newly_closed_lanes(self, closed_lanes):
         need_to_replan = False
         current_lane = self.get_current_lane()
 
-        if self.target_waypoint is not None and \
-                self.target_waypoint.approach_lanes is not None:
+        if (
+            self.target_waypoint is not None
+            and self.target_waypoint.approach_lanes is not None
+        ):
             for lane_idx in self.target_waypoint.approach_lanes:
                 if lane_idx in closed_lanes:
                     need_to_replan = True
@@ -1102,9 +1150,9 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         lane = self.graph.get_lane(current_lane)
 
                         return_waypoint = lane.entry.waypoint_index
-                        reverse_lane = \
-                            self.graph.lane_from(lane.entry.waypoint_index,
-                                                 lane.exit.waypoint_index)
+                        reverse_lane = self.graph.lane_from(
+                            lane.entry.waypoint_index, lane.exit.waypoint_index
+                        )
 
                         with self._lock:
                             if reverse_lane:
@@ -1132,13 +1180,12 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
 
     def dock_summary_cb(self, msg):
         for fleet in msg.docks:
-            if(fleet.fleet_name == self.fleet_name):
+            if fleet.fleet_name == self.fleet_name:
                 for dock in fleet.params:
                     self.docks[dock.start] = dock.path
 
     def mode_request_cb(self, msg: ModeRequest):
-        if (msg.fleet_name != self.fleet_name or
-            msg.robot_name != self.name):
+        if msg.fleet_name != self.fleet_name or msg.robot_name != self.name:
             return
         if msg.mode.mode == RobotState.IDLE:
             self.complete_robot_action()
@@ -1153,10 +1200,9 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             self.node.get_logger().error(f"on_kill with error")
 
     def search_mode_docking(self, dock_name: str):
-        match = re.search(r'--(.+)',dock_name)
+        match = re.search(r"--(.+)", dock_name)
         if match:
             result = match.group(1)
             return result
         else:
             return None
-        

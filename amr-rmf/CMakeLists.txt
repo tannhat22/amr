@@ -53,23 +53,23 @@ foreach(path ${traffic_editor_paths})
   # Generate Gz world and download Models
   ##############################################################################
 
-  message(NOTICE "BUILDING WORLDFILE WITH COMMAND: ros2 run rmf_building_map_tools building_map_generator gazebo ${map_path} ${output_world_path} ${output_model_dir}")
-  message(NOTICE "....Downloading Models and Building to ${output_model_dir}")
-  add_custom_command(
-    OUTPUT ${output_world_path}
-    COMMAND ros2 run rmf_building_map_tools building_map_generator gazebo ${map_path} ${output_world_path} ${output_model_dir}
-    COMMAND ros2 run rmf_building_map_tools building_map_model_downloader ${map_path} -f -e ${output_model_dir}
-    DEPENDS ${map_path}
-  )
+  # message(NOTICE "BUILDING WORLDFILE WITH COMMAND: ros2 run rmf_building_map_tools building_map_generator gazebo ${map_path} ${output_world_path} ${output_model_dir}")
+  # message(NOTICE "....Downloading Models and Building to ${output_model_dir}")
+  # add_custom_command(
+  #   OUTPUT ${output_world_path}
+  #   COMMAND ros2 run rmf_building_map_tools building_map_generator gazebo ${map_path} ${output_world_path} ${output_model_dir}
+  #   COMMAND ros2 run rmf_building_map_tools building_map_model_downloader ${map_path} -f -e ${output_model_dir}
+  #   DEPENDS ${map_path}
+  # )
 
-  add_custom_target(generate_${output_world_name}_world ALL
-    DEPENDS ${output_world_path}
-  )
+  # add_custom_target(generate_${output_world_name}_world ALL
+  #   DEPENDS ${output_world_path}
+  # )
 
-  message(NOTICE "....Downloading and Building Models to ${output_model_dir} >>>>> DONE")
+  # message(NOTICE "....Downloading and Building Models to ${output_model_dir} >>>>> DONE")
 
 
-  message(NOTICE "....BUILDING WORLDFILE...DONE")
+  # message(NOTICE "....BUILDING WORLDFILE...DONE")
 
   ##############################################################################
   # Generate the nav graphs
