@@ -2,7 +2,7 @@
 # RMF Fleet parameters
 
 rmf_fleet:
-  name: "amr_vdm"
+  name: "amr_tayrua"
   fleet_manager:
     ip: "127.0.0.1"
     port: 22011
@@ -37,7 +37,7 @@ rmf_fleet:
     loop: True
     delivery: True
     clean: False
-    finishing_request: "park" # [park, charge, nothing]
+    finishing_request: "nothing" # [park, charge, nothing]
     # action_categories: ["custom_mission_1"]
   
   server_charger_running: True  # Server charge is running or not
@@ -54,11 +54,11 @@ robots:
     rmf_config:
       robot_state_update_frequency: 5.0
       start:
-        map_name: "L1"
+        map_name: "L2"
         waypoint: "amr-start"
         orientation: 0.0 # radians
       charger:
-        waypoint: "charger001--charger"
+        waypoint: "charger001--charge"
   
   # Configuration for robot2
   amr_002:
@@ -67,7 +67,7 @@ robots:
     rmf_config:
       robot_state_update_frequency: 5.0
       start:
-        map_name: "L1"
+        map_name: "L2"
         # waypoint: "amr-start"
         orientation: 0.0 # radians
       charger:
@@ -77,105 +77,20 @@ robots:
 # Docks config:
 docks:
   # Here the user is expected to append the configuration for each dock in the fleet
-
-  # /******************** TP2 *********************/
-  # Configuration for clr55--dropoff:
-  # clr55--dropoff:
-  #   front_dock: "clr55DOFD"
-  #   orientation: 0.0 #-1.57199
-  #   rotate_to_dock: 90
-  #   custom_dock: 
-  #     rotate_angle: 45
-  #     rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  # # Configuration for clr56--dropoff:
-  # clr56--dropoff:
-  #   front_dock: "clr56DOFD"
-  #   orientation: 0.0 #-1.57199
-  #   rotate_to_dock: 90
-  #   # custom_dock: 
-  #   #   rotate_angle: 45
-  #   #   rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  # # Configuration for clr55--pickup:
-  # clr55--pickup:
-  #   front_dock: "clr55PKFD"
-  #   orientation: 1.571
-  #   rotate_to_dock: -90
-  #   # custom_dock: 
-  #   #   rotate_angle: 30
-  #   #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
-  
-  # # Configuration for clr56--pickup:
-  # clr56--pickup:
-  #   front_dock: "clr56PKFD"
-  #   orientation: 1.571
-  #   rotate_to_dock: -90
-  #   # custom_dock: 
-  #   #   rotate_angle: 30
-  #   #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  # # Configuration for line55--dropoff:
-  # line55--dropoff:
-  #   front_dock: "line55DOFD"
-  #   orientation: -1.57199
-  #   rotate_to_dock: 90
-  #   # custom_dock: 
-  #   #   rotate_angle: 30
-  #   #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  # # Configuration for line55--pickup:
-  # line55--pickup:
-  #   front_dock: "line55PKFD"
-  #   orientation: 1.57199
-  #   rotate_to_dock: -90
-  #   # custom_dock: 
-  #   #   rotate_angle: 30
-  #   #   rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  # # Configuration for line56--dropoff:
-  # line56--dropoff:
-  #   front_dock: "line56DOFD"
-  #   orientation: -1.57199
-  #   rotate_to_dock: -90
-  #   custom_dock: 
-  #     rotate_angle: 45
-  #     rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  # # Configuration for line56--pickup:
-  # line56--pickup:
-  #   front_dock: "line56PKFD"
-  #   orientation: -1.57199
-  #   rotate_to_dock: -90
-  #   # custom_dock: 
-  #   #   rotate_angle: 30
-  #   #   rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  # # Configuration for amr_002--charger:
-  # charger001--charge:
-  #   front_dock: "chargerFD001"
-  #   orientation: 1.571
-  #   rotate_to_dock: 0
-
-
-  # /******************** LK1 *********************/
-  # Configuration for nqvlm104--pickup:
-  nqvlm104--mcpickup:
-    machine: True  # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 1.1
-    front_dock: "nqvlm104PKFD"
-    orientation: 1.57199
+  # /******************** TP3 *********************/
+  # Configuration for line90--pickup:
+  line90--pickup:
+    machine: False  # Vị trí docking này là máy hay trạm thô
+    distance_go_out: 0.9
     rotate_to_dock: 90
     custom_dock: 
       rotate_angle: 45
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
-  # Configuration for nqvlm104--pickup:
-  nqvlm104--mcdropoff:
-    machine: True # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 1.06
-    front_dock: "nqvlm104DOFD"
-    orientation: 1.57199
+  # Configuration for line90--dropoff:
+  line90--dropoff:
+    machine: False # Vị trí docking này là máy hay trạm thô
+    distance_go_out: 0.9
     rotate_to_dock: -90
     custom_dock: 
       rotate_angle: 90
@@ -184,64 +99,31 @@ docks:
   # Configuration for tramlay1--pickup:
   tramlay1--pickup:
     machine: False  # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 1.0
-    front_dock: "tramlay1PKFD"
-    orientation: -0.15
-    rotate_to_dock: 90
-
-  # Configuration for tramlay2--pickup:
-  tramlay2--pickup:
-    machine: False  # Vị trí docking này là máy hay trạm thô
     distance_go_out: 0.90
-    front_dock: "tramlay2PKFD"
-    orientation: 0.0
-    rotate_to_dock: 90
-
-  # Configuration for tramlay3--pickup:
-  tramlay3--pickup:
-    machine: False  # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 0.90
-    front_dock: "tramlay3PKFD"
-    orientation: 0.0
-    rotate_to_dock: 90
-
-  # Configuration for tramlay4--pickup:
-  tramlay4--pickup:
-    machine: False  # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 0.90
-    front_dock: "tramlay4PKFD"
-    orientation: 0.0
     rotate_to_dock: 90
 
   # Configuration for tramtha1--dropoff:
   tramtha1--dropoff:
     machine: False  # Vị trí docking này là máy hay trạm thô
     distance_go_out: 0.62
-    front_dock: "tramtha1DOFD"
-    orientation: -1.59
     rotate_to_dock: -180
     custom_dock:
-      rotate_angle: 30
-      rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  # Configuration for tramtha2--dropoff:
-  tramtha2--dropoff:
-    machine: False  # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 0.62
-    front_dock: "tramtha2DOFD"
-    orientation: -1.57199
-    rotate_to_dock: -180
-    custom_dock: 
-      rotate_angle: 30
-      rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+      rotate_angle: 0
+      rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Configuration for charger001--charge:
   charger001--charge:
     machine: False
-    front_dock: "chargerFD001"
-    orientation: 1.57199
     rotate_to_dock: -90
+    distance_go_out: -0.62
 
+vertexs:
+  tramlay1PKFD: [1.57199, False]
+  tramtha1DOFD: [1.57199, False]
+  line90PKFD: 0.0
+  line90DOFD: -1.59
+  chargerFD001: 1.57199
+  # lift-001: [1.57199, True]
 
 machines: ["nqvlm104"]
 stations: ["tramlay1", "tramlay2", "tramlay3", "tramlay4", "tramtha1", "tramtha2"]

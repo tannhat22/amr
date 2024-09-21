@@ -117,6 +117,24 @@ class State:
         return True
 
 
+class DockInfo:
+    def __init__(
+        self,
+        is_machine: bool = False,
+        distance_go_out: float = 0.0,
+        rotate_to_dock: int = 0,
+        custom_dock: bool = False,
+        rotate_angle: int = 0,
+        rotate_orientation: int = 0,
+    ) -> None:
+        self.is_machine = is_machine
+        self.distance_go_out = distance_go_out
+        self.rotate_to_dock = rotate_to_dock
+        self.custom_dock = custom_dock
+        self.rotate_angle = rotate_angle
+        self.rotate_orientation = rotate_orientation
+
+
 class MCState:
     def __init__(self, state: MachineState = None) -> None:
         self.state = state
@@ -124,6 +142,8 @@ class MCState:
 
 
 class FleetManager(Node):
+    _dock_context: dict[str, DockInfo]
+
     def __init__(self, config, nav_path):
         self.debug = True
         self.config = config
@@ -144,12 +164,39 @@ class FleetManager(Node):
         super().__init__(f"{self.fleet_name}_fleet_manager")
 
         self.robots = {}  # Map robot name to state
-        self.docks = {}  # Map dock name to waypoints
+        self._dock_context = {}
         self.machines = {}
 
         if "docks" in self.config:
-            self.docks = self.config["docks"]
-        assert len(self.docks) > 0
+            for dock in self.config["docks"]:
+                dockConf = self.config["docks"][dock]
+                machine = dockConf.get("machine", False)
+                distance_go_out = dockConf.get("distance_go_out", None)
+                rotate_to_dock = dockConf.get("rotate_to_dock", None)
+                custom_dock_conf = dockConf.get("custom_dock", None)
+                if custom_dock_conf is not None:
+                    custom_dock = True
+                    rotate_angle = custom_dock_conf.get("rotate_angle", 0)
+                    rotate_orientation = custom_dock_conf.get("rotate_orientation", 0)
+                else:
+                    custom_dock = False
+                    rotate_angle = 0
+                    rotate_orientation = 0
+
+                assert distance_go_out is not None
+                assert rotate_to_dock is not None
+
+                dInf = DockInfo(
+                    machine,
+                    distance_go_out,
+                    rotate_to_dock,
+                    custom_dock,
+                    rotate_angle,
+                    rotate_orientation,
+                )
+                self._dock_context.update({dock: dInf})
+
+        assert len(self._dock_context) > 0
 
         for robot_name, robot_config in self.config["robots"].items():
             self.robots[robot_name] = State()
@@ -472,13 +519,6 @@ class FleetManager(Node):
                 return response
 
             robot = self.robots[robot_name]
-            machine = False
-            distance_go_out = 0.0
-            rotate_to_dock = 0
-            custom_dock = False
-            rotate_angle = 0
-            rotate_orientation = 0
-
             dock_request = DockRequest()
             if task.task["mode"] == "charge":
                 dock_request.dock_mode.mode = DockMode.MODE_CHARGE
@@ -488,64 +528,40 @@ class FleetManager(Node):
                 dock_request.dock_mode.mode = DockMode.MODE_DROPOFF
             elif task.task["mode"] == "undock":
                 dock_request.dock_mode.mode = DockMode.MODE_UNDOCK
-            elif task.task["mode"] == "goout":
-                dock_request.dock_mode.mode = DockMode.MODE_GOOUT
             else:
                 response["msg"] = "Mode dock does not support. Please check mode!"
                 return response
 
-            if task.task["dock_name"] in self.docks:
-                dock_config = self.docks[task.task["dock_name"]]
-                for conf in dock_config:
-                    if conf == "machine":
-                        machine = dock_config["machine"]
-                    elif conf == "distance_go_out":
-                        distance_go_out = dock_config["distance_go_out"]
-                    elif conf == "custom_dock":
-                        custom_dock = True
-                        for custom in dock_config["custom_dock"]:
-                            if custom == "rotate_angle":
-                                rotate_angle = dock_config["custom_dock"][
-                                    "rotate_angle"
-                                ]
-                            elif custom == "rotate_orientation":
-                                rotate_orientation = dock_config["custom_dock"][
-                                    "rotate_orientation"
-                                ]
-                    elif conf == "rotate_to_dock":
-                        rotate_to_dock = dock_config[conf]
-                    else:
-                        continue
-
-            else:
+            dock_config = self._dock_context.get(task.task["dock_name"], None)
+            if dock_config is None:
                 response["msg"] = "Not found dock name in config!"
                 return response
+            else:
+                destination = Location()
+                destination.level_name = task.map_name
+                destination.x = task.task["location"][0]
+                destination.y = task.task["location"][1]
+                destination.yaw = task.task["location"][2]
+                dock_request.destination = destination
+                dock_request.fleet_name = self.fleet_name
+                dock_request.robot_name = robot_name
+                dock_request.machine = dock_config.is_machine
+                dock_request.distance_go_out = dock_config.distance_go_out
+                dock_request.custom_docking = dock_config.custom_dock
+                dock_request.rotate_to_dock = dock_config.rotate_to_dock
+                dock_request.rotate_angle = dock_config.rotate_angle
+                dock_request.rotate_orientation = dock_config.rotate_orientation
+                dock_request.task_id = str(cmd_id)
 
-            destination = Location()
-            destination.level_name = task.map_name
-            destination.x = task.task["location"][0]
-            destination.y = task.task["location"][1]
-            destination.yaw = task.task["location"][2]
-            dock_request.destination = destination
-            dock_request.fleet_name = self.fleet_name
-            dock_request.robot_name = robot_name
-            dock_request.machine = machine
-            dock_request.distance_go_out = distance_go_out
-            dock_request.custom_docking = custom_dock
-            dock_request.rotate_to_dock = rotate_to_dock
-            dock_request.rotate_angle = rotate_angle
-            dock_request.rotate_orientation = rotate_orientation
-            dock_request.task_id = str(cmd_id)
+                self.dock_pub.publish(dock_request)
 
-            self.dock_pub.publish(dock_request)
+                if self.debug:
+                    print(f"Sending process request for {robot_name}: {cmd_id}")
+                robot.last_request = dock_request
+                robot.destination = destination
 
-            if self.debug:
-                print(f"Sending process request for {robot_name}: {cmd_id}")
-            robot.last_request = dock_request
-            robot.destination = destination
-
-            response["success"] = True
-            return response
+                response["success"] = True
+                return response
 
         # ///////////////////////////////////////////////////////////////////////
         # ///////////////////////////////////////////////////////////////////////

@@ -1,0 +1,237 @@
+coordinate_system: reference_image
+crowd_sim:
+  agent_groups:
+    - {agents_name: [], agents_number: 0, group_id: 0, profile_selector: external_agent, state_selector: external_static, x: 0, y: 0}
+  agent_profiles:
+    - {ORCA_tau: 1, ORCA_tauObst: 0.40000000000000002, class: 1, max_accel: 0, max_angle_vel: 0, max_neighbors: 10, max_speed: 0, name: external_agent, neighbor_dist: 5, obstacle_set: 1, pref_speed: 0, r: 0.25}
+  enable: 0
+  goal_sets: []
+  model_types: []
+  obstacle_set: {class: 1, file_name: L1_navmesh.nav, type: nav_mesh}
+  states:
+    - {final: 1, goal_set: -1, name: external_static, navmesh_file_name: ""}
+  transitions: []
+  update_time_step: 0.10000000000000001
+graphs:
+  {}
+levels:
+  L1:
+    drawing:
+      filename: tp2-layout/tp2_layout.png
+    elevation: 0
+    fiducials:
+      - [1684.202, 651.80899999999997, ref1]
+      - [1958.4059999999999, 920.25699999999995, ref3]
+      - [1684.1969999999999, 780.99400000000003, ref2]
+      - [4422.7349999999997, 650.25699999999995, ref4]
+      - [1682.5830000000001, 2564.1469999999999, ref5]
+      - [4419.125, 2286.971, ref6]
+    floors:
+      - parameters: {ceiling_scale: [3, 1], ceiling_texture: [1, blue_linoleum], indoor: [2, 0], texture_name: [1, blue_linoleum], texture_rotation: [3, 0], texture_scale: [3, 1]}
+        vertices: [11, 10, 9, 8, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
+    lanes:
+      - [22, 23, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [23, 24, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [24, 25, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [26, 28, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [28, 25, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [27, 29, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [29, 25, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [23, 30, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [28, 29, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [22, 31, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.20000000000000001]}]
+      - [22, 32, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [32, 33, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [33, 34, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [33, 35, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+    layers:
+      tp2_scan:
+        color: [1, 0, 0, 0.5]
+        filename: tp2-layout/map_tp2_edited.png
+        transform:
+          scale: 0.050099999999999999
+          translation_x: 35.700000000000003
+          translation_y: 17.100000000000001
+          yaw: -0.0033161255787892258
+        visible: true
+    measurements:
+      - [0, 1, {distance: [3, 90]}]
+      - [2, 3, {distance: [3, 107.625]}]
+      - [4, 5, {distance: [3, 62.799999999999997]}]
+      - [6, 7, {distance: [3, 71.599999999999994]}]
+    vertices:
+      - [1685.4010000000001, 2928.9270000000001, 0, ""]
+      - [4418.9970000000003, 2928.9270000000001, 0, ""]
+      - [1416.521, 3004.4580000000001, 0, ""]
+      - [4685.4870000000001, 3004.4580000000001, 0, ""]
+      - [4803.915, 2560.4470000000001, 0, ""]
+      - [4803.915, 653.12699999999995, 0, ""]
+      - [4867.9889999999996, 652.95699999999999, 0, ""]
+      - [4867.9889999999996, 2827.8600000000001, 0, ""]
+      - [1417.059, 650.46799999999996, 0, ""]
+      - [1416.979, 783.24199999999996, 0, ""]
+      - [1689.5650000000001, 784.01099999999997, 0, ""]
+      - [1689.067, 651.60199999999998, 0, ""]
+      - [1125, 647, 0, ""]
+      - [1115, 894.60000000000002, 0, ""]
+      - [1178, 894, 0, ""]
+      - [1176, 998.31799999999998, 0, ""]
+      - [1412.2049999999999, 1000.86, 0, ""]
+      - [1414.492, 920.02099999999996, 0, ""]
+      - [1688.2760000000001, 920.52999999999997, 0, ""]
+      - [1684.982, 2562.4079999999999, 0, ""]
+      - [4419.1400000000003, 2559.5129999999999, 0, ""]
+      - [4419.6890000000003, 651.005, 0, ""]
+      - [1734, 700.21100000000001, 0, waiting_for_lift_tp2, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
+      - [1734, 836.44000000000005, 0, ""]
+      - [1388.3579999999999, 836.44000000000005, 0, ""]
+      - [1388.3579999999999, 700.28999999999996, 0, ""]
+      - [1325.9849999999999, 689.41999999999996, 0, clr_line90--dropoff, {dock_name: [1, clr_line90--dropoff], dropoff_ingestor: [1, clr_line90], is_parking_spot: [4, false]}]
+      - [1325.758, 714.80499999999995, 0, clr_line90--pickup, {dock_name: [1, clr_line90--pickup], pickup_dispenser: [1, clr_line90]}]
+      - [1347.6590000000001, 689.46799999999996, 0, clr_line90DOFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
+      - [1349.3989999999999, 714.80499999999995, 0, clr_line90PKFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
+      - [1734, 919.82500000000005, 0, tp2_waiting01, {is_charger: [4, false], is_holding_point: [4, true], is_parking_spot: [4, false]}]
+      - [1734, 600, 0, lift001-L1, {lift_cabin: [1, lift-001]}]
+      - [1846.3599999999999, 700.21100000000001, 0, ""]
+      - [2014.5319999999999, 700.21100000000001, 0, ""]
+      - [2014.5319999999999, 668.505, 0, ""]
+      - [2113.6019999999999, 700.21100000000001, 0, ""]
+  L2:
+    drawing:
+      filename: tp3-layout/layout-tp3.png
+    elevation: 4
+    fiducials:
+      - [259.58800000000002, 156.33600000000001, ref1]
+      - [259.19, 243.37799999999999, ref2]
+      - [441.58699999999999, 333.589, ref3]
+      - [2063.3600000000001, 156.27199999999999, ref4]
+      - [259.19299999999998, 1415.174, ref5]
+      - [2062.8969999999999, 1234.4760000000001, ref6]
+    floors:
+      - parameters: {ceiling_scale: [3, 1], ceiling_texture: [1, blue_linoleum], indoor: [2, 0], texture_name: [1, blue_linoleum], texture_rotation: [3, 0], texture_scale: [3, 1]}
+        vertices: [30, 31, 32, 33, 34]
+    lanes:
+      - [8, 9, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.40000000000000002]}]
+      - [15, 14, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [13, 12, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [16, 17, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [17, 19, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [21, 20, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [21, 22, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [22, 23, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [23, 25, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [25, 26, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [26, 27, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [27, 28, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [22, 29, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [11, 10, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [19, 35, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [35, 36, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [36, 37, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [37, 22, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [28, 38, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [38, 39, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [39, 40, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [40, 41, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [41, 42, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [42, 43, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [43, 16, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [42, 39, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [39, 13, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.40000000000000002]}]
+      - [38, 15, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.40000000000000002]}]
+      - [40, 11, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.40000000000000002]}]
+      - [23, 36, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [36, 24, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [19, 26, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [27, 17, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [17, 18, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [28, 16, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [43, 38, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
+      - [8, 40, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.40000000000000002]}]
+      - [42, 44, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [8, 45, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.20000000000000001]}]
+    layers:
+      tp3_scan:
+        color: [1, 0, 0, 0.5]
+        filename: tp3-layout/map_tp3_edited.png
+        transform:
+          scale: 0.050200000000000002
+          translation_x: -6.9500000000000002
+          translation_y: 3.4500000000000002
+          yaw: -0.0017453292519943296
+        visible: true
+    measurements:
+      - [0, 1, {distance: [3, 72.000029999999995]}]
+      - [2, 3, {distance: [3, 63.200000000000003]}]
+      - [4, 5, {distance: [3, 108.02500000000001]}]
+      - [6, 7, {distance: [3, 91.329999999999998]}]
+    vertices:
+      - [18.928999999999998, 153.57499999999999, 0, ""]
+      - [18.928999999999998, 1594.405, 0, ""]
+      - [46.948, 1418.4100000000001, 0, ""]
+      - [46.948, 153.48699999999999, 0, ""]
+      - [81.412999999999997, 1640.585, 0, ""]
+      - [2243.5650000000001, 1640.585, 0, ""]
+      - [256.46699999999998, 1618.77, 0, ""]
+      - [2084.5729999999999, 1618.77, 0, ""]
+      - [289.53500000000003, 181.499, 0, waiting_for_lift_tp3, {is_holding_point: [4, true]}]
+      - [289.53500000000003, 226.56100000000001, 0, tp3_waiting_for_motor01, {is_holding_point: [4, true]}]
+      - [318, 162.517, 0, charger001--charge, {dock_name: [1, charger001--charge], is_charger: [4, true], is_holding_point: [4, false], is_parking_spot: [4, false]}]
+      - [318, 175, 0, chargerFD001]
+      - [355, 164.55699999999999, 0, tramlay1--pickup, {dock_name: [1, tramlay1--pickup], pickup_dispenser: [1, tramlay1]}]
+      - [355, 180, 0, tramlay1PKFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
+      - [450, 165, 0, tramtha1--dropoff, {dock_name: [1, tramtha1--dropoff], dropoff_ingestor: [1, tramtha1]}]
+      - [450, 180, 0, tramtha1DOFD, {is_holding_point: [4, true]}]
+      - [600, 205, 0, ""]
+      - [1030.502, 205, 0, ""]
+      - [1030.502, 241.83199999999999, 0, tp3_waiting01, {is_holding_point: [4, true]}]
+      - [1662.5039999999999, 205, 0, ""]
+      - [1968, 765, 0, line90--dropoff, {dock_name: [1, line90--dropoff], dropoff_ingestor: [1, line90]}]
+      - [1968, 785, 0, line90DOFD]
+      - [2042, 785, 0, ""]
+      - [2042, 632, 0, "", {is_holding_point: [4, false]}]
+      - [2009, 632, 0, line90--pickup, {dock_name: [1, line90--pickup], pickup_dispenser: [1, line90]}]
+      - [2042, 195, 0, ""]
+      - [1662.713, 195, 0, ""]
+      - [1030.567, 195, 0, ""]
+      - [600, 195, 0, ""]
+      - [2042, 817.25199999999995, 0, tp3_waiting_for_motor02, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
+      - [259.88400000000001, 156.64500000000001, 0, ""]
+      - [259.16899999999998, 243.691, 0, ""]
+      - [259.78699999999998, 1416.058, 0, ""]
+      - [2064.1529999999998, 1414.6279999999999, 0, ""]
+      - [2064.0599999999999, 156.94300000000001, 0, ""]
+      - [2032, 205, 0, ""]
+      - [2032, 632, 0, line90PKFD]
+      - [2032, 785, 0, ""]
+      - [450, 195, 0, ""]
+      - [355, 195, 0, ""]
+      - [318, 195, 0, ""]
+      - [318, 205, 0, ""]
+      - [355, 205, 0, ""]
+      - [450, 205, 0, ""]
+      - [355, 235.286, 0, amr-start]
+      - [290.5, 122, 0, lift001-L2, {lift_cabin: [1, lift-001]}]
+lifts:
+  lift-001:
+    depth: 2
+    doors:
+      liftdoor-001:
+        door_type: 2
+        motion_axis_orientation: 0
+        width: 1
+        x: 0
+        y: -1.1000000000000001
+    highest_floor: L2
+    initial_floor_name: L1
+    level_doors:
+      L1: [liftdoor-001]
+      L2: [liftdoor-001]
+    lowest_floor: L1
+    plugins: true
+    reference_floor_name: L1
+    width: 1
+    x: 1734
+    y: 617
+    yaw: 0
+name: tp2-tp3-layout

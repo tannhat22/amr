@@ -53,6 +53,15 @@ class RobotState(enum.IntEnum):
     WAITING_MACHINE = 11
 
 
+class VertexInfo:
+    def __init__(
+        self, name: str, orientation: float = 0.0, in_lift: bool = False
+    ) -> None:
+        self.name = name
+        self.orientation = orientation
+        self.in_lift = in_lift
+
+
 # Custom wrapper for Plan::Waypoint. We use this to modify position of
 # waypoints to prevent backtracking
 class PlanWaypoint:
@@ -66,6 +75,8 @@ class PlanWaypoint:
 
 
 class RobotCommandHandle(adpt.RobotCommandHandle):
+    vertexs_dict: dict[str, VertexInfo]
+
     def __init__(
         self,
         name,
@@ -79,7 +90,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
         start,
         position,
         charger_waypoint,
-        dock_config,
+        vertexs_config,
         update_frequency,
         lane_merge_distance,
         adapter,
@@ -103,10 +114,15 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
           does not exist in the navigation graph"
         self.charger_waypoint_index = waypoint.index
 
-        self.dock_config = dock_config
+        self.vertexs_dict = {}
+        if vertexs_config is not None:
+            for vertex in vertexs_config:
+                conf = vertexs_config[vertex]
+                vt = VertexInfo(conf[0], conf[1], conf[2])
+                self.vertexs_dict.update({vertex: vt})
 
         if self.debug:
-            self.node.get_logger().info(f"WAYPOINTS DOCKS: {self.dock_config}")
+            self.node.get_logger().info(f"VERTEXS_CONFIG: {self.vertexs_dict}")
 
         self.update_frequency = update_frequency
         self.lane_merge_distance = lane_merge_distance
@@ -375,9 +391,9 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                 [x, y] = target_path[i].position[:2]
                                 theta = target_path[i].position[2]
                                 # Gán hướng theta khi tới điểm docking:
-                                pose_config = self.dock_config.get(
+                                pose_config = self.vertexs_dict.get(
                                     str(target_path[i].graph_index)
-                                )
+                                ).orientation
                                 if (
                                     i == (target_path_length - 1)
                                     and pose_config is not None
@@ -451,11 +467,10 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                 # )
 
                             #############################################################################
-                            # Go out dock if docked to machine before
+                            # Go out dock if robot is on dock waypoint
                             if self.undock_name is not None:
                                 error = False
-                                dock_mode = "goout"
-                                machine_name = self.undock_name.split("--")[0]
+                                dock_mode = "undock"
                                 process = {
                                     "mode": dock_mode,
                                     "dock_name": self.undock_name,
@@ -475,7 +490,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     if self._quit_path_event.wait(1.0):
                                         break
 
-                                duration_gooutdock = 30.0
+                                duration_undock = 30.0
                                 while not self.api.process_completed(self.name, cmd_id):
                                     cmd_id = self.current_cmd_id
 
@@ -489,32 +504,40 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
 
                                     next_arrival_estimator(
                                         path_index,
-                                        timedelta(seconds=duration_gooutdock),
+                                        timedelta(seconds=duration_undock),
                                     )
 
-                                    duration_gooutdock -= 0.1
+                                    duration_undock -= 0.1
                                     # Check if we need to abort
                                     if self._quit_path_event.wait(0.1):
                                         self.node.get_logger().info(
-                                            "Aborting go out dock from machine"
+                                            "Aborting go out dock!"
                                         )
                                         return
 
                                 if not error:
-                                    process = {
-                                        "machine_name": machine_name,
-                                        "mode": self.undock_name.split("--")[1],
-                                        "action": "clamp",
-                                    }
                                     self.undock_name = None
-                                    while not self.api.machine_trigger(
-                                        self.name, cmd_id, process
+                                    check_mode = self.search_mode_docking(
+                                        self.undock_name
+                                    )
+                                    if (
+                                        check_mode == "mcpickup"
+                                        or check_mode == "mcdropoff"
                                     ):
-                                        self.node.get_logger().info(
-                                            f"Send complete request for machine: {machine_name}"
-                                        )
-                                        if self._quit_path_event.wait(1.0):
-                                            break
+                                        machine_name = self.undock_name.split("--")[0]
+                                        process = {
+                                            "machine_name": machine_name,
+                                            "mode": check_mode,
+                                            "action": "clamp",
+                                        }
+                                        while not self.api.machine_trigger(
+                                            self.name, cmd_id, process
+                                        ):
+                                            self.node.get_logger().info(
+                                                f"Send complete request for machine: {machine_name}"
+                                            )
+                                            if self._quit_path_event.wait(1.0):
+                                                break
 
                             #############################################################################
                             #############################################################################
@@ -596,6 +619,14 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     if graph_index is not None:
                                         self.on_waypoint = graph_index
                                         self.last_known_waypoint_index = graph_index
+                                        check_vertex = self.vertexs_dict.get(
+                                            str(graph_index), None
+                                        )
+                                        if (
+                                            check_vertex is not None
+                                            and check_vertex.in_lift
+                                        ):
+                                            self.undock_name = check_vertex.name
                                     else:
                                         self.on_waypoint = None  # still on a lane
                                 else:
@@ -732,13 +763,13 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                         current_pos = self.graph.get_waypoint(self.on_waypoint).location
                         dock_yaw = self.calc_yaw(current_pos, dock_position)
 
-                        if (
-                            dock_mode == "pickup"
-                            or dock_mode == "dropoff"
-                            or dock_mode == "mcpickup"
-                            or dock_mode == "mcdropoff"
-                        ):
-                            self.dock_waypoint_index = self.on_waypoint
+                        # if (
+                        #     dock_mode == "pickup"
+                        #     or dock_mode == "dropoff"
+                        #     or dock_mode == "mcpickup"
+                        #     or dock_mode == "mcdropoff"
+                        # ):
+                        #     self.dock_waypoint_index = self.on_waypoint
 
                     else:
                         self.node.get_logger().error(
@@ -860,6 +891,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             )
                             self.on_waypoint = self.dock_waypoint_index
                             self.dock_waypoint_index = None
+                            self.undock_name = self.dock_name
 
                             # Gọi client trigger trạm sạc:
                             if dock_mode == "charge" and self.server_charger:
@@ -883,14 +915,8 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     f"Requested charger: {chargerName} succeed"
                                 )
 
-                            # Pickup with machine:
-                            elif dock_mode == "mcpickup" or dock_mode == "mcdropoff":
-                                self.undock_name = self.dock_name
-
-                            else:
-                                self.undock_name = None
-
                             docking_finished_callback()
+
                         else:
                             if self.state == RobotState.REQUEST_ERROR:
                                 self.node.get_logger().error(
