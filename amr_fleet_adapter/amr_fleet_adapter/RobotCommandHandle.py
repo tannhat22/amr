@@ -257,44 +257,48 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                 self._stopping_thread.join()
 
     def pause(self):
-        """Set pause flag and hold on to any requested paths."""
-        self.paused = True
+        with self._lock:
+            """Set pause flag and hold on to any requested paths."""
+            self.paused = True
 
-        if self.remaining_waypoints:
-            if self.api.pause(self.name, self.next_cmd_id()):
-                self.node.get_logger().info("[PAUSE] {self.name}: Current path saved!")
-                self.paused_path = self.remaining_waypoints
-                self.remaining_waypoints = []
-        elif self.dock_name:
-            if self.api.pause(self.name, self.next_cmd_id()):
-                self.node.get_logger().info(
-                    "[PAUSE] {self.name}: Current dock_name saved!"
-                )
-                self.paused_dock = self.dock_name
-                self.dock_name = None
+            if self.remaining_waypoints:
+                if self.api.pause(self.name, self.next_cmd_id()):
+                    self.node.get_logger().info(
+                        "[PAUSE] {self.name}: Current path saved!"
+                    )
+                    self.paused_path = self.remaining_waypoints
+                    self.remaining_waypoints = []
+            elif self.dock_name:
+                if self.api.pause(self.name, self.next_cmd_id()):
+                    self.node.get_logger().info(
+                        "[PAUSE] {self.name}: Current dock_name saved!"
+                    )
+                    self.paused_dock = self.dock_name
+                    self.dock_name = None
 
     def resume(self):
-        """Unset pause flag and substitute paused paths if no paths exist."""
-        if self.paused:
-            if self.api.resume(self.name, self.next_cmd_id()):
-                self.paused = False
+        with self._lock:
+            """Unset pause flag and substitute paused paths if no paths exist."""
+            if self.paused:
+                if self.api.resume(self.name, self.next_cmd_id()):
+                    self.paused = False
 
-                if self.remaining_waypoints or self.dock_name:
-                    return
-                elif self.paused_path:
-                    self.remaining_waypoints = self.paused_path
-                    self.paused_path = []
-                    self.node.get_logger().info(
-                        "[RESUME] {self.name}: Saved path restored!"
-                    )
-                elif self.paused_dock:
-                    self.dock_name = self.paused_dock
-                    self.paused_dock = None
-                    self.node.get_logger().info(
-                        "[RESUME] {self.name}: Saved dock_name restored!"
-                    )
-        else:
-            return
+                    if self.remaining_waypoints or self.dock_name:
+                        return
+                    elif self.paused_path:
+                        self.remaining_waypoints = self.paused_path
+                        self.paused_path = []
+                        self.node.get_logger().info(
+                            "[RESUME] {self.name}: Saved path restored!"
+                        )
+                    elif self.paused_dock:
+                        self.dock_name = self.paused_dock
+                        self.paused_dock = None
+                        self.node.get_logger().info(
+                            "[RESUME] {self.name}: Saved dock_name restored!"
+                        )
+            else:
+                return
 
     def stop(self):
         if self.debug:
