@@ -49,11 +49,20 @@ levels:
         color: [1, 0, 0, 0.5]
         filename: tp2-layout/map_tp2_edited.png
         transform:
-          scale: 0.050099999999999999
-          translation_x: 35.700000000000003
-          translation_y: 17.100000000000001
+          scale: 0.050200000000000002
+          translation_x: 35.5
+          translation_y: 17
           yaw: -0.0033161255787892258
         visible: true
+      tp3_scan:
+        color: [0, 1, 0, 0.5]
+        filename: tp3-layout/map_tp3_edited.png
+        transform:
+          scale: 0.050200000000000002
+          translation_x: 35.399999999999999
+          translation_y: 17.100000000000001
+          yaw: -0.0017453292519943296
+        visible: false
     measurements:
       - [0, 1, {distance: [3, 90]}]
       - [2, 3, {distance: [3, 107.625]}]
@@ -91,14 +100,37 @@ levels:
       - [1347.6590000000001, 689.46799999999996, 0, clr_line90DOFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
       - [1349.3989999999999, 714.80499999999995, 0, clr_line90PKFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
       - [1734, 919.82500000000005, 0, tp2_waiting01, {is_charger: [4, false], is_holding_point: [4, true], is_parking_spot: [4, false]}]
-      - [1734, 600, 0, lift001-L1, {lift_cabin: [1, lift-001]}]
+      - [1727, 602, 0, lift001-L1, {lift_cabin: [1, LIFT-001]}]
       - [1846.3599999999999, 700.21100000000001, 0, ""]
       - [2014.5319999999999, 700.21100000000001, 0, ""]
       - [2014.5319999999999, 668.505, 0, ""]
       - [2113.6019999999999, 700.21100000000001, 0, ""]
+      - [1754, 651.005, 0, ""]
+      - [1698.501, 651.60199999999998, 0, ""]
+      - [1698.501, 564.46299999999997, 0, ""]
+      - [1754, 564.46299999999997, 0, ""]
+    walls:
+      - [8, 12, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [12, 13, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [13, 14, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [14, 15, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [15, 16, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [16, 17, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [17, 18, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [18, 19, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [19, 20, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [20, 21, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [21, 36, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [11, 10, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [10, 9, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [9, 8, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [11, 37, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [37, 38, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [38, 39, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [39, 36, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
   L2:
     drawing:
-      filename: tp3-layout/layout-tp3.png
+      filename: tp3-layout/tp3_layout.png
     elevation: 4
     fiducials:
       - [259.58800000000002, 156.33600000000001, ref1]
@@ -148,8 +180,7 @@ levels:
       - [28, 16, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
       - [43, 38, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.5]}]
       - [8, 40, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.40000000000000002]}]
-      - [42, 44, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
-      - [8, 45, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.20000000000000001]}]
+      - [8, 44, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.20000000000000001]}]
     layers:
       tp3_scan:
         color: [1, 0, 0, 0.5]
@@ -174,8 +205,8 @@ levels:
       - [2243.5650000000001, 1640.585, 0, ""]
       - [256.46699999999998, 1618.77, 0, ""]
       - [2084.5729999999999, 1618.77, 0, ""]
-      - [289.53500000000003, 181.499, 0, waiting_for_lift_tp3, {is_holding_point: [4, true]}]
-      - [289.53500000000003, 226.56100000000001, 0, tp3_waiting_for_motor01, {is_holding_point: [4, true]}]
+      - [284, 181.499, 0, waiting_for_lift_tp3, {is_holding_point: [4, true]}]
+      - [284, 226.56100000000001, 0, tp3_waiting_for_motor01, {is_holding_point: [4, true]}]
       - [318, 162.517, 0, charger001--charge, {dock_name: [1, charger001--charge], is_charger: [4, true], is_holding_point: [4, false], is_parking_spot: [4, false]}]
       - [318, 175, 0, chargerFD001]
       - [355, 164.55699999999999, 0, tramlay1--pickup, {dock_name: [1, tramlay1--pickup], pickup_dispenser: [1, tramlay1]}]
@@ -210,10 +241,23 @@ levels:
       - [318, 205, 0, ""]
       - [355, 205, 0, ""]
       - [450, 205, 0, ""]
-      - [355, 235.286, 0, amr-start]
-      - [290.5, 122, 0, lift001-L2, {lift_cabin: [1, lift-001]}]
+      - [287.15199999999999, 123.203, 0, lift001-L2, {lift_cabin: [1, LIFT-001]}]
+      - [301, 154.96000000000001, 0, ""]
+      - [269.101, 156.64500000000001, 0, ""]
+      - [269.101, 98.747, 0, ""]
+      - [301, 98.747, 0, ""]
+    walls:
+      - [30, 31, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [31, 32, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [32, 33, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [33, 34, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [34, 45, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [30, 46, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [46, 47, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [47, 48, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [48, 45, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
 lifts:
-  lift-001:
+  LIFT-001:
     depth: 2
     doors:
       liftdoor-001:
@@ -231,7 +275,7 @@ lifts:
     plugins: true
     reference_floor_name: L1
     width: 1
-    x: 1734
-    y: 617
+    x: 1727
+    y: 602
     yaw: 0
 name: tp2-tp3-layout

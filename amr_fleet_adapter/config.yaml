@@ -42,7 +42,7 @@ rmf_fleet:
   
   server_charger_running: True  # Server charge is running or not
 
-# TinyRobot CONFIG =================================================================
+# Vdm Robot CONFIG =================================================================
 
 robots:
   # Here the user is expected to append the configuration for each robot in the
@@ -55,24 +55,10 @@ robots:
       robot_state_update_frequency: 5.0
       start:
         map_name: "L2"
-        waypoint: "amr-start"
-        orientation: 0.0 # radians
-      charger:
-        waypoint: "charger001--charge"
-  
-  # Configuration for robot2
-  amr_002:
-    robot_config:
-      max_delay: 15.0 # allowed seconds of delay of the current itinerary before it gets interrupted and replanned
-    rmf_config:
-      robot_state_update_frequency: 5.0
-      start:
-        map_name: "L2"
         # waypoint: "amr-start"
         orientation: 0.0 # radians
       charger:
-        # waypoint: "charger001--charge"
-        waypoint: "amr-start"
+        waypoint: "charger001--charge"
 
 # Docks config:
 docks:
@@ -100,30 +86,34 @@ docks:
   tramlay1--pickup:
     machine: False  # Vị trí docking này là máy hay trạm thô
     distance_go_out: 0.90
-    rotate_to_dock: 90
+    rotate_to_dock: -180
 
   # Configuration for tramtha1--dropoff:
   tramtha1--dropoff:
     machine: False  # Vị trí docking này là máy hay trạm thô
     distance_go_out: 0.62
     rotate_to_dock: -180
-    custom_dock:
-      rotate_angle: 0
-      rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
+    # custom_dock:
+    #   rotate_angle: 0
+    #   rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Configuration for charger001--charge:
   charger001--charge:
     machine: False
-    rotate_to_dock: -90
+    rotate_to_dock: 0
     distance_go_out: -0.62
 
+# up: 1.57199, down: -1.57199, right: 0.0, left: 3.14  
 vertexs:
   tramlay1PKFD: [1.57199, False]
   tramtha1DOFD: [1.57199, False]
   line90PKFD: 0.0
   line90DOFD: -1.59
   chargerFD001: 1.57199
-  # lift-001: [1.57199, True]
+  waiting_for_lift_tp2: 1.57199
+  waiting_for_lift_tp3: 1.57199
+  lift001-L1: [1.57199, True]
+  lift001-L2: [1.57199, True]
 
 machines: ["nqvlm104"]
 stations: ["tramlay1", "tramlay2", "tramlay3", "tramlay4", "tramtha1", "tramtha2"]

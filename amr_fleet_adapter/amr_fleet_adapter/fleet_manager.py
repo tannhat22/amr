@@ -143,6 +143,7 @@ class MCState:
 
 class FleetManager(Node):
     _dock_context: dict[str, DockInfo]
+    robots: dict[str, State]
 
     def __init__(self, config, nav_path):
         self.debug = True

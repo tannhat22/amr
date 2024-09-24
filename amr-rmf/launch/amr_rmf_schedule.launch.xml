@@ -5,10 +5,12 @@
   <arg name="use_sim_time" default="false"/>
   <arg name="map_name" description="Name of the rmf_demos map to simulate" />
   <arg name="server_uri" default="" description="Name of the rmf_demos map to simulate" />
+  <arg name="enable_experimental_lift_watchdog" default="false" description="experimental lift watchdog"/>
+
   <!-- <arg name="failover_mode" default="false"/> -->
 
   <!-- Common launch -->
-  <include file="$(find-pkg-share rmf_demos)/common.launch.xml">
+  <include file="$(find-pkg-share amr-rmf)/launch/common.launch.xml">
     <arg name="use_sim_time" value="$(var use_sim_time)"/>
     <arg name="viz_config_file" value ="$(find-pkg-share amr-rmf)/rviz_config/$(var map_name).rviz"/>
     <arg name="config_file" value="$(find-pkg-share amr-rmf)/maps/$(var map_name).building.yaml"/>
@@ -16,11 +18,24 @@
     <arg name="dashboard_config_file" value="$(find-pkg-share amr-rmf)/dashboard_config/$(var map_name)/dashboard_config.json"/>
   </include>
 
+  <!-- Experimental Lift watchdog service launch, default disable -->
+  <group if="$(var enable_experimental_lift_watchdog)" scoped="false">
+    <node pkg="rmf_fleet_adapter"
+          exec="experimental_lift_watchdog"
+          name="experimental_lift_watchdog"
+          output="both" />
+    <set_env name="EXPT_LIFT_WATCHDOG_SRV" value="experimental_lift_watchdog"/>
+  </group>
+  <group unless="$(var enable_experimental_lift_watchdog)" scoped="false">
+    <set_env name="EXPT_LIFT_WATCHDOG_SRV" value=""/>
+  </group>
+
   <include file="$(find-pkg-share amr_fleet_adapter)/launch/fleet_adapter.launch.xml">
     <arg name="use_sim_time" value="$(var use_sim_time)"/>
     <arg name="config_file" value="$(find-pkg-share amr_fleet_adapter)/config.yaml"/>
     <arg name="nav_graph_file" value="$(find-pkg-share amr-rmf)/maps/$(var map_name)/nav_graphs/0.yaml"/>
     <arg name="server_uri" value="$(var server_uri)"/>
+    <arg name="experimental_lift_watchdog_service" value="$(env EXPT_LIFT_WATCHDOG_SRV)"/>
   </include>
 
 </launch>

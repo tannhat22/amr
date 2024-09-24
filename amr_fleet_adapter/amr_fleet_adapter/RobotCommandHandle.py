@@ -119,6 +119,10 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             for vertex in vertexs_config:
                 conf = vertexs_config[vertex]
                 vt = VertexInfo(conf[0], conf[1], conf[2])
+                # self.node.get_logger().info(
+                #     f"//////////////////////////////////////////////////////////////////////////////////////"
+                # )
+                # self.node.get_logger().info(f"CONFIGGGGGGGGGGGGGGGGGGGGGGGGGG: {conf}")
                 self.vertexs_dict.update({vertex: vt})
 
         if self.debug:
@@ -397,15 +401,15 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                 # Gán hướng theta khi tới điểm docking:
                                 pose_config = self.vertexs_dict.get(
                                     str(target_path[i].graph_index)
-                                ).orientation
+                                )
                                 if (
                                     i == (target_path_length - 1)
                                     and pose_config is not None
                                     and target_path_length > 1
                                 ):
-                                    theta = pose_config
+                                    theta = pose_config.orientation
                                     self.node.get_logger().info(
-                                        f"Theta_endpoint[{self.name}]: docking_config: {pose_config},"
+                                        f"Theta_endpoint[{self.name}]: vertex_orientation_config: {pose_config.orientation},"
                                         f" wp_index start: {self.on_waypoint}"
                                     )
                                 elif target_path_length == 1:
@@ -623,14 +627,14 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     if graph_index is not None:
                                         self.on_waypoint = graph_index
                                         self.last_known_waypoint_index = graph_index
-                                        check_vertex = self.vertexs_dict.get(
-                                            str(graph_index), None
-                                        )
-                                        if (
-                                            check_vertex is not None
-                                            and check_vertex.in_lift
-                                        ):
-                                            self.undock_name = check_vertex.name
+                                        # check_vertex = self.vertexs_dict.get(
+                                        #     str(graph_index), None
+                                        # )
+                                        # if (
+                                        #     check_vertex is not None
+                                        #     and check_vertex.in_lift
+                                        # ):
+                                        #     self.undock_name = check_vertex.name
                                     else:
                                         self.on_waypoint = None  # still on a lane
                                 else:

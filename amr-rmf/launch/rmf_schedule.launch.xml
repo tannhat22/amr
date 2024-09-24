@@ -27,8 +27,15 @@
   <!-- <include file="$(find-pkg-share amr-rmf)/launch/machine_server.launch.xml">
   </include> -->
 
+  <!-- Ldm server -->
+  <include file="$(find-pkg-share amr-rmf)/launch/ldm_server.launch.py">
+  </include>
+
   <!-- Workcells adapter -->
   <include file="$(find-pkg-share amr_workcells_adapter)/launch/workcells_adapter.launch.xml">
   </include>
 
+  <!-- Ldm adapter -->
+  <include file="$(find-pkg-share ldm_rmf_adapter)/launch/ldm_rmf.launch.py">
+  </include>
 </launch>
