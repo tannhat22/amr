@@ -100,8 +100,20 @@ docks:
   # Configuration for charger001--charge:
   charger001--charge:
     machine: False
-    rotate_to_dock: 0
     distance_go_out: -0.62
+    rotate_to_dock: 0
+
+  # Undock when robot in lift
+  lift001-L1:
+    machine: False
+    distance_go_out: -3.6
+    rotate_to_dock: 0
+
+  lift001-L2:
+    machine: False
+    distance_go_out: -3.6
+    rotate_to_dock: 0
+
 
 # up: 1.57199, down: -1.57199, right: 0.0, left: 3.14  
 vertexs:

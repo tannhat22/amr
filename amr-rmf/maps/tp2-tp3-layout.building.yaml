@@ -100,7 +100,7 @@ levels:
       - [1347.6590000000001, 689.46799999999996, 0, clr_line90DOFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
       - [1349.3989999999999, 714.80499999999995, 0, clr_line90PKFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
       - [1734, 919.82500000000005, 0, tp2_waiting01, {is_charger: [4, false], is_holding_point: [4, true], is_parking_spot: [4, false]}]
-      - [1727, 602, 0, lift001-L1, {lift_cabin: [1, LIFT-001]}]
+      - [1726, 602, 0, lift001-L1, {lift_cabin: [1, LIFT-001]}]
       - [1846.3599999999999, 700.21100000000001, 0, ""]
       - [2014.5319999999999, 700.21100000000001, 0, ""]
       - [2014.5319999999999, 668.505, 0, ""]
@@ -205,12 +205,12 @@ levels:
       - [2243.5650000000001, 1640.585, 0, ""]
       - [256.46699999999998, 1618.77, 0, ""]
       - [2084.5729999999999, 1618.77, 0, ""]
-      - [284, 181.499, 0, waiting_for_lift_tp3, {is_holding_point: [4, true]}]
-      - [284, 226.56100000000001, 0, tp3_waiting_for_motor01, {is_holding_point: [4, true]}]
+      - [286, 185, 0, waiting_for_lift_tp3, {is_holding_point: [4, true]}]
+      - [286, 226.56100000000001, 0, tp3_waiting_for_motor01, {is_holding_point: [4, true]}]
       - [318, 162.517, 0, charger001--charge, {dock_name: [1, charger001--charge], is_charger: [4, true], is_holding_point: [4, false], is_parking_spot: [4, false]}]
       - [318, 175, 0, chargerFD001]
-      - [355, 164.55699999999999, 0, tramlay1--pickup, {dock_name: [1, tramlay1--pickup], pickup_dispenser: [1, tramlay1]}]
-      - [355, 180, 0, tramlay1PKFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
+      - [385, 164.55699999999999, 0, tramlay1--pickup, {dock_name: [1, tramlay1--pickup], pickup_dispenser: [1, tramlay1]}]
+      - [385, 180, 0, tramlay1PKFD, {is_holding_point: [4, true], is_parking_spot: [4, false]}]
       - [450, 165, 0, tramtha1--dropoff, {dock_name: [1, tramtha1--dropoff], dropoff_ingestor: [1, tramtha1]}]
       - [450, 180, 0, tramtha1DOFD, {is_holding_point: [4, true]}]
       - [600, 205, 0, ""]
@@ -236,12 +236,12 @@ levels:
       - [2032, 632, 0, line90PKFD]
       - [2032, 785, 0, ""]
       - [450, 195, 0, ""]
-      - [355, 195, 0, ""]
+      - [385, 195, 0, ""]
       - [318, 195, 0, ""]
       - [318, 205, 0, ""]
-      - [355, 205, 0, ""]
+      - [385, 205, 0, ""]
       - [450, 205, 0, ""]
-      - [287.15199999999999, 123.203, 0, lift001-L2, {lift_cabin: [1, LIFT-001]}]
+      - [286.49200000000002, 123.203, 0, lift001-L2, {lift_cabin: [1, LIFT-001]}]
       - [301, 154.96000000000001, 0, ""]
       - [269.101, 156.64500000000001, 0, ""]
       - [269.101, 98.747, 0, ""]
@@ -275,7 +275,7 @@ lifts:
     plugins: true
     reference_floor_name: L1
     width: 1
-    x: 1727
+    x: 1726
     y: 602
     yaw: 0
 name: tp2-tp3-layout

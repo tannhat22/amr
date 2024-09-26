@@ -41,6 +41,7 @@ from rmf_fleet_msgs.msg import (
     DockRequest,
     ModeRequest,
     CancelRequest,
+    LocalizeRequest,
     DockSummary,
     RobotMode,
     DockMode,
@@ -268,6 +269,13 @@ class FleetManager(Node):
         self.cancel_pub = self.create_publisher(
             CancelRequest,
             "robot_cancel_requests",
+            qos_profile=qos_profile_system_default,
+        )
+
+        # To publish robot localize request to Free Fleet Server
+        self.localize_pub = self.create_publisher(
+            LocalizeRequest,
+            "robot_localize_requests",
             qos_profile=qos_profile_system_default,
         )
 
@@ -564,6 +572,39 @@ class FleetManager(Node):
                 response["success"] = True
                 return response
 
+        @app.post("/vdm-rmf/cmd/localize/", response_model=Response)
+        async def localize(robot_name: str, cmd_id: int, dest: Request):
+            response = {"success": False, "msg": ""}
+            if robot_name not in self.robots or len(dest.destination) < 1:
+                return response
+
+            robot = self.robots[robot_name]
+
+            target_x = dest.destination["x"]
+            target_y = dest.destination["y"]
+            target_yaw = dest.destination["yaw"]
+            target_map = dest.map_name
+
+            t = self.get_clock().now().to_msg()
+
+            localize_request = LocalizeRequest()
+            localize_request.fleet_name = self.fleet_name
+            localize_request.robot_name = robot_name
+            localize_request.destination.t = t
+            localize_request.destination.x = target_x
+            localize_request.destination.y = target_y
+            localize_request.destination.yaw = target_yaw
+            localize_request.destination.level_name = target_map
+
+            localize_request.task_id = str(cmd_id)
+            self.localize_pub.publish(localize_request)
+
+            if self.debug:
+                print(f"Sending localize request for {robot_name}: {cmd_id}")
+            robot.last_request = localize_request
+            response["success"] = True
+            return response
+
         # ///////////////////////////////////////////////////////////////////////
         # ///////////////////////////////////////////////////////////////////////
         # Lay du lieu machine
@@ -746,8 +787,10 @@ class FleetManager(Node):
                                 self.mode_pub.publish(robot.last_request)
                             elif type(robot.last_request) is DockRequest:
                                 self.dock_pub.publish(robot.last_request)
-                            elif type(robot.last_request is CancelRequest):
+                            elif type(robot.last_request) is CancelRequest:
                                 self.cancel_pub.publish(robot.last_request)
+                            elif type(robot.last_request) is LocalizeRequest:
+                                self.localize_pub.publish(robot.last_request)
                         continue
 
                     robot.state = robotMsg

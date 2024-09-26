@@ -119,10 +119,6 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
             for vertex in vertexs_config:
                 conf = vertexs_config[vertex]
                 vt = VertexInfo(conf[0], conf[1], conf[2])
-                # self.node.get_logger().info(
-                #     f"//////////////////////////////////////////////////////////////////////////////////////"
-                # )
-                # self.node.get_logger().info(f"CONFIGGGGGGGGGGGGGGGGGGGGGGGGGG: {conf}")
                 self.vertexs_dict.update({vertex: vt})
 
         if self.debug:
@@ -391,6 +387,44 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             self.target_waypoint = self.remaining_waypoints[0]
                             path_index = self.remaining_waypoints[0].index
                             target_pose = self.target_waypoint.position
+
+                            # Check level_name of waypoint:
+                            level_name = self.graph.get_waypoint(
+                                self.target_waypoint.graph_index
+                            ).map_name
+
+                            # Request localize if map_name of robot now is different with level_name of first waypoint
+                            if level_name != self.map_name:
+                                self.map_name = level_name
+                                if self.undock_name is not None:
+                                    lift_name_wp = (
+                                        self.undock_name.split("-")[0]
+                                        + "-"
+                                        + (self.map_name)
+                                    )
+                                    lift_wp_index = self.graph.find_waypoint(
+                                        lift_name_wp
+                                    ).index
+                                    pose_config = self.vertexs_dict.get(
+                                        str(lift_wp_index)
+                                    )
+                                    [x, y] = self.graph.get_waypoint(
+                                        lift_wp_index
+                                    ).location[:2]
+                                    theta = pose_config.orientation
+                                    destination = [x, y, theta]
+
+                                    cmd_id = self.next_cmd_id()
+                                    while not self.api.localize(
+                                        self.name, cmd_id, self.map_name, destination
+                                    ):
+                                        self.node.get_logger().info(
+                                            f"Requesting robot {self.name} change map to {self.map_name}!"
+                                        )
+                                        if self._quit_path_event.wait(1.0):
+                                            break
+                                    time.sleep(5)
+
                             # Move robot with list waypoint
                             target_path = self.remaining_waypoints
                             target_path_length = len(target_path)
@@ -398,22 +432,15 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             for i in range(target_path_length):
                                 [x, y] = target_path[i].position[:2]
                                 theta = target_path[i].position[2]
-                                # Gán hướng theta khi tới điểm docking:
+                                # Gán hướng theta khi tới điểm đã cấu hình orientation:
                                 pose_config = self.vertexs_dict.get(
                                     str(target_path[i].graph_index)
                                 )
-                                if (
-                                    i == (target_path_length - 1)
-                                    and pose_config is not None
-                                    and target_path_length > 1
-                                ):
-                                    theta = pose_config.orientation
-                                    self.node.get_logger().info(
-                                        f"Theta_endpoint[{self.name}]: vertex_orientation_config: {pose_config.orientation},"
-                                        f" wp_index start: {self.on_waypoint}"
-                                    )
-                                elif target_path_length == 1:
-                                    if self.on_waypoint is not None:
+                                if i == (target_path_length - 1):
+                                    if (
+                                        target_path_length <= 3
+                                        and self.on_waypoint is not None
+                                    ):
                                         current_pos = self.graph.get_waypoint(
                                             self.on_waypoint
                                         ).location
@@ -425,48 +452,13 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                             )
                                             path_finished_callback()
                                             return
-                                        else:
-                                            theta = self.calc_yaw(
-                                                [x, y], self.position[:2]
-                                            )
-                                            self.node.get_logger().info(
-                                                f"Theta_endpoint[{self.name}]: from now position to target position, "
-                                                f"wp_index start: {self.on_waypoint}"
-                                            )
-                                    else:
-                                        # theta = self.calc_yaw([x, y], self.position[:2])
-                                        # self.node.get_logger().info(f"Theta_endpoint[{self.name}]: from now position to target position, "
-                                        #                             f"wp_index start: {self.on_waypoint}")
-                                        [x, y] = self.position[:2]
-                                        theta = self.position[2]
+
+                                    if pose_config is not None:
+                                        theta = pose_config.orientation
                                         self.node.get_logger().info(
-                                            f"Theta_endpoint[{self.name}]: will no rotate or move because don't know state of robot"
+                                            f"Theta_endpoint[{self.name}]: vertex_orientation--{pose_config.name}: {pose_config.orientation}"
                                         )
-                                elif i == (target_path_length - 1):
-                                    j = i - 1
-                                    while True:
-                                        if j < 0:
-                                            newTheta = self.calc_yaw(
-                                                [x, y], self.position[:2]
-                                            )
-                                            self.node.get_logger().info(
-                                                f"Theta_endpoint[{self.name}]: from {theta} to {newTheta}"
-                                            )
-                                            theta = newTheta
-                                            break
-                                        elif (
-                                            x == target_path[j].position[0]
-                                            and y == target_path[j].position[1]
-                                        ):
-                                            j -= 1
-                                        else:
-                                            startPos = target_path[j].position[:2]
-                                            newTheta = self.calc_yaw([x, y], startPos)
-                                            self.node.get_logger().info(
-                                                f"Theta_endpoint[{self.name}]: from {theta} to {newTheta}"
-                                            )
-                                            theta = newTheta
-                                            break
+
                                 speed_limit = self.get_speed_limit(target_path[i])
                                 waypoints_path.append([x, y, theta, speed_limit])
                                 # self.node.get_logger().info(
@@ -475,7 +467,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                 # )
 
                             #############################################################################
-                            # Go out dock if robot is on dock waypoint
+                            # Undock if robot is on dock waypoint
                             if self.undock_name is not None:
                                 error = False
                                 dock_mode = "undock"
@@ -492,8 +484,8 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     self.name, cmd_id, self.map_name, process
                                 ):
                                     self.node.get_logger().info(
-                                        f"Requesting robot {self.name} go out dock at "
-                                        f"{self.dock_name}"
+                                        f"Requesting robot {self.name}  undock at "
+                                        f"{self.undock_name}"
                                     )
                                     if self._quit_path_event.wait(1.0):
                                         break
@@ -524,7 +516,6 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                         return
 
                                 if not error:
-                                    self.undock_name = None
                                     check_mode = self.search_mode_docking(
                                         self.undock_name
                                     )
@@ -546,6 +537,16 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                             )
                                             if self._quit_path_event.wait(1.0):
                                                 break
+
+                                    self.undock_name = None
+                                    # Huy follow path neu undock toi 1 vertex:
+                                    if target_path_length == 1:
+                                        self.on_waypoint = target_path[0].graph_index
+                                        self.node.get_logger().info(
+                                            f"Follow path will return success after undock-[{self.name}]!"
+                                        )
+                                        path_finished_callback()
+                                        return
 
                             #############################################################################
                             #############################################################################
@@ -627,14 +628,15 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     if graph_index is not None:
                                         self.on_waypoint = graph_index
                                         self.last_known_waypoint_index = graph_index
-                                        # check_vertex = self.vertexs_dict.get(
-                                        #     str(graph_index), None
-                                        # )
-                                        # if (
-                                        #     check_vertex is not None
-                                        #     and check_vertex.in_lift
-                                        # ):
-                                        #     self.undock_name = check_vertex.name
+                                        # Check vertex is need undock
+                                        check_vertex = self.vertexs_dict.get(
+                                            str(graph_index), None
+                                        )
+                                        if (
+                                            check_vertex is not None
+                                            and check_vertex.in_lift
+                                        ):
+                                            self.undock_name = check_vertex.name
                                     else:
                                         self.on_waypoint = None  # still on a lane
                                 else:
@@ -770,14 +772,6 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                     if self.on_waypoint is not None:
                         current_pos = self.graph.get_waypoint(self.on_waypoint).location
                         dock_yaw = self.calc_yaw(current_pos, dock_position)
-
-                        # if (
-                        #     dock_mode == "pickup"
-                        #     or dock_mode == "dropoff"
-                        #     or dock_mode == "mcpickup"
-                        #     or dock_mode == "mcdropoff"
-                        # ):
-                        #     self.dock_waypoint_index = self.on_waypoint
 
                     else:
                         self.node.get_logger().error(

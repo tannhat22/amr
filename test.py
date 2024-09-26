@@ -19,3 +19,5 @@ a = {
     },
 }
 print(a["request"].get("nhat", 123))
+a = "lift001-L2"
+print(a[:-2])

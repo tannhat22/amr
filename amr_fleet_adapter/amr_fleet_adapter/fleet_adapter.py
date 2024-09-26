@@ -252,17 +252,6 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
                             ]
                         }
                     )
-        # dock_config_index = {}
-        # if dock_config is not None:
-        #     for dock in dock_config:
-        #         dock_check = nav_graph.find_waypoint(dock_config[dock]["front_dock"])
-        #         assert (
-        #             dock_check
-        #         ), f"Front_dock waypoint of {dock} \
-        #             does not exist in the navigation graph"
-        #         dock_config_index[str(dock_check.index)] = dock_config[dock][
-        #             "orientation"
-        #         ]
 
         while len(missing_robots) > 0:
             time.sleep(0.2)
