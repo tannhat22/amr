@@ -274,6 +274,11 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
                     else:
                         initial_orientation = rmf_config["start"]["orientation"]
 
+                    if "map_name" in data["data"]:
+                        initial_level = data["data"]["map_name"]
+                    else:
+                        initial_level = rmf_config["start"]["map_name"]
+
                     starts = []
                     time_now = adapter.now()
                     # No need to offset robot and RMF crs for demos
@@ -308,7 +313,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
                         )
                         starts = plan.compute_plan_starts(
                             nav_graph,
-                            rmf_config["start"]["map_name"],
+                            initial_level,
                             position,
                             time_now,
                         )
@@ -327,7 +332,7 @@ def initialize_fleet(config_yaml, nav_graph_path, node, use_sim_time):
                         node=node,
                         graph=nav_graph,
                         vehicle_traits=vehicle_traits,
-                        map_name=rmf_config["start"]["map_name"],
+                        map_name=initial_level,
                         start=starts[0],
                         position=position,
                         charger_waypoint=rmf_config["charger"]["waypoint"],

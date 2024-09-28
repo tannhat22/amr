@@ -555,11 +555,15 @@ class FleetManager(Node):
                 dock_request.fleet_name = self.fleet_name
                 dock_request.robot_name = robot_name
                 dock_request.machine = dock_config.is_machine
-                dock_request.distance_go_out = dock_config.distance_go_out
                 dock_request.custom_docking = dock_config.custom_dock
                 dock_request.rotate_to_dock = dock_config.rotate_to_dock
                 dock_request.rotate_angle = dock_config.rotate_angle
                 dock_request.rotate_orientation = dock_config.rotate_orientation
+
+                if task.task.get("unlift", None) is not None:
+                    dock_request.distance_go_out = task.task["unlift"]
+                else:
+                    dock_request.distance_go_out = dock_config.distance_go_out
                 dock_request.task_id = str(cmd_id)
 
                 self.dock_pub.publish(dock_request)

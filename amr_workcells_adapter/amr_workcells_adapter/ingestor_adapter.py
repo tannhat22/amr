@@ -74,7 +74,7 @@ class IngestorHandle(Node):
 
         for machine_name in self.config["machines"]:
             self.machines[machine_name] = State()
-        assert len(self.machines) > 0
+        # assert len(self.machines) > 0
 
         # timer_period = 0.5
         # self.timer = self.create_timer(timer_period, self.timer_callback, callback_group=timer_cb_group)
@@ -116,7 +116,7 @@ class IngestorHandle(Node):
 
             else:
                 self.get_logger().warn(
-                    f"Ingestor name not found in machines or stations, please check!"
+                    f"Ingestor name not found in machines or stations, return IngestorResult.SUCCESS!"
                 )
 
             result_msg = IngestorResult()

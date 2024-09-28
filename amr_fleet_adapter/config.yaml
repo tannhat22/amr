@@ -54,7 +54,7 @@ robots:
     rmf_config:
       robot_state_update_frequency: 5.0
       start:
-        map_name: "L2"
+        map_name: "L1"
         # waypoint: "amr-start"
         orientation: 0.0 # radians
       charger:
@@ -64,6 +64,16 @@ robots:
 docks:
   # Here the user is expected to append the configuration for each dock in the fleet
   # /******************** TP3 *********************/
+  clr90_STR--pickup:
+    machine: False  # Vị trí docking này là máy hay trạm thô
+    distance_go_out: 0.9
+    rotate_to_dock: 180
+
+  clr90_TTR--dropoff:
+    machine: False  # Vị trí docking này là máy hay trạm thô
+    distance_go_out: 0.9
+    rotate_to_dock: -90
+
   # Configuration for line90--pickup:
   line90--pickup:
     machine: False  # Vị trí docking này là máy hay trạm thô
@@ -117,6 +127,8 @@ docks:
 
 # up: 1.57199, down: -1.57199, right: 0.0, left: 3.14  
 vertexs:
+  clr90_TTR_FD: [-1.5719, False]
+  clr90_STR_FD: [1.57199, False]
   tramlay1PKFD: [1.57199, False]
   tramtha1DOFD: [1.57199, False]
   line90PKFD: 0.0
@@ -127,5 +139,5 @@ vertexs:
   lift001-L1: [1.57199, True]
   lift001-L2: [1.57199, True]
 
-machines: ["nqvlm104"]
-stations: ["tramlay1", "tramlay2", "tramlay3", "tramlay4", "tramtha1", "tramtha2"]
+machines: []
+stations: []

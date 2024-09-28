@@ -414,6 +414,9 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     theta = pose_config.orientation
                                     destination = [x, y, theta]
 
+                                    startWP = [x, y]
+                                    dist_unLift = -self.dist(startWP, target_pose)
+
                                     cmd_id = self.next_cmd_id()
                                     while not self.api.localize(
                                         self.name, cmd_id, self.map_name, destination
@@ -423,6 +426,8 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                         )
                                         if self._quit_path_event.wait(1.0):
                                             break
+
+                                    self.on_waypoint = lift_wp_index
                                     time.sleep(5)
 
                             # Move robot with list waypoint
@@ -474,8 +479,11 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                 process = {
                                     "mode": dock_mode,
                                     "dock_name": self.undock_name,
-                                    "location": [0.0, 0.0, 0.0],
+                                    "location": [target_pose[0], target_pose[1], 0.0],
                                 }
+
+                                if dist_unLift is not None:
+                                    process.update({"unlift": dist_unLift})
 
                                 # Request the robot to start the relevant process
                                 cmd_id = self.next_cmd_id()
@@ -501,6 +509,21 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     ):
                                         error = True
                                         break
+
+                                    lane = self.get_current_lane()
+                                    if lane is not None:
+                                        self.on_waypoint = None
+                                        self.on_lane = lane
+                                    elif (
+                                        self.target_waypoint.graph_index is not None
+                                        and self.dist(self.position, target_pose) < 0.5
+                                    ):
+                                        self.on_waypoint = (
+                                            self.target_waypoint.graph_index
+                                        )
+                                    else:
+                                        self.on_waypoint = None
+                                        self.on_lane = None
 
                                     next_arrival_estimator(
                                         path_index,
