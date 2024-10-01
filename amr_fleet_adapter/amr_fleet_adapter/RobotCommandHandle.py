@@ -392,7 +392,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                             level_name = self.graph.get_waypoint(
                                 self.target_waypoint.graph_index
                             ).map_name
-
+                            dist_unLift = None
                             # Request localize if map_name of robot now is different with level_name of first waypoint
                             if level_name != self.map_name:
                                 self.map_name = level_name
@@ -425,10 +425,31 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                             f"Requesting robot {self.name} change map to {self.map_name}!"
                                         )
                                         if self._quit_path_event.wait(1.0):
-                                            break
+                                            return
 
                                     self.on_waypoint = lift_wp_index
-                                    time.sleep(5)
+                                    duration_relocalize = 10.0
+                                    while not self.api.process_completed(
+                                        self.name, cmd_id
+                                    ):
+                                        cmd_id = self.current_cmd_id
+                                        next_arrival_estimator(
+                                            path_index,
+                                            timedelta(seconds=duration_relocalize),
+                                        )
+
+                                        duration_relocalize -= 0.1
+
+                                        # Check if we need to abort
+                                        if self._quit_path_event.wait(0.1):
+                                            self.node.get_logger().info(
+                                                f"Aborting relocalize on [{self.name}]!"
+                                            )
+                                            return
+
+                                    self.node.get_logger().info(
+                                        f"Robot [{self.name}] relocalize to {self.map_name} success!"
+                                    )
 
                             # Move robot with list waypoint
                             target_path = self.remaining_waypoints
@@ -534,10 +555,13 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     # Check if we need to abort
                                     if self._quit_path_event.wait(0.1):
                                         self.node.get_logger().info(
-                                            "Aborting go out dock!"
+                                            f"Aborting undock on [{self.name}]!"
                                         )
                                         return
 
+                                self.node.get_logger().info(
+                                    f"Robot [{self.name}] undock success!"
+                                )
                                 if not error:
                                     check_mode = self.search_mode_docking(
                                         self.undock_name
@@ -625,8 +649,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                         ]
                                         path_index = self.remaining_waypoints[0].index
                                         target_pose = self.target_waypoint.position
-                                        # self.node.get_logger().info(f"Remaining waypoint: {len(self.remaining_waypoints)} waypoints")
-                                        # self.node.get_logger().info(f"Target waypoint: {target_pose}")
+
                                 elif remaining_path_length == False:
                                     self.node.get_logger().error(
                                         f"Robot {self.name} failed to request for "

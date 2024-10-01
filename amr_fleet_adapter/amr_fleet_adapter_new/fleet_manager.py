@@ -14,71 +14,56 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import math
-import yaml
-import json
-import time
-import copy
 import argparse
+import copy
+import json
+import math
+import sys
+import threading
+import time
+from typing import Optional
 
+from fastapi import FastAPI
+import numpy as np
+from pydantic import BaseModel
+from pyproj import Transformer
 import rclpy
-from rclpy.executors import MultiThreadedExecutor
-from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import qos_profile_system_default
-
-from rclpy.qos import QoSProfile
-from rclpy.qos import QoSHistoryPolicy as History
 from rclpy.qos import QoSDurabilityPolicy as Durability
+from rclpy.qos import QoSHistoryPolicy as History
+from rclpy.qos import QoSProfile
 from rclpy.qos import QoSReliabilityPolicy as Reliability
-
+import rmf_adapter as adpt
+import rmf_adapter.geometry as geometry
+import rmf_adapter.vehicletraits as traits
+from charger_fleet_msgs.msg import ChargerRequest, ChargerMode
 from rmf_fleet_msgs.msg import (
     FleetState,
     RobotState,
-    Location,
-    PathRequest,
-    DockRequest,
-    ModeRequest,
-    CancelRequest,
-    LocalizeRequest,
-    DockSummary,
     RobotMode,
     DockMode,
+    DockSummary,
+    Location,
+    CancelRequest,
+    DockRequest,
+    LocalizeRequest,
+    ModeRequest,
+    PathRequest,
 )
-
-from charger_fleet_msgs.msg import ChargerRequest, ChargerMode, ChargerState
-from machine_fleet_msgs.msg import (
-    FleetMachineState,
-    MachineRequest,
-    MachineMode,
-    MachineState,
-    StationRequest,
-    StationMode,
-)
-
-import rmf_adapter as adpt
-import rmf_adapter.vehicletraits as traits
-import rmf_adapter.geometry as geometry
-
-import numpy as np
-from pyproj import Transformer
-
-from fastapi import FastAPI
+import socketio
 import uvicorn
-from typing import Optional
-from pydantic import BaseModel
-
-import threading
+import yaml
 
 app = FastAPI()
 
 
 class Request(BaseModel):
     map_name: Optional[str] = None
-    task: Optional[dict] = None
+    activity: Optional[str] = None
+    activity_desc: Optional[dict] = None
+    label: Optional[str] = None
     destination: Optional[dict] = None
-    waypoints: Optional[list] = None
     data: Optional[dict] = None
     speed_limit: Optional[float] = None
     toggle: Optional[bool] = None
@@ -94,12 +79,10 @@ class Response(BaseModel):
 # Fleet Manager
 # ------------------------------------------------------------------------------
 class State:
-    def __init__(
-        self, state: RobotState = None, destination: Location = None, path: list = None
-    ):
+
+    def __init__(self, state: RobotState = None, destination: Location = None):
         self.state = state
         self.destination = destination
-        self.path = path
         self.last_request = None
         self.last_completed_request = None
         self.mode_teleop = False
@@ -136,38 +119,30 @@ class DockInfo:
         self.rotate_orientation = rotate_orientation
 
 
-class MCState:
-    def __init__(self, state: MachineState = None) -> None:
-        self.state = state
-        self.last_completed_request = None
-
-
 class FleetManager(Node):
     _dock_context: dict[str, DockInfo]
     robots: dict[str, State]
 
     def __init__(self, config, nav_path):
-        self.debug = True
+        self.debug = False
         self.config = config
         self.fleet_name = self.config["rmf_fleet"]["name"]
+        mgr_config = self.config["fleet_manager"]
 
         self.gps = False
         self.offset = [0, 0]
-        if (
-            "reference_coordinates" in self.config
-            and "offset" in self.config["reference_coordinates"]
-        ):
-            assert (
-                len(self.config["reference_coordinates"]["offset"]) > 1
-            ), "Please ensure that the offset provided is valid."
-            self.gps = True
-            self.offset = self.config["reference_coordinates"]["offset"]
+        reference_coordinates_yaml = mgr_config.get("reference_coordinates")
+        if reference_coordinates_yaml is not None:
+            offset_yaml = reference_coordinates_yaml.get("offset")
+            if offset_yaml is not None and len(offset_yaml) > 1:
+                self.gps = True
+                self.offset = offset_yaml
 
         super().__init__(f"{self.fleet_name}_fleet_manager")
 
         self.robots = {}  # Map robot name to state
+        self.action_paths = {}  # Map activities to paths
         self._dock_context = {}
-        self.machines = {}
 
         if "docks" in self.config:
             for dock in self.config["docks"]:
@@ -200,13 +175,9 @@ class FleetManager(Node):
 
         assert len(self._dock_context) > 0
 
-        for robot_name, robot_config in self.config["robots"].items():
+        for robot_name, _ in self.config["rmf_fleet"]["robots"].items():
             self.robots[robot_name] = State()
         assert len(self.robots) > 0
-
-        for machine_name in self.config["machines"]:
-            self.machines[machine_name] = MCState()
-        # assert(len(self.machines) > 0)
 
         profile = traits.Profile(
             geometry.make_final_convex_circle(
@@ -225,22 +196,35 @@ class FleetManager(Node):
             "reversible"
         ]
 
-        client_cb_group = MutuallyExclusiveCallbackGroup()
+        fleet_manager_config = self.config["fleet_manager"]
+        self.action_paths = fleet_manager_config.get("action_paths", {})
+        self.sio = socketio.Client()
+
+        @self.sio.on("/gps")
+        def message(data):
+            try:
+                robot = json.loads(data)
+                robot_name = robot["robot_id"]
+                self.robots[robot_name].gps_to_xy(robot)
+            except KeyError as e:
+                self.get_logger().info(f"Malformed GPS Message!: {e}")
+
+        if self.gps:
+            while True:
+                try:
+                    self.sio.connect("http://0.0.0.0:8080")
+                    break
+                except Exception:
+                    self.get_logger().info(
+                        "Trying to connect to sio server at " "http://0.0.0.0:8080.."
+                    )
+                    time.sleep(1)
 
         self.create_subscription(
             FleetState,
             "fleet_states",
             self.fleet_states_cb,
             100,
-            callback_group=client_cb_group,
-        )
-
-        self.create_subscription(
-            FleetMachineState,
-            "fleet_machine_state",
-            self.machine_states_cb,
-            100,
-            callback_group=client_cb_group,
         )
 
         transient_qos = QoSProfile(
@@ -251,11 +235,16 @@ class FleetManager(Node):
         )
 
         self.create_subscription(
-            DockSummary, "dock_summary", self.dock_summary_cb, qos_profile=transient_qos
+            DockSummary,
+            "dock_summary",
+            self.dock_summary_cb,
+            qos_profile=transient_qos,
         )
 
         self.path_pub = self.create_publisher(
-            PathRequest, "robot_path_requests", qos_profile=qos_profile_system_default
+            PathRequest,
+            "robot_path_requests",
+            qos_profile=qos_profile_system_default,
         )
 
         self.dock_pub = self.create_publisher(
@@ -283,15 +272,7 @@ class FleetManager(Node):
             ChargerRequest, "charger_request", qos_profile=qos_profile_system_default
         )
 
-        self.machine_pub = self.create_publisher(
-            MachineRequest, "machine_request", qos_profile=qos_profile_system_default
-        )
-
-        self.station_pub = self.create_publisher(
-            StationRequest, "station_request", qos_profile=qos_profile_system_default
-        )
-
-        @app.get("/vdm-rmf/data/status/", response_model=Response)
+        @app.get("/open-rmf/rmf_vdm_fm/status/", response_model=Response)
         async def status(robot_name: Optional[str] = None):
             response = {"data": {}, "success": False, "msg": ""}
             if robot_name is None:
@@ -311,7 +292,7 @@ class FleetManager(Node):
             response["success"] = True
             return response
 
-        @app.post("/vdm-rmf/cmd/navigate/", response_model=Response)
+        @app.post("/open-rmf/rmf_vdm_fm/navigate/", response_model=Response)
         async def navigate(robot_name: str, cmd_id: int, dest: Request):
             response = {"success": False, "msg": ""}
             if robot_name not in self.robots or len(dest.destination) < 1:
@@ -350,7 +331,8 @@ class FleetManager(Node):
             target_loc.y = target_y
             target_loc.yaw = target_yaw
             target_loc.level_name = target_map
-            if target_speed_limit > 0:
+            target_loc.obey_approach_speed_limit = False
+            if target_speed_limit is not None and target_speed_limit > 0.0:
                 target_loc.obey_approach_speed_limit = True
                 target_loc.approach_speed_limit = target_speed_limit
 
@@ -368,72 +350,7 @@ class FleetManager(Node):
             response["success"] = True
             return response
 
-        @app.post("/vdm-rmf/cmd/follow_path/", response_model=Response)
-        async def follow_path(robot_name: str, cmd_id: int, dest: Request):
-            response = {"success": False, "msg": ""}
-            if robot_name not in self.robots or len(dest.waypoints) < 1:
-                return response
-
-            robot = self.robots[robot_name]
-
-            duration = 0
-            path_request = PathRequest()
-            cur_x = robot.state.location.x
-            cur_y = robot.state.location.y
-            cur_yaw = robot.state.location.yaw
-            cur_loc = robot.state.location
-            path_request.path.append(cur_loc)
-            t = self.get_clock().now().to_msg()
-            for destination in dest.waypoints:
-                target_x = destination["x"]
-                target_y = destination["y"]
-                target_yaw = destination["yaw"]
-                target_speed_limit = destination["speed_limit"]
-                target_map = dest.map_name
-
-                target_x -= self.offset[0]
-                target_y -= self.offset[1]
-
-                disp = self.disp([target_x, target_y], [cur_x, cur_y])
-                duration = int(
-                    disp / self.vehicle_traits.linear.nominal_velocity
-                ) + int(
-                    abs(abs(cur_yaw) - abs(target_yaw))
-                    / self.vehicle_traits.rotational.nominal_velocity
-                )
-
-                t.sec = t.sec + duration
-                target_loc = Location()
-                target_loc.t = t
-                target_loc.x = target_x
-                target_loc.y = target_y
-                target_loc.yaw = target_yaw
-                target_loc.level_name = target_map
-                target_loc.obey_approach_speed_limit = False
-                if target_speed_limit is not None and target_speed_limit > 0.0:
-                    target_loc.obey_approach_speed_limit = True
-                    target_loc.approach_speed_limit = target_speed_limit
-
-                path_request.path.append(target_loc)
-                cur_x = target_x
-                cur_y = target_y
-                cur_yaw = target_yaw
-
-            path_request.task_id = str(cmd_id)
-            path_request.fleet_name = self.fleet_name
-            path_request.robot_name = robot_name
-            self.path_pub.publish(path_request)
-
-            if self.debug:
-                print(f"Sending follow_path request for {robot_name}: {cmd_id}")
-            robot.last_request = path_request
-            robot.destination = target_loc
-            robot.path = path_request.path[1:]
-
-            response["success"] = True
-            return response
-
-        @app.get("/vdm-rmf/cmd/pause_robot/", response_model=Response)
+        @app.get("/open-rmf/rmf_vdm_fm/pause_robot/", response_model=Response)
         async def pause(robot_name: str, cmd_id: int):
             response = {"success": False, "msg": ""}
             if robot_name not in self.robots:
@@ -499,7 +416,7 @@ class FleetManager(Node):
             response["success"] = True
             return response
 
-        @app.get("/vdm-rmf/cmd/stop_robot/", response_model=Response)
+        @app.get("/open-rmf/rmf_vdm_fm/stop_robot/", response_model=Response)
         async def stop(robot_name: str, cmd_id: int):
             response = {"success": False, "msg": ""}
             if robot_name not in self.robots:
@@ -516,67 +433,109 @@ class FleetManager(Node):
                 print(f"Sending stop request for {robot_name}: {cmd_id}")
             robot.last_request = cancel_request
             robot.destination = None
-            robot.path = None
 
             response["success"] = True
             return response
 
-        @app.post("/vdm-rmf/cmd/start_task/", response_model=Response)
-        async def start_process(robot_name: str, cmd_id: int, task: Request):
+        @app.get("/open-rmf/rmf_vdm_fm/action_paths/", response_model=Response)
+        async def action_paths(activity: str, label: str):
             response = {"success": False, "msg": ""}
-            if robot_name not in self.robots or len(task.task) < 2:
+            if activity not in self.action_paths:
+                return response
+
+            if label not in self.action_paths[activity][label]:
+                return response
+
+            response["data"] = self.action_paths[activity][label]
+            response["success"] = True
+            return response
+
+        @app.post("/open-rmf/rmf_vdm_fm/start_activity/", response_model=Response)
+        async def start_activity(robot_name: str, cmd_id: int, request: Request):
+            response = {"success": False, "msg": ""}
+            if robot_name not in self.robots:
                 return response
 
             robot = self.robots[robot_name]
-            dock_request = DockRequest()
-            if task.task["mode"] == "charge":
-                dock_request.dock_mode.mode = DockMode.MODE_CHARGE
-            elif task.task["mode"] == "pickup" or task.task["mode"] == "mcpickup":
-                dock_request.dock_mode.mode = DockMode.MODE_PICKUP
-            elif task.task["mode"] == "dropoff" or task.task["mode"] == "mcdropoff":
-                dock_request.dock_mode.mode = DockMode.MODE_DROPOFF
-            elif task.task["mode"] == "undock":
-                dock_request.dock_mode.mode = DockMode.MODE_UNDOCK
-            else:
-                response["msg"] = "Mode dock does not support. Please check mode!"
-                return response
 
-            dock_config = self._dock_context.get(task.task["dock_name"], None)
-            if dock_config is None:
-                response["msg"] = "Not found dock name in config!"
-                return response
-            else:
-                destination = Location()
-                destination.level_name = task.map_name
-                destination.x = task.task["location"][0]
-                destination.y = task.task["location"][1]
-                destination.yaw = task.task["location"][2]
-                dock_request.destination = destination
-                dock_request.fleet_name = self.fleet_name
-                dock_request.robot_name = robot_name
-                dock_request.machine = dock_config.is_machine
-                dock_request.custom_docking = dock_config.custom_dock
-                dock_request.rotate_to_dock = dock_config.rotate_to_dock
-                dock_request.rotate_angle = dock_config.rotate_angle
-                dock_request.rotate_orientation = dock_config.rotate_orientation
-
-                if task.task.get("unlift", None) is not None:
-                    dock_request.distance_go_out = task.task["unlift"]
+            if request.activity == "dock":
+                dock_request = DockRequest()
+                if request.activity_desc["mode"] == "charge":
+                    dock_request.dock_mode.mode = DockMode.MODE_CHARGE
+                elif (
+                    request.activity_desc["mode"] == "pickup"
+                    or request.activity_desc["mode"] == "mcpickup"
+                ):
+                    dock_request.dock_mode.mode = DockMode.MODE_PICKUP
+                elif (
+                    request.activity_desc["mode"] == "dropoff"
+                    or request.activity_desc["mode"] == "mcdropoff"
+                ):
+                    dock_request.dock_mode.mode = DockMode.MODE_DROPOFF
+                elif request.activity_desc["mode"] == "undock":
+                    dock_request.dock_mode.mode = DockMode.MODE_UNDOCK
                 else:
-                    dock_request.distance_go_out = dock_config.distance_go_out
-                dock_request.task_id = str(cmd_id)
+                    response["msg"] = "Mode dock does not support. Please check mode!"
+                    return response
 
-                self.dock_pub.publish(dock_request)
+                dock_config = self._dock_context.get(
+                    request.activity_desc["dock_name"], None
+                )
+                if dock_config is None:
+                    response["msg"] = "Not found dock name in config!"
+                    return response
+                else:
+                    target_loc = Location()
+                    target_loc.level_name = request.map_name
+                    target_loc.x = request.activity_desc["location"][0]
+                    target_loc.y = request.activity_desc["location"][1]
+                    target_loc.yaw = request.activity_desc["location"][2]
 
-                if self.debug:
-                    print(f"Sending process request for {robot_name}: {cmd_id}")
-                robot.last_request = dock_request
-                robot.destination = destination
+                    activity_path = {}
+                    activity_path.update({"map_name": request.map_name})
+                    activity_path.update(
+                        {
+                            "path": [
+                                [
+                                    robot.state.location.x,
+                                    robot.state.location.y,
+                                    robot.state.location.yaw,
+                                ],
+                                [target_loc.x, target_loc.y, target_loc.yaw],
+                            ]
+                        }
+                    )
+                    dock_request.destination = target_loc
+                    dock_request.fleet_name = self.fleet_name
+                    dock_request.robot_name = robot_name
+                    dock_request.machine = dock_config.is_machine
+                    dock_request.custom_docking = dock_config.custom_dock
+                    dock_request.rotate_to_dock = dock_config.rotate_to_dock
+                    dock_request.rotate_angle = dock_config.rotate_angle
+                    dock_request.rotate_orientation = dock_config.rotate_orientation
+
+                    if request.activity_desc.get("unlift", None) is not None:
+                        dock_request.distance_go_out = request.activity_desc["unlift"]
+                    else:
+                        dock_request.distance_go_out = dock_config.distance_go_out
+                    dock_request.task_id = str(cmd_id)
+
+                    self.dock_pub.publish(dock_request)
+
+                    if self.debug:
+                        print(
+                            f"Sending [{request.activity}] at [{request.label}] "
+                            f"request for {robot_name}: {cmd_id}"
+                        )
+                    robot.last_request = dock_request
+                    robot.destination = target_loc
 
                 response["success"] = True
+                response["data"] = {}
+                response["data"]["path"] = activity_path
                 return response
 
-        @app.post("/vdm-rmf/cmd/localize/", response_model=Response)
+        @app.post("/open-rmf/rmf_vdm_fm/localize/", response_model=Response)
         async def localize(robot_name: str, cmd_id: int, dest: Request):
             response = {"success": False, "msg": ""}
             if robot_name not in self.robots or len(dest.destination) < 1:
@@ -591,155 +550,25 @@ class FleetManager(Node):
 
             t = self.get_clock().now().to_msg()
 
-            destination = Location()
-            destination.t = t
-            destination.x = target_x
-            destination.y = target_y
-            destination.yaw = target_yaw
-            destination.level_name = target_map
-
             localize_request = LocalizeRequest()
             localize_request.fleet_name = self.fleet_name
             localize_request.robot_name = robot_name
-            localize_request.destination = destination
+            localize_request.destination.t = t
+            localize_request.destination.x = target_x
+            localize_request.destination.y = target_y
+            localize_request.destination.yaw = target_yaw
+            localize_request.destination.level_name = target_map
+
             localize_request.task_id = str(cmd_id)
             self.localize_pub.publish(localize_request)
 
             if self.debug:
                 print(f"Sending localize request for {robot_name}: {cmd_id}")
             robot.last_request = localize_request
-            robot.destination = destination
             response["success"] = True
             return response
 
-        # ///////////////////////////////////////////////////////////////////////
-        # ///////////////////////////////////////////////////////////////////////
-        # Lay du lieu machine
-        @app.get("/vdm-rmf/machine_data/status/", response_model=Response)
-        async def status(machine_name: Optional[str] = None):
-            response = {"data": {}, "success": False, "msg": ""}
-            if not self.debug:
-                print(f"Receiv request get data machine: {machine_name}")
-            if machine_name is None:
-                response["data"]["all_machines"] = []
-                for machine_name in self.machines:
-                    state = self.machines.get(machine_name)
-                    if state is None or state.state is None:
-                        return response
-                    response["data"]["all_machines"].append(
-                        self.get_machine_state(state, machine_name)
-                    )
-            else:
-                state = self.machines.get(machine_name)
-                if state is None or state.state is None:
-                    return response
-                response["data"] = self.get_machine_state(state, machine_name)
-            response["success"] = True
-            return response
-
-        # Gui tin hieu cho machine thuc thi
-        @app.post("/vdm-rmf/cmd/machine_trigger/", response_model=Response)
-        async def machine_trigger(robot_name: str, cmd_id: int, task: Request):
-            response = {"success": False, "msg": ""}
-
-            machine_request = MachineRequest()
-            if task.task["mode"] == "mcpickup":
-                if task.task["action"] == "clamp":
-                    machine_request.mode.mode = MachineMode.MODE_PK_CLAMP
-                elif task.task["action"] == "release":
-                    machine_request.mode.mode = MachineMode.MODE_PK_RELEASE
-                else:
-                    response["msg"] = (
-                        "Mode mcpickup only support clamp or release action. Please check action!"
-                    )
-                    return response
-            elif task.task["mode"] == "mcdropoff":
-                if task.task["action"] == "clamp":
-                    machine_request.mode.mode = MachineMode.MODE_DF_CLAMP
-                elif task.task["action"] == "release":
-                    machine_request.mode.mode = MachineMode.MODE_DF_RELEASE
-                else:
-                    response["msg"] = (
-                        "Mode mcdropoff only support clamp or release action. Please check action!"
-                    )
-                    return response
-            else:
-                response["msg"] = "Mode machine does not support. Please check mode!"
-                return response
-
-            machine_request.fleet_name = self.fleet_name
-            machine_request.machine_name = task.task["machine_name"]
-            machine_request.request_id = str(cmd_id)
-            self.machine_pub.publish(machine_request)
-
-            if self.debug:
-                print(
-                    f'Sending machine request for {task.task["machine_name"]}: {cmd_id}'
-                )
-
-            response["success"] = True
-            return response
-
-        # Gui tin hieu cho station thuc thi
-        @app.post("/vdm-rmf/cmd/station_trigger/", response_model=Response)
-        async def station_trigger(robot_name: str, cmd_id: int, task: Request):
-            response = {"success": False, "msg": ""}
-
-            station_request = StationRequest()
-            if task.task["mode"] == "pickup":
-                station_request.mode.mode = StationMode.MODE_EMPTY
-            elif task.task["mode"] == "dropoff":
-                station_request.mode.mode = StationMode.MODE_FILLED
-            else:
-                response["msg"] = "Mode station does not support. Please check mode!"
-                return response
-
-            station_request.fleet_name = self.fleet_name
-            station_request.machine_name = "nqvlm104"
-            station_request.station_name = task.task["station_name"]
-            station_request.request_id = str(cmd_id)
-            self.station_pub.publish(station_request)
-
-            if self.debug:
-                print(
-                    f'Sending station request for {task.task["station_name"]}: {cmd_id}'
-                )
-
-            response["success"] = True
-            return response
-
-        # ///////////////////////////////////////////////////////////////////////
-        # ///////////////////////////////////////////////////////////////////////
-
-        @app.post("/vdm-rmf/cmd/charger_trigger/", response_model=Response)
-        async def charger_trigger(robot_name: str, cmd_id: int, task: Request):
-            response = {"success": False, "msg": ""}
-
-            charger_request = ChargerRequest()
-            if task.task["mode"] == "charge":
-                charger_request.charger_mode.mode = ChargerMode.MODE_CHARGE
-            elif task.task["mode"] == "uncharge":
-                charger_request.charger_mode.mode = ChargerMode.MODE_UNCHARGE
-            else:
-                response["msg"] = "Mode charger does not support. Please check mode!"
-                return response
-
-            charger_request.fleet_name = self.fleet_name
-            charger_request.charger_name = task.task["charger_name"]
-            charger_request.robot_name = robot_name
-            charger_request.request_id = str(cmd_id)
-
-            self.charger_pub.publish(charger_request)
-
-            if self.debug:
-                print(
-                    f'Sending charger request for {task.task["charger_name"]}: {cmd_id}'
-                )
-
-            response["success"] = True
-            return response
-
-        @app.post("/vdm-rmf/cmd/toggle_action/", response_model=Response)
+        @app.post("/open-rmf/rmf_vdm_fm/toggle_teleop/", response_model=Response)
         async def toggle_teleop(robot_name: str, mode: Request):
             response = {"success": False, "msg": ""}
             if robot_name not in self.robots:
@@ -749,30 +578,42 @@ class FleetManager(Node):
             response["success"] = True
             return response
 
-        # @app.get('/vdm-rmf/cmd/is_task_queue_finished/',
-        #          response_model=Response)
-        # async def is_task_queue_finished(robot_name: str):
-        #     response = {
-        #         'data': {},
-        #         'success': False,
-        #         'msg': ''
-        #     }
-        #     if (robot_name not in self.robots):
-        #         return response
+        # ///////////////////////////////////////////////////////////////////////
+        # ///////////////////////////////////////////////////////////////////////
 
-        #     robot = self.robots[robot_name]
-        #     if robot.last_completed_request == robot.last_request.task_id:
-        #         response['data']['task_finished'] = True
-        #     else:
-        #         response['data']['task_finished'] = False
-        #     response['success'] = True
-        #     return response
+        @app.post("/open-rmf/rmf_vdm_fm/charger_trigger/", response_model=Response)
+        async def charger_trigger(robot_name: str, cmd_id: int, request: Request):
+            response = {"success": False, "msg": ""}
+
+            charger_request = ChargerRequest()
+            if request.activity_desc["mode"] == "charge":
+                charger_request.charger_mode.mode = ChargerMode.MODE_CHARGE
+            elif request.activity_desc["mode"] == "uncharge":
+                charger_request.charger_mode.mode = ChargerMode.MODE_UNCHARGE
+            else:
+                response["msg"] = "Mode charger does not support. Please check mode!"
+                return response
+
+            charger_request.fleet_name = self.fleet_name
+            charger_request.charger_name = request.activity_desc["charger_name"]
+            charger_request.robot_name = robot_name
+            charger_request.request_id = str(cmd_id)
+
+            self.charger_pub.publish(charger_request)
+
+            if self.debug:
+                print(
+                    f'Sending charger request for {request.activity_desc["charger_name"]}: {cmd_id}'
+                )
+
+            response["success"] = True
+            return response
 
     def fleet_states_cb(self, msg: FleetState):
         if msg.name == self.fleet_name:
             dataRobot = msg.robots
             for robotMsg in dataRobot:
-                if robotMsg.name in self.robots.keys():
+                if robotMsg.name in self.robots:
                     robot = self.robots[robotMsg.name]
                     if (
                         not robot.is_expected_task_id(robotMsg.task_id)
@@ -801,8 +642,6 @@ class FleetManager(Node):
                         continue
 
                     robot.state = robotMsg
-                    # self.get_logger().warn(f'robot "{robotMsg.name}":  {robot.state.location}')
-
                     # Check if robot has reached destination
                     if robot.destination is None:
                         continue
@@ -812,10 +651,6 @@ class FleetManager(Node):
                         or robotMsg.mode.mode == RobotMode.MODE_CHARGING
                     ) and len(robotMsg.path) == 0:
                         if type(robot.last_request) is LocalizeRequest:
-                            # self.get_logger().warn(
-                            #     f'Localize Request: "{robotMsg.name}" , level: {robot.last_request.destination.level_name}\n'
-                            #     f"Robot fleet level now: {robotMsg.location.level_name}"
-                            # )
                             if (
                                 robot.last_request.destination.level_name
                                 != robotMsg.location.level_name
@@ -823,7 +658,6 @@ class FleetManager(Node):
                                 continue
 
                         robot.destination = None
-                        robot.path = None
                         completed_request = int(robotMsg.task_id)
                         if robot.last_completed_request != completed_request:
                             if self.debug:
@@ -837,30 +671,7 @@ class FleetManager(Node):
                         f'Detect robot "{robotMsg.name}" is not in config file, pleascheck!'
                     )
 
-    def machine_states_cb(self, msg: FleetMachineState):
-        if msg.name == self.fleet_name:
-            dataMachine = msg.machines
-            for machineMsg in dataMachine:
-                if machineMsg.machine_name in self.machines.keys():
-                    machine = self.machines[machineMsg.machine_name]
-                    machine.state = machineMsg
-
-                    if machineMsg.mode.mode == MachineMode.MODE_IDLE:
-                        completed_request = machineMsg.request_id
-                        if machine.last_completed_request != completed_request:
-                            # if self.debug:
-                            #     print(
-                            #         f'Detecting completed request for {robotMsg.name}: '
-                            #         f'{completed_request}'
-                            #     )
-                            machine.last_completed_request = completed_request
-                else:
-                    self.get_logger().warn(
-                        f'Detect machine "{machineMsg.machine_name}" is not in config file, pleascheck!'
-                    )
-
     def dock_summary_cb(self, msg):
-        return
         for fleet in msg.docks:
             if fleet.fleet_name == self.fleet_name:
                 for dock in fleet.params:
@@ -877,19 +688,8 @@ class FleetManager(Node):
         data["map_name"] = robot.state.location.level_name
         data["position"] = {"x": position[0], "y": position[1], "yaw": angle}
         data["battery"] = robot.state.battery_percent
-        if (
-            robot.destination is not None
-            and robot.last_request is not None
-            and robot.path is not None
-        ):
-            data["path_length"] = len(robot.path)
-            # Sửa destination để nhận điểm đầu tiên trong path
-            # destination = robot.destination
-            destination = robot.path[0]
-            n = len(robot.path) - len(robot.state.path)
-            if len(robot.state.path) > 0 and n > 0:
-                robot.path = robot.path[n:]
-
+        if robot.destination is not None and robot.last_request is not None:
+            destination = robot.destination
             # remove offset for calculation if using gps coords
             if self.gps:
                 position[0] -= self.offset[0]
@@ -906,10 +706,12 @@ class FleetManager(Node):
                 + ori_delta / self.vehicle_traits.rotational.nominal_velocity
             )
             cmd_id = int(robot.last_request.task_id)
-            data["destination_arrival"] = {"cmd_id": cmd_id, "duration": duration}
+            data["destination_arrival"] = {
+                "cmd_id": cmd_id,
+                "duration": duration,
+            }
         else:
             data["destination_arrival"] = None
-            data["path_length"] = None
 
         data["last_completed_request"] = robot.last_completed_request
         if (
@@ -929,16 +731,7 @@ class FleetManager(Node):
         else:
             data["replan"] = False
 
-        data["robot_mode"] = robot.state.mode.mode
-
-        return data
-
-    # Lay du lieu machine
-    def get_machine_state(self, machine: MCState, machine_name):
-        data = {}
-        data["machine_name"] = machine_name
-        data["last_completed_request"] = machine.last_completed_request
-        data["machine_mode"] = machine.state.mode.mode
+        data["mode"] = robot.state.mode.mode
         return data
 
     def disp(self, A, B):
@@ -955,7 +748,8 @@ def main(argv=sys.argv):
     args_without_ros = rclpy.utilities.remove_ros_args(argv)
 
     parser = argparse.ArgumentParser(
-        prog="fleet_adapter", description="Configure and spin up the fleet adapter"
+        prog="fleet_adapter",
+        description="Configure and spin up the fleet adapter",
     )
     parser.add_argument(
         "-c",
@@ -972,22 +766,20 @@ def main(argv=sys.argv):
         help="Path to the nav_graph for this fleet adapter",
     )
     args = parser.parse_args(args_without_ros[1:])
-    print(f"Starting fleet manager...")
+    print("Starting fleet manager...")
 
     with open(args.config_file, "r") as f:
         config = yaml.safe_load(f)
 
     fleet_manager = FleetManager(config, args.nav_graph)
-    executor = MultiThreadedExecutor()
-    executor.add_node(fleet_manager)
 
     spin_thread = threading.Thread(target=rclpy.spin, args=(fleet_manager,))
     spin_thread.start()
 
     uvicorn.run(
         app,
-        host=config["rmf_fleet"]["fleet_manager"]["ip"],
-        port=config["rmf_fleet"]["fleet_manager"]["port"],
+        host=config["fleet_manager"]["ip"],
+        port=config["fleet_manager"]["port"],
         log_level="warning",
     )
 

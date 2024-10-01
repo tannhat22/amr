@@ -3,62 +3,50 @@
 
 rmf_fleet:
   name: "amr_tayrua"
-  fleet_manager:
-    ip: "127.0.0.1"
-    port: 22011
-    user: "some_user"
-    password: "some_password"
   limits:
-    # linear: [0.7, 1.5] # velocity, acceleration
-    # angular: [0.7, 2.0] # velocity, acceleration
-    linear: [1.2, 2.5] # velocity, acceleration
-    angular: [1.2, 3.0] # velocity, acceleration
+    linear: [0.7, 1.5] # velocity, acceleration
+    angular: [0.7, 2.0] # velocity, acceleration
   profile: # Robot profile is modelled as a circle
     footprint: 1.0 # radius in m
     vicinity: 1.2 # radius in m
-  reversible: True # whether robots in this fleet can reverse
+  reversible: False # whether robots in this fleet can reverse
   battery_system:
     voltage: 24.0 # V
     capacity: 80.0 # Ahr
-    charging_current: 17.0 # A
+    charging_current: 8.8 # A
   mechanical_system:
-    mass: 6.0 # kg
-    moment_of_inertia: 10.0 #kgm^2
+    mass: 100.0 # kg
+    moment_of_inertia: 40.0 #kgm^2
     friction_coefficient: 0.22
   ambient_system:
     power: 20.0 # W
   tool_system:
     power: 0.0 # W
   recharge_threshold: 0.10 # Battery level below which robots in this fleet will not operate
-  recharge_soc: 0.80 # Battery level to which robots in this fleet should be charged up to during recharging tasks
+  recharge_soc: 0.8 # Battery level to which robots in this fleet should be charged up to during recharging tasks
+  max_delay: 15.0 # allowed seconds of delay of the current itinerary before it gets interrupted and replanned
   publish_fleet_state: 5.0 # Publish frequency for fleet state, ensure that it is same as robot_state_update_frequency
   account_for_battery_drain: True
   task_capabilities: # Specify the types of RMF Tasks that robots in this fleet are capable of performing
     loop: True
     delivery: True
     clean: False
-    finishing_request: "nothing" # [park, charge, nothing]
-    # action_categories: ["custom_mission_1"]
-  
+  finishing_request: "nothing" # [park, charge, nothing]
   server_charger_running: True  # Server charge is running or not
+  robots:
+    # Here the user is expected to append the configuration for each robot in the fleet.
+    amr001:
+      charger: "charger001--charge"
+    amr002:
+      charger: "charger002--charge"
+  
+fleet_manager:
+  ip: "127.0.0.1"
+  port: 7001
+  user: "some_user"
+  password: "some_password"
+  robot_state_update_frequency: 10.0
 
-# Vdm Robot CONFIG =================================================================
-
-robots:
-  # Here the user is expected to append the configuration for each robot in the
-  # fleet.
-  # Configuration for robot1
-  amr_001:
-    robot_config:
-      max_delay: 15.0 # allowed seconds of delay of the current itinerary before it gets interrupted and replanned
-    rmf_config:
-      robot_state_update_frequency: 5.0
-      start:
-        map_name: "L1"
-        # waypoint: "amr-start"
-        orientation: 0.0 # radians
-      charger:
-        waypoint: "charger001--charge"
 
 # Docks config:
 docks:
@@ -66,36 +54,36 @@ docks:
   # /******************** TP3 *********************/
   clr90_STR--pickup:
     machine: False  # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 0.85
-    rotate_to_dock: -90
+    distance_go_out: 0.9
+    rotate_to_dock: 180
 
   clr90_TTR--dropoff:
     machine: False  # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 0.75
-    rotate_to_dock: 180
+    distance_go_out: 0.9
+    rotate_to_dock: -90
 
   # Configuration for line90--pickup:
   line90--pickup:
     machine: False  # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 0.85
+    distance_go_out: 0.9
     rotate_to_dock: -90
 
   # Configuration for line90--dropoff:
   line90--dropoff:
     machine: False # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 0.75
+    distance_go_out: 0.9
     rotate_to_dock: 90
 
   # Configuration for tramlay1--pickup:
   tramlay1--pickup:
     machine: False  # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 0.85
+    distance_go_out: 0.90
     rotate_to_dock: -180
 
   # Configuration for tramtha1--dropoff:
   tramtha1--dropoff:
     machine: False  # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 0.75
+    distance_go_out: 0.62
     rotate_to_dock: -180
     # custom_dock:
     #   rotate_angle: 0
