@@ -588,7 +588,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
                                     self.undock_name = None
                                     # Huy follow path neu undock toi 1 vertex:
                                     if target_path_length == 1:
-                                        self.on_waypoint = target_path[0].graph_index
+                                        # self.on_waypoint = target_path[0].graph_index
                                         self.node.get_logger().info(
                                             f"Follow path will return success after undock-[{self.name}]!"
                                         )
