@@ -121,14 +121,12 @@ class State:
 class DockInfo:
     def __init__(
         self,
-        is_machine: bool = False,
         distance_go_out: float = 0.0,
         rotate_to_dock: int = 0,
         custom_dock: bool = False,
         rotate_angle: int = 0,
         rotate_orientation: int = 0,
     ) -> None:
-        self.is_machine = is_machine
         self.distance_go_out = distance_go_out
         self.rotate_to_dock = rotate_to_dock
         self.custom_dock = custom_dock
@@ -172,7 +170,6 @@ class FleetManager(Node):
         if "docks" in self.config:
             for dock in self.config["docks"]:
                 dockConf = self.config["docks"][dock]
-                machine = dockConf.get("machine", False)
                 distance_go_out = dockConf.get("distance_go_out", None)
                 rotate_to_dock = dockConf.get("rotate_to_dock", None)
                 custom_dock_conf = dockConf.get("custom_dock", None)
@@ -189,7 +186,6 @@ class FleetManager(Node):
                 assert rotate_to_dock is not None
 
                 dInf = DockInfo(
-                    machine,
                     distance_go_out,
                     rotate_to_dock,
                     custom_dock,
@@ -554,7 +550,6 @@ class FleetManager(Node):
                 dock_request.destination = destination
                 dock_request.fleet_name = self.fleet_name
                 dock_request.robot_name = robot_name
-                dock_request.machine = dock_config.is_machine
                 dock_request.custom_docking = dock_config.custom_dock
                 dock_request.rotate_to_dock = dock_config.rotate_to_dock
                 dock_request.rotate_angle = dock_config.rotate_angle

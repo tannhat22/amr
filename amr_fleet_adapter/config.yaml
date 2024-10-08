@@ -48,7 +48,7 @@ robots:
   # Here the user is expected to append the configuration for each robot in the
   # fleet.
   # Configuration for robot1
-  amr_001:
+  amr001:
     robot_config:
       max_delay: 15.0 # allowed seconds of delay of the current itinerary before it gets interrupted and replanned
     rmf_config:
@@ -65,36 +65,30 @@ docks:
   # Here the user is expected to append the configuration for each dock in the fleet
   # /******************** TP3 *********************/
   clr90_STR--pickup:
-    machine: False  # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 0.85
+    distance_go_out: 0.9
     rotate_to_dock: -90
 
   clr90_TTR--dropoff:
-    machine: False  # Vị trí docking này là máy hay trạm thô
     distance_go_out: 0.75
     rotate_to_dock: 180
 
   # Configuration for line90--pickup:
   line90--pickup:
-    machine: False  # Vị trí docking này là máy hay trạm thô
     distance_go_out: 0.85
-    rotate_to_dock: -90
+    rotate_to_dock: 90
 
   # Configuration for line90--dropoff:
   line90--dropoff:
-    machine: False # Vị trí docking này là máy hay trạm thô
     distance_go_out: 0.75
     rotate_to_dock: 90
 
   # Configuration for tramlay1--pickup:
   tramlay1--pickup:
-    machine: False  # Vị trí docking này là máy hay trạm thô
-    distance_go_out: 0.85
+    distance_go_out: 0.9
     rotate_to_dock: -180
 
   # Configuration for tramtha1--dropoff:
   tramtha1--dropoff:
-    machine: False  # Vị trí docking này là máy hay trạm thô
     distance_go_out: 0.75
     rotate_to_dock: -180
     # custom_dock:
@@ -103,21 +97,8 @@ docks:
 
   # Configuration for charger001--charge:
   charger001--charge:
-    machine: False
-    distance_go_out: -0.62
+    distance_go_out: -0.58
     rotate_to_dock: 0
-
-  # Undock when robot in lift
-  lift001-L1:
-    machine: False
-    distance_go_out: -3.6
-    rotate_to_dock: 0
-
-  lift001-L2:
-    machine: False
-    distance_go_out: -3.6
-    rotate_to_dock: 0
-
 
 # up: 1.57199, down: -1.57199, right: 0.0, left: 3.14  
 vertexs:
@@ -125,7 +106,7 @@ vertexs:
   clr90_STR_FD: [1.57199, False]
   tramlay1PKFD: [1.57199, False]
   tramtha1DOFD: [1.57199, False]
-  line90PKFD: 1.57199
+  line90PKFD: 3.14
   line90DOFD: 3.14
   chargerFD001: 1.57199
   waiting_for_lift_tp2: 1.57199

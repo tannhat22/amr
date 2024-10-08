@@ -833,7 +833,7 @@ class RobotCommandHandle(adpt.RobotCommandHandle):
 
                     # Wait before start docking if dock_station is machine:
                     if dock_mode == "mcpickup" or dock_mode == "mcdropoff":
-                        cmd_id = self.next_cmd_id()
+                        cmd_id = self.current_cmd_id
                         machine_name = self.dock_name.split("--")[0]
                         mc_process = {
                             "machine_name": machine_name,
