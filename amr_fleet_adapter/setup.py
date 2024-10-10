@@ -26,6 +26,7 @@ setup(
             "fleet_adapter=amr_fleet_adapter.fleet_adapter:main",
             "fleet_manager=amr_fleet_adapter.fleet_manager:main",
             "fleet_conflicts=amr_fleet_adapter.fleet_conflicts_handle:main",
+            "test_action_execution_notice=amr_fleet_adapter.test_action_execution_notice:main",
         ],
     },
 )

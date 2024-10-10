@@ -2,7 +2,6 @@ import sys
 import argparse
 import yaml
 import math
-import uuid
 
 import rclpy
 from rclpy.node import Node
@@ -14,8 +13,6 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_system_default
 
 from rmf_fleet_msgs.msg import FleetState, RobotMode, RobotState, ModeRequest
-
-from .RobotClientAPI import RobotAPI
 
 
 class State:
@@ -48,19 +45,6 @@ class FleetConflictsHandle(Node):
         self.recharge_threshold = self.config["rmf_fleet"]["recharge_threshold"]
         self.current_cmd_id = ""
 
-        prefix = (
-            "http://"
-            + self.config["rmf_fleet"]["fleet_manager"]["ip"]
-            + ":"
-            + str(self.config["rmf_fleet"]["fleet_manager"]["port"])
-        )
-
-        self.api = RobotAPI(
-            prefix,
-            self.config["rmf_fleet"]["fleet_manager"]["user"],
-            self.config["rmf_fleet"]["fleet_manager"]["password"],
-        )
-
         # transient_qos = QoSProfile(
         #     history=History.KEEP_LAST,
         #     depth=1,
@@ -79,17 +63,6 @@ class FleetConflictsHandle(Node):
             self.fleet_states_cb,
             100,
         )
-
-    # def next_cmd_id(self):
-    #     self.current_cmd_id = self.current_cmd_id + 1
-    #     return self.current_cmd_id
-
-    def generate_task_id(self):
-        # Tạo một UUID ngẫu nhiên
-        new_uuid = uuid.uuid4()
-        # Lấy một phần của UUID (ví dụ: 8 ký tự đầu tiên)
-        self.current_cmd_id = str(new_uuid)[:6]
-        return self.current_cmd_id
 
     def dist(self, A, B):
         """Euclidian distance between A(x,y) and B(x,y)"""
@@ -165,9 +138,7 @@ class FleetConflictsHandle(Node):
             if (
                 robot1Mode == RobotMode.MODE_IDLE
                 or robot1Mode == RobotMode.MODE_CHARGING
-                or
-                # robot1Mode == RobotMode.MODE_PAUSED or
-                robot1Mode == RobotMode.MODE_EMERGENCY
+                or robot1Mode == RobotMode.MODE_EMERGENCY
                 or robot1Mode == RobotMode.MODE_REQUEST_ERROR
             ):
                 if self.robots[robot1Name].wait_HID is not None:
@@ -178,7 +149,6 @@ class FleetConflictsHandle(Node):
 
                 if len(self.robots[robot1Name].wait_LID) != 0:
                     for robot in self.robots[robot1Name].wait_LID:
-                        # if self.api.resume(robot_name=robot, cmd_id=self.generate_task_id()):
                         self.mode_request(
                             fleet_name=fleetName,
                             robot_name=robot,
@@ -234,7 +204,6 @@ class FleetConflictsHandle(Node):
                                     ].last_mode_request
                                     != RobotMode.MODE_PAUSED
                                 ):
-                                    # if self.api.pause(robot_name=dataRobot[prioLID].name, cmd_id=self.generate_task_id()):
                                     self.mode_request(
                                         fleet_name=fleetName,
                                         robot_name=dataRobot[prioLID].name,
@@ -260,7 +229,6 @@ class FleetConflictsHandle(Node):
                                     self.robots[robot1Name].last_mode_request
                                     != RobotMode.MODE_PAUSED
                                 ):
-                                    # if self.api.pause(robot_name=robot1Name, cmd_id=self.generate_task_id()):
                                     self.mode_request(
                                         fleet_name=fleetName,
                                         robot_name=robot1Name,
@@ -285,7 +253,6 @@ class FleetConflictsHandle(Node):
                                     and self.robots[robot1Name].last_mode_request
                                     != RobotMode.MODE_PAUSED
                                 ):
-                                    # if self.api.pause(robot_name=robot1Name, cmd_id=self.generate_task_id()):
                                     self.mode_request(
                                         fleet_name=fleetName,
                                         robot_name=robot1Name,
@@ -307,7 +274,6 @@ class FleetConflictsHandle(Node):
                                     self.robots[robot2Name].last_mode_request
                                     != RobotMode.MODE_PAUSED
                                 ):
-                                    # if self.api.pause(robot_name=robot2Name, cmd_id=self.generate_task_id()):
                                     self.mode_request(
                                         fleet_name=fleetName,
                                         robot_name=robot2Name,
@@ -330,7 +296,6 @@ class FleetConflictsHandle(Node):
                             == RobotMode.MODE_PAUSED
                             and self.robots[robot1Name].wait_HID == robot2Name
                         ):
-                            # if self.api.resume(robot_name=robot1Name, cmd_id=self.generate_task_id()):
                             self.mode_request(
                                 fleet_name=fleetName,
                                 robot_name=robot1Name,
@@ -349,7 +314,6 @@ class FleetConflictsHandle(Node):
                         == RobotMode.MODE_PAUSED
                         and self.robots[robot1Name].wait_HID == robot2Name
                     ):
-                        # if self.api.resume(robot_name=robot1Name, cmd_id=self.generate_task_id()):
                         self.mode_request(
                             fleet_name=fleetName,
                             robot_name=robot1Name,
