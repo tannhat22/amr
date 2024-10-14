@@ -146,7 +146,7 @@ class FleetManager(Node):
             for dock in self.config["docks"]:
                 dockConf = self.config["docks"][dock]
                 distance_go_out = dockConf.get("distance_go_out", None)
-                rotate_to_dock = dockConf.get("rotate_to_dock", None)
+                rotate_to_dock = dockConf.get("rotate_to_dock", 0)
                 custom_dock_conf = dockConf.get("custom_dock", None)
                 if custom_dock_conf is not None:
                     custom_dock = True

@@ -12,7 +12,7 @@ from rclpy.node import Node
 # from rclpy.qos import QoSReliabilityPolicy as Reliability
 from rclpy.qos import qos_profile_system_default
 
-from rmf_fleet_msgs.msg import FleetState, RobotMode, RobotState, ModeRequest
+from rmf_fleet_msgs.msg import FleetState, RobotMode, RobotState, ModeRequest, Location
 
 
 class State:
@@ -80,7 +80,24 @@ class FleetConflictsHandle(Node):
     # Check priority between robot A and B with state of two robots
     # return ID of robot have higher priority
     def check_priority(self, A: int, B: int, robot_A: RobotState, robot_B: RobotState):
-        if robot_A.battery_percent <= self.recharge_threshold:
+        result = []
+        # Kiểm tra cả hai robot đều đã dưới mức ngưỡng sạc:
+        if (
+            robot_A.battery_percent <= self.recharge_threshold
+            and robot_B.battery_percent <= self.recharge_threshold
+        ):
+            robotA_path_len = self.calc_path_length(robot_A.location, robot_A.path)
+            robotB_path_len = self.calc_path_length(robot_B.location, robot_B.path)
+            if robotA_path_len == robotB_path_len:
+                if robot_A.battery_percent <= robotB_path_len:
+                    return A
+                else:
+                    return B
+            elif robotA_path_len > robotB_path_len:
+                return A
+            else:
+                return B
+        elif robot_A.battery_percent <= self.recharge_threshold:
             return A
         elif robot_B.battery_percent <= self.recharge_threshold:
             return B
@@ -128,7 +145,23 @@ class FleetConflictsHandle(Node):
                         return A
                 return A
 
+    def calc_path_length(self, position: Location, path: list[Location]):
+        a = len(path)
+        posCurrent = [position.x, position.y]
+        if a == 0:
+            return None
+        else:
+            pointDest = [path[0].x, path[0].y]
+            dist = self.dist(posCurrent, pointDest)
+            for i in range(a - 1):
+                pointA = [path[i].x, path[i].y]
+                pointB = [path[i + 1].x, path[i + 1].y]
+                dist += self.dist(pointA, pointB)
+            return dist
+
     def fleet_states_cb(self, msg: FleetState):
+        dataRobot: list[RobotState]
+
         fleetName = msg.name
         dataRobot = msg.robots
         dataLen = len(dataRobot)
@@ -159,8 +192,8 @@ class FleetConflictsHandle(Node):
                         self.get_logger().info(
                             f"Robot: `{robot}` will resume from conflicts"
                         )
-
-                    self.robots[robot1Name].wait_LID = []
+                        self.robots[robot1Name].wait_LID.remove(robot)
+                    # self.robots[robot1Name].wait_LID = []
 
                 continue
 

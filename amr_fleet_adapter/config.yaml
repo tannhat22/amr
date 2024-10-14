@@ -51,51 +51,61 @@ fleet_manager:
 # Docks config:
 docks:
   # Here the user is expected to append the configuration for each dock in the fleet
-  # /******************** TP3 *********************/
-  clr90_STR--pickup:
+  # /******************** TP2 *********************/
+  clr55--pickup:
     distance_go_out: 0.90
-    rotate_to_dock: -90
 
-  clr90_TTR--dropoff:
+  clr55--dropoff:
     distance_go_out: 0.70
-    rotate_to_dock: 180
 
-  # Configuration for line90--pickup:
+  line55--pickup:
+    distance_go_out: 0.85
+
+  line55--dropoff:
+    distance_go_out: 0.70
+
+  # /******************** TP3 *********************/
+  clr90--pickup:
+    distance_go_out: 0.90
+
+  clr90--dropoff:
+    distance_go_out: 0.70
+
   line90--pickup:
     distance_go_out: 0.85
-    rotate_to_dock: 90
 
-  # Configuration for line90--dropoff:
   line90--dropoff:
     distance_go_out: 0.70
-    rotate_to_dock: 90
 
-  # Configuration for tramlay1--pickup:
   tramlay1--pickup:
     distance_go_out: 0.90
-    rotate_to_dock: -180
 
-  # Configuration for tramtha1--dropoff:
   tramtha1--dropoff:
     distance_go_out: 0.70
-    rotate_to_dock: -180
+    rotate_to_dock: 0
     # custom_dock:
     #   rotate_angle: 0
     #   rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
 
-  # Configuration for charger001--charge:
   charger001--charge:
     distance_go_out: -0.58
-    rotate_to_dock: 0
 
 # up: 1.57199, down: -1.57199, right: 0.0, left: 3.14  
 vertexs:
-  clr90_TTR_FD: [-1.5719, False]
-  clr90_STR_FD: [1.57199, False]
-  tramlay1PKFD: [1.57199, False]
-  tramtha1DOFD: [1.57199, False]
-  line90PKFD: 3.14
-  line90DOFD: 3.14
+  # ------TP2------:
+  # Line55:
+  clr55_PKFD: 0.0
+  clr55_DOFD: 1.57199
+  line55_PKFD: 0.0
+  line55_DOFD: 0.0
+  # ------TP3------:
+  # Line90:
+  clr90_PKFD: 0.0
+  clr90_DOFD: 1.57199
+  line90_PKFD: -1.57199
+  line90_DOFD: -1.57199
+  tramlay1_PKFD: 1.57199
+  tramtha1_DOFD: 1.57199
   chargerFD001: 1.57199
   waiting_for_lift_tp2: 1.57199
   waiting_for_lift_tp3: 1.57199
