@@ -4,6 +4,7 @@ import yaml
 import math
 
 import rclpy
+from enum import IntEnum
 from rclpy.node import Node
 
 # from rclpy.qos import QoSProfile
@@ -11,7 +12,6 @@ from rclpy.node import Node
 # from rclpy.qos import QoSDurabilityPolicy as Durability
 # from rclpy.qos import QoSReliabilityPolicy as Reliability
 from rclpy.qos import qos_profile_system_default
-
 from rmf_fleet_msgs.msg import FleetState, RobotMode, RobotState, ModeRequest, Location
 
 
@@ -20,6 +20,15 @@ class State:
         self.last_mode_request = last_mode_request
         self.wait_HID = None
         self.wait_LID = []
+
+
+class PriotityCode(IntEnum):
+    DEST_TOO_NEAR_POSSITION = 1
+    BATTERY_PRIORITY = 2
+    BATTERY_PRIORITY_THRESHOLD = 3
+    BATTERY_PRIORITY_THRESHOLD_AND_PATH_EQUAL = 4
+    BATTERY_PRIORITY_THRESHOLD_AND_PATH_SHORTER = 5
+    PATH_DISTANCE_PRIORITY = 6
 
 
 class FleetConflictsHandle(Node):
@@ -38,7 +47,7 @@ class FleetConflictsHandle(Node):
         self.debug = self.get_parameter("debug").value
 
         self.robots = {}
-        for robot_name, robot_config in self.config["robots"].items():
+        for robot_name, robot_config in self.config["rmf_fleet"]["robots"].items():
             self.robots[robot_name] = State()
         assert len(self.robots) > 0
 
@@ -78,74 +87,79 @@ class FleetConflictsHandle(Node):
         self.mode_request_pub.publish(msg)
 
     # Check priority between robot A and B with state of two robots
-    # return ID of robot have higher priority
+    # return [highPriority, lowPriority]
     def check_priority(self, A: int, B: int, robot_A: RobotState, robot_B: RobotState):
-        result = []
+        destA = None
+        destB = None
+        result = [A, B]
+        code = None
+        posCurrent_A = [robot_A.location.x, robot_A.location.y]
+        posCurrent_B = [robot_B.location.x, robot_B.location.y]
+
+        if len(robot_A.path) > 0:
+            destA = [robot_A.path[-1].x, robot_A.path[-1].y]
+        if len(robot_B.path) > 0:
+            destB = [robot_B.path[-1].x, robot_B.path[-1].y]
+
+        # Kiểm tra đích đến của robot có nằm quá gần vị trí của robot còn lại không:
+        if destA is not None and self.dist(destA, posCurrent_B) < 1.0:
+            code = PriotityCode.DEST_TOO_NEAR_POSSITION
+            result = [B, A]
+        elif destB is not None and self.dist(destB, posCurrent_A) < 1.0:
+            code = PriotityCode.DEST_TOO_NEAR_POSSITION
+            result = [A, B]
         # Kiểm tra cả hai robot đều đã dưới mức ngưỡng sạc:
-        if (
+        elif (
             robot_A.battery_percent <= self.recharge_threshold
             and robot_B.battery_percent <= self.recharge_threshold
         ):
-            robotA_path_len = self.calc_path_length(robot_A.location, robot_A.path)
-            robotB_path_len = self.calc_path_length(robot_B.location, robot_B.path)
-            if robotA_path_len == robotB_path_len:
-                if robot_A.battery_percent <= robotB_path_len:
-                    return A
+            robotA_path_dis = self.calc_path_distance(robot_A.location, robot_A.path)
+            robotB_path_dis = self.calc_path_distance(robot_B.location, robot_B.path)
+            if robotA_path_dis == robotB_path_dis:
+                code = PriotityCode.BATTERY_PRIORITY_THRESHOLD_AND_PATH_EQUAL
+                if robot_A.battery_percent <= robot_B.battery_percent:
+                    result = [A, B]
                 else:
-                    return B
-            elif robotA_path_len > robotB_path_len:
-                return A
+                    result = [B, A]
+            elif robotA_path_dis > robotB_path_dis:
+                code = PriotityCode.BATTERY_PRIORITY_THRESHOLD_AND_PATH_SHORTER
+                result = [A, B]
             else:
-                return B
+                code = PriotityCode.BATTERY_PRIORITY_THRESHOLD_AND_PATH_SHORTER
+                result = [B, A]
         elif robot_A.battery_percent <= self.recharge_threshold:
-            return A
+            code = PriotityCode.BATTERY_PRIORITY_THRESHOLD
+            result = [A, B]
         elif robot_B.battery_percent <= self.recharge_threshold:
-            return B
-        elif robot_A.battery_percent > robot_B.battery_percent:
-            if len(robot_A.path):
-                endPath_A = [robot_A.path[-1].x, robot_A.path[-1].y]
-                if (
-                    self.dist(endPath_A, [robot_B.location.x, robot_B.location.y])
-                    >= self.conflicts_distance
-                ):
-                    return A
-                else:
-                    return B
-            return B
-        elif robot_A.battery_percent < robot_B.battery_percent:
-            if len(robot_B.path):
-                endPath_B = [robot_B.path[-1].x, robot_B.path[-1].y]
-                if (
-                    self.dist(endPath_B, [robot_A.location.x, robot_A.location.y])
-                    >= self.conflicts_distance
-                ):
-                    return B
-                else:
-                    return A
-            return A
+            code = PriotityCode.BATTERY_PRIORITY_THRESHOLD
+            result = [B, A]
+        elif robot_A.battery_percent / robot_B.battery_percent > 1.1:
+            code = PriotityCode.BATTERY_PRIORITY
+            result = [A, B]
+        elif robot_B.battery_percent / robot_A.battery_percent > 1.1:
+            code = PriotityCode.BATTERY_PRIORITY
+            result = [B, A]
         else:
-            if len(robot_A.path) > len(robot_B.path):
-                endPath_A = [robot_A.path[-1].x, robot_A.path[-1].y]
-                if (
-                    self.dist(endPath_A, [robot_B.location.x, robot_B.location.y])
-                    >= self.conflicts_distance
-                ):
-                    return A
-                else:
-                    return B
-            else:
-                if len(robot_B.path):
-                    endPath_B = [robot_B.path[-1].x, robot_B.path[-1].y]
-                    if (
-                        self.dist(endPath_B, [robot_A.location.x, robot_A.location.y])
-                        >= self.conflicts_distance
-                    ):
-                        return B
-                    else:
-                        return A
-                return A
+            robotA_path_dis = self.calc_path_distance(robot_A.location, robot_A.path)
+            robotB_path_dis = self.calc_path_distance(robot_B.location, robot_B.path)
 
-    def calc_path_length(self, position: Location, path: list[Location]):
+            code = PriotityCode.PATH_DISTANCE_PRIORITY
+            if robotA_path_dis >= robotB_path_dis:
+                result = [A, B]
+            else:
+                result = [B, A]
+
+        if result[0] == A:
+            self.get_logger().info(
+                f"[{robot_B.name}] will pause for conflicts handle (code: {code})!"
+            )
+        else:
+            self.get_logger().info(
+                f"[{robot_A.name}] will pause for conflicts handle (code: {code})!"
+            )
+        return result
+
+    def calc_path_distance(self, position: Location, path: list[Location]):
         a = len(path)
         posCurrent = [position.x, position.y]
         if a == 0:
@@ -176,6 +190,7 @@ class FleetConflictsHandle(Node):
             ):
                 if self.robots[robot1Name].wait_HID is not None:
                     self.robots[robot1Name].wait_HID = None
+                    self.robots[robot1Name].last_mode_request = None
                     self.robots[self.robots[robot1Name].wait_HID].wait_LID.remove(
                         robot1Name
                     )
@@ -190,11 +205,9 @@ class FleetConflictsHandle(Node):
                         self.robots[robot].wait_HID = None
                         self.robots[robot].last_mode_request = None
                         self.get_logger().info(
-                            f"Robot: `{robot}` will resume from conflicts"
+                            f"Publish RESUME_ACTION for [{robot}] from conflicts handle!"
                         )
                         self.robots[robot1Name].wait_LID.remove(robot)
-                    # self.robots[robot1Name].wait_LID = []
-
                 continue
 
             for j in range(dataLen):
@@ -215,118 +228,74 @@ class FleetConflictsHandle(Node):
                             # robot nào có độ ưu tiên thấp hơn sẽ phải chuyển sang chế độ tạm dừng
                             if robot2Mode == RobotMode.MODE_MOVING:
                                 # Lựa chọn robot nào sẽ có độ ưu tiên cao hơn
-                                if (
-                                    self.check_priority(
-                                        A=i,
-                                        B=j,
-                                        robot_A=dataRobot[i],
-                                        robot_B=dataRobot[j],
-                                    )
-                                    == i
-                                ):
-                                    prioHID = i
-                                    prioLID = j
-                                else:
-                                    prioHID = j
-                                    prioLID = i
-
+                                prioHID, prioLID = self.check_priority(
+                                    i, j, dataRobot[i], dataRobot[j]
+                                )
                                 # Yêu cầu robot không được ưu tiên sẽ chuyển sang MODE_PAUSED
+                                self.mode_request(
+                                    fleet_name=fleetName,
+                                    robot_name=dataRobot[prioLID].name,
+                                    mode=RobotMode.MODE_PAUSED,
+                                )
+                                self.robots[
+                                    dataRobot[prioLID].name
+                                ].last_mode_request = RobotMode.MODE_PAUSED
+                                self.robots[dataRobot[prioLID].name].wait_HID = (
+                                    dataRobot[prioHID].name
+                                )
                                 if (
-                                    self.robots[
-                                        dataRobot[prioLID].name
-                                    ].last_mode_request
-                                    != RobotMode.MODE_PAUSED
+                                    dataRobot[prioLID].name
+                                    not in self.robots[dataRobot[prioHID].name].wait_LID
                                 ):
-                                    self.mode_request(
-                                        fleet_name=fleetName,
-                                        robot_name=dataRobot[prioLID].name,
-                                        mode=RobotMode.MODE_PAUSED,
-                                    )
-                                    self.robots[
-                                        dataRobot[prioLID].name
-                                    ].last_mode_request = RobotMode.MODE_PAUSED
-                                    self.robots[dataRobot[prioLID].name].wait_HID = (
-                                        dataRobot[prioHID].name
-                                    )
                                     self.robots[
                                         dataRobot[prioHID].name
                                     ].wait_LID.append(dataRobot[prioLID].name)
-                                    self.get_logger().info(
-                                        f"Robot `{dataRobot[prioLID].name}` will waiting"
-                                        f" `{dataRobot[prioHID].name}` for conflicts"
-                                    )
+                                self.get_logger().info(
+                                    f"Publish PAUSED_ACTION for [{dataRobot[prioLID].name}] (waiting [{dataRobot[prioHID].name}])!"
+                                )
 
                             # Nếu robot2 đang docking thì tạm dừng robot1
                             elif robot2Mode == RobotMode.MODE_DOCKING:
-                                if (
-                                    self.robots[robot1Name].last_mode_request
-                                    != RobotMode.MODE_PAUSED
-                                ):
-                                    self.mode_request(
-                                        fleet_name=fleetName,
-                                        robot_name=robot1Name,
-                                        mode=RobotMode.MODE_PAUSED,
-                                    )
-                                    self.robots[robot1Name].last_mode_request = (
-                                        RobotMode.MODE_PAUSED
-                                    )
-                                    self.robots[robot1Name].wait_HID = robot2Name
+                                self.mode_request(
+                                    fleet_name=fleetName,
+                                    robot_name=robot1Name,
+                                    mode=RobotMode.MODE_PAUSED,
+                                )
+                                self.robots[robot1Name].last_mode_request = (
+                                    RobotMode.MODE_PAUSED
+                                )
+                                self.robots[robot1Name].wait_HID = robot2Name
+                                if robot1Name not in self.robots[robot2Name].wait_LID:
                                     self.robots[robot2Name].wait_LID.append(robot1Name)
-                                    self.get_logger().info(
-                                        f"Robot `{robot1Name}` will waiting"
-                                        f" `{robot2Name}` for conflicts"
-                                    )
-
+                                self.get_logger().info(
+                                    f"Publish PAUSED_ACTION for [{robot1Name}] (waiting [{robot2Name}])!"
+                                )
                             # Nếu robot2 dang ở chế độ tạm dừng bởi wait_HID khác thì robot1 cũng
                             # sẽ chuyển sang chế độ tạm dừng để tránh xung đột với wait_HID của robot2
-                            elif robot2Mode == RobotMode.MODE_PAUSED:
-                                if (
-                                    self.robots[robot2Name].wait_HID is not None
-                                    and self.robots[robot2Name].wait_HID != robot1Name
-                                    and self.robots[robot1Name].last_mode_request
-                                    != RobotMode.MODE_PAUSED
-                                ):
-                                    self.mode_request(
-                                        fleet_name=fleetName,
-                                        robot_name=robot1Name,
-                                        mode=RobotMode.MODE_PAUSED,
-                                    )
-                                    self.robots[robot1Name].last_mode_request = (
-                                        RobotMode.MODE_PAUSED
-                                    )
-                                    self.robots[robot1Name].wait_HID = robot2Name
+                            elif (
+                                robot2Mode == RobotMode.MODE_PAUSED
+                                and self.robots[robot2Name].wait_HID is not None
+                                and self.robots[robot2Name].wait_HID != robot1Name
+                            ):
+                                self.mode_request(
+                                    fleet_name=fleetName,
+                                    robot_name=robot1Name,
+                                    mode=RobotMode.MODE_PAUSED,
+                                )
+                                self.robots[robot1Name].last_mode_request = (
+                                    RobotMode.MODE_PAUSED
+                                )
+                                self.robots[robot1Name].wait_HID = robot2Name
+                                if robot1Name not in self.robots[robot2Name].wait_LID:
                                     self.robots[robot2Name].wait_LID.append(robot1Name)
-                                    self.get_logger().info(
-                                        f"Robot `{robot1Name}` will waiting"
-                                        f" `{robot2Name}` for conflicts"
-                                    )
-                        # Kiểm tra robot1 đang docking hay không
-                        elif robot1Mode == RobotMode.MODE_DOCKING:
-                            if robot2Mode == RobotMode.MODE_MOVING:
-                                if (
-                                    self.robots[robot2Name].last_mode_request
-                                    != RobotMode.MODE_PAUSED
-                                ):
-                                    self.mode_request(
-                                        fleet_name=fleetName,
-                                        robot_name=robot2Name,
-                                        mode=RobotMode.MODE_PAUSED,
-                                    )
-                                    self.robots[robot2Name].last_mode_request = (
-                                        RobotMode.MODE_PAUSED
-                                    )
-                                    self.robots[robot2Name].wait_HID = robot1Name
-                                    self.robots[robot1Name].wait_LID.append(robot2Name)
-                                    self.get_logger().info(
-                                        f"Robot `{robot2Name}` will waiting"
-                                        f" `{robot1Name}` for conflicts"
-                                    )
+                                self.get_logger().info(
+                                    f"Publish PAUSED_ACTION for [{robot1Name}] (waiting [{robot2Name}])!"
+                                )
                     else:
                         # Khi khoảng cách đã vượt ngoài ngưỡng conflict, hãy kiểm tra
-                        # nếu robot1 đang tạm dừng để chờ robot2 hãy giải phóng robot1
+                        # nếu robot1 đang chờ robot2 hãy giải phóng robot1
                         if (
-                            self.robots[robot1Name].last_mode_request
-                            == RobotMode.MODE_PAUSED
+                            robot1Mode == RobotMode.MODE_PAUSED
                             and self.robots[robot1Name].wait_HID == robot2Name
                         ):
                             self.mode_request(
@@ -336,28 +305,30 @@ class FleetConflictsHandle(Node):
                             )
                             self.robots[robot1Name].last_mode_request = None
                             self.robots[robot1Name].wait_HID = None
-                            self.robots[robot2Name].wait_LID.remove(robot1Name)
+                            if robot1Name in self.robots[robot2Name].wait_LID:
+                                self.robots[robot2Name].wait_LID.remove(robot1Name)
                             self.get_logger().info(
-                                f"Robot `{robot1Name}` will resume from conflicts"
+                                f"Publish RESUME_ACTION for [{robot1Name}] from conflicts handle!"
                             )
 
-                else:
-                    if (
-                        self.robots[robot1Name].last_mode_request
-                        == RobotMode.MODE_PAUSED
-                        and self.robots[robot1Name].wait_HID == robot2Name
-                    ):
-                        self.mode_request(
-                            fleet_name=fleetName,
-                            robot_name=robot1Name,
-                            mode=RobotMode.MODE_MOVING,
-                        )
-                        self.robots[robot1Name].last_mode_request = None
-                        self.robots[robot1Name].wait_HID = None
+                # Nếu robot khác tầng với nhau, hãy kiểm tra nếu robot1
+                # đang tạm dừng để chờ robot2 hãy giải phóng robot1
+                elif (
+                    robot1Mode == RobotMode.MODE_PAUSED
+                    and self.robots[robot1Name].wait_HID == robot2Name
+                ):
+                    self.mode_request(
+                        fleet_name=fleetName,
+                        robot_name=robot1Name,
+                        mode=RobotMode.MODE_MOVING,
+                    )
+                    self.robots[robot1Name].last_mode_request = None
+                    self.robots[robot1Name].wait_HID = None
+                    if robot1Name in self.robots[robot2Name].wait_LID:
                         self.robots[robot2Name].wait_LID.remove(robot1Name)
-                        self.get_logger().info(
-                            f"Robot: `{robot1Name}` will resume from conflicts"
-                        )
+                    self.get_logger().info(
+                        f"Publish RESUME_ACTION for [{robot1Name}] from conflicts handle!"
+                    )
 
 
 # ------------------------------------------------------------------------------

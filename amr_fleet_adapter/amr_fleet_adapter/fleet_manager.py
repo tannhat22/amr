@@ -312,8 +312,8 @@ class FleetManager(Node):
             cur_x = robot.state.location.x
             cur_y = robot.state.location.y
             cur_yaw = robot.state.location.yaw
-            cur_loc = robot.state.location
-            path_request.path.append(cur_loc)
+            # cur_loc = robot.state.location
+            # path_request.path.append(cur_loc)
 
             disp = self.disp([target_x, target_y], [cur_x, cur_y])
             duration = int(disp / self.vehicle_traits.linear.nominal_velocity) + int(
