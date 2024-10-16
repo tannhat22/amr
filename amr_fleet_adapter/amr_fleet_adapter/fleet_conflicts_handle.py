@@ -181,6 +181,9 @@ class FleetConflictsHandle(Node):
         dataLen = len(dataRobot)
         for i in range(dataLen):
             robot1Name = dataRobot[i].name
+            if robot1Name not in self.robots:
+                continue
+
             robot1Mode = dataRobot[i].mode.mode
             if (
                 robot1Mode == RobotMode.MODE_IDLE
@@ -215,6 +218,9 @@ class FleetConflictsHandle(Node):
                     continue
 
                 robot2Name = dataRobot[j].name
+                if robot2Name not in self.robots:
+                    continue
+
                 robot2Mode = dataRobot[j].mode.mode
                 # Kiểm tra xem 2 robot này có cùng tầng không:
                 if dataRobot[i].location.level_name == dataRobot[j].location.level_name:

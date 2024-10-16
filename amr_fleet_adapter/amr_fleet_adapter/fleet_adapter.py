@@ -264,7 +264,7 @@ class RobotAdapter:
         self.mission: MissionHandle | None = None
         self.teleoperation = None
         self.cmd_id = 0
-        # self.update_handle = None
+        self.update_handle = None
         self.configuration = configuration
         self.node = node
         self.api = api
@@ -284,17 +284,7 @@ class RobotAdapter:
         self.issue_cmd_thread = None
         self.cancel_cmd_event = threading.Event()
 
-        data = self.api.get_data(self.name)
-        while data is None:
-            data = self.api.get_data(self.name)
-            time.sleep(0.2)
-
-        self.last_known_status = data
-
-        state = rmf_easy.RobotState(data.map, data.position, data.battery_soc)
-        self.update_handle = fleet_handle.add_robot(
-            self.name, state, self.configuration, self.make_callbacks()
-        )
+        self.last_known_status = None
 
     @property
     def activity(self):
@@ -309,27 +299,36 @@ class RobotAdapter:
         while rclpy.ok():
             now = self.node.get_clock().now()
             next_wakeup = now + Duration(nanoseconds=period * 1e9)
-            await self.update()
-            while self.node.get_clock().now() < next_wakeup:
-                time.sleep(0.01)
-
-    @parallel
-    def update(self):
-        with self._lock:
             data = self.api.get_data(self.name)
             if data is None:
-                self.disconnect = False
-                self.node.get_logger().warn(
-                    f"Unable to retrieve state from robot [{self.name}]!"
-                )
-                return
-            if self.disconnect:
-                self.node.get_logger().info(
-                    f"Robot [{self.name}] connectivity resumed, received "
-                    f"status from robot successfully."
-                )
-                self.disconnect = False
+                if not self.disconnect:
+                    self.disconnect = True
+                    self.node.get_logger().warn(
+                        f"Unable to retrieve state from robot [{self.name}]!"
+                    )
+            else:
+                if self.disconnect:
+                    self.node.get_logger().info(
+                        f"Robot [{self.name}] connectivity resumed, received "
+                        f"status from robot successfully."
+                    )
+                    self.disconnect = False
 
+                state = rmf_easy.RobotState(data.map, data.position, data.battery_soc)
+
+                if self.update_handle is None:
+                    self.update_handle = self.fleet_handle.add_robot(
+                        self.name, state, self.configuration, self.make_callbacks()
+                    )
+                else:
+                    await self.update(state, data)
+            while self.node.get_clock().now() < next_wakeup:
+                # time.sleep(0.01)
+                await asyncio.sleep(0.01)
+
+    @parallel
+    def update(self, state, data):
+        with self._lock:
             # Update the stored mission status from AMR
             mission = self.mission
             self.update_mission_status(data, mission)
@@ -340,7 +339,6 @@ class RobotAdapter:
                 or (mission.localize and mission.done)
                 or not mission.localize
             ):
-                state = rmf_easy.RobotState(data.map, data.position, data.battery_soc)
                 self.update_handle.update(state, self.activity)
                 self.last_known_status = data
             else:
@@ -469,11 +467,9 @@ class RobotAdapter:
                 category, description, execution
             ),
         )
-
         callbacks.localize = lambda estimate, execution: self.localize(
             estimate, execution
         )
-
         return callbacks
 
     def navigate(self, destination, execution):

@@ -37,8 +37,8 @@ rmf_fleet:
     # Here the user is expected to append the configuration for each robot in the fleet.
     amr001:
       charger: "charger001--charge"
-    # amr002:
-    #   charger: "charger002--charge"
+    amr002:
+      charger: "charger002--charge"
   
 fleet_manager:
   ip: "127.0.0.1"
@@ -57,6 +57,9 @@ docks:
 
   clr55--dropoff:
     distance_go_out: 0.70
+    custom_dock:
+      rotate_angle: 30
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   line55--pickup:
     distance_go_out: 0.85
@@ -106,7 +109,6 @@ vertexs:
   line90_DOFD: -1.57199
   tramlay1_PKFD: 1.57199
   tramtha1_DOFD: 1.57199
-  chargerFD001: 1.57199
   waiting_for_lift_tp2: 1.57199
   waiting_for_lift_tp3: 1.57199
   tp3_forward_1: 0.0

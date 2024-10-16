@@ -39,7 +39,7 @@
   </include>
 
   <!-- Launch fleet conflicts handle -->
-  <include file="$(find-pkg-share amr_fleet_adapter)/launch/fleet_conflicts_handle.launch.xml">
+  <!-- <include file="$(find-pkg-share amr_fleet_adapter)/launch/fleet_conflicts_handle.launch.xml">
     <arg name="config_file" value="$(find-pkg-share amr_fleet_adapter)/config.yaml"/>
-  </include>
+  </include> -->
 </launch>
