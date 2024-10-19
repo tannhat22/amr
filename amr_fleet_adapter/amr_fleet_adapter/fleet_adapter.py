@@ -482,15 +482,18 @@ class RobotAdapter:
 
             # If the nav command coming in is to bring the robot to same waypoint
             # with waypoint robot is at on, we ignore this nav command
-            status = self.last_known_status
-            if self.dist(status.position[0:2], destination.xy) <= 0.1:
-                self.node.get_logger().info(
-                    f"[{self.name}] Received navigation command to waypoint but "
-                    f"robot is already at the same waypoint, ignoring command and "
-                    f"marking it as finished."
-                )
-                execution.finished()
-                return
+            if self.last_known_status is not None:
+                if (
+                    self.dist(self.last_known_status.position[0:2], destination.xy)
+                    <= 0.25
+                ):
+                    self.node.get_logger().info(
+                        f"[{self.name}] Received navigation command to waypoint but "
+                        f"robot is already at the same waypoint, ignoring command and "
+                        f"marking it as finished."
+                    )
+                    execution.finished()
+                    return
 
             self.cmd_id += 1
             # Check if robot need undock:

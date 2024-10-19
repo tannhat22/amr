@@ -300,7 +300,8 @@ class RobotAPI:
         except HTTPError as http_err:
             print(f"HTTP error for {robot_name} in get_data: {http_err}")
         except Exception as err:
-            print(f"Other error for {robot_name} in get_data: {err}")
+            # print(f"Other error for {robot_name} in get_data: {err}")
+            pass
         return None
 
     # ///////////////////////////////////////////////////////////////////////////

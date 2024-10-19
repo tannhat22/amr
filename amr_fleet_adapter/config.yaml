@@ -7,12 +7,12 @@ rmf_fleet:
     linear: [0.7, 1.5] # velocity, acceleration
     angular: [0.7, 2.0] # velocity, acceleration
   profile: # Robot profile is modelled as a circle
-    footprint: 1.0 # radius in m
-    vicinity: 1.2 # radius in m
+    footprint: 0.3 # radius in m
+    vicinity: 0.3 # radius in m
   reversible: False # whether robots in this fleet can reverse
   battery_system:
     voltage: 24.0 # V
-    capacity: 80.0 # Ahr
+    capacity: 60.0 # Ahr
     charging_current: 8.8 # A
   mechanical_system:
     mass: 100.0 # kg
@@ -31,14 +31,15 @@ rmf_fleet:
     loop: True
     delivery: True
     clean: False
-  finishing_request: "nothing" # [park, charge, nothing]
+  finishing_request: "charge" # [park, charge, nothing]
+  responsive_wait: True # Should responsive wait be on/off for the whole fleet by default? False if not specified.
   charger_server_running: True  # Server charge is running or not
   robots:
     # Here the user is expected to append the configuration for each robot in the fleet.
     amr001:
       charger: "charger001--charge"
     amr002:
-      charger: "charger002--charge"
+      charger: "charger001--charge"
   
 fleet_manager:
   ip: "127.0.0.1"
@@ -56,7 +57,8 @@ docks:
     distance_go_out: 0.90
 
   clr55--dropoff:
-    distance_go_out: 0.70
+    distance_go_out: 2.5
+    rotate_to_dock: 0
     custom_dock:
       rotate_angle: 30
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
@@ -65,7 +67,7 @@ docks:
     distance_go_out: 0.85
 
   line55--dropoff:
-    distance_go_out: 0.70
+    distance_go_out: 0.65
 
   # /******************** TP3 *********************/
   clr90--pickup:
@@ -73,12 +75,13 @@ docks:
 
   clr90--dropoff:
     distance_go_out: 0.70
+    rotate_to_dock: 90
 
   line90--pickup:
     distance_go_out: 0.85
 
   line90--dropoff:
-    distance_go_out: 0.70
+    distance_go_out: 0.65
 
   tramlay1--pickup:
     distance_go_out: 0.90
@@ -93,6 +96,9 @@ docks:
   charger001--charge:
     distance_go_out: -0.58
 
+  charger002--charge:
+    distance_go_out: -0.58
+
 # up: 1.57199, down: -1.57199, right: 0.0, left: 3.14  
 vertexs:
   # ------TP2------:
@@ -104,7 +110,7 @@ vertexs:
   # ------TP3------:
   # Line90:
   clr90_PKFD: 0.0
-  clr90_DOFD: 1.57199
+  clr90_DOFD: 0.0
   line90_PKFD: -1.57199
   line90_DOFD: -1.57199
   tramlay1_PKFD: 1.57199

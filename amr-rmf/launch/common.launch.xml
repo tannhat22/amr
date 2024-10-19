@@ -5,6 +5,7 @@
   <arg name="use_sim_time" default="false" description="Use the /clock topic for time to sync with simulation"/>
   <arg name="viz_config_file" default="$(find-pkg-share rmf_visualization_schedule)/config/rmf.rviz"/>
   <arg name="config_file" description="Building description file required by rmf_building_map_tools"/>
+  <arg name="config_dynamic_charge_file" description="Dynamic charge configuration for fleet"/>
   <arg name="dashboard_config_file" default="" description="Path to dashboard config for web rmf panel file"/>
   <arg name="initial_map" default="L1" description="Initial map name for the visualizer"/>
   <arg name="headless" default="false" description="do not launch rviz; launch gazebo in headless mode"/>
@@ -75,5 +76,14 @@
       <arg name="dashboard_config_file" value ="$(var dashboard_config_file)"/>
     </include>
   </group>
+
+
+  <!-- Rmf charging schedule -->
+  <node pkg="rmf_charging_schedule"
+        exec="charging_schedule"
+        args="$(var config_dynamic_charge_file)"
+        output="both">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
 
 </launch>

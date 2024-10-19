@@ -1,0 +1,5 @@
+amr_tayrua:
+  "00:00": { amr001: charger001--charge, amr002: park_comon_001 }
+  "12:00": { amr001: park_comon_001, amr002: charger001--charge }
+
+parking: ["park_comon_001"]

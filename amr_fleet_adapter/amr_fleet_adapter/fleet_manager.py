@@ -511,6 +511,9 @@ class FleetManager(Node):
                     dock_request.distance_go_out = unliftDis
                 elif dock_config is None:
                     response["msg"] = "Not found dock name in config!"
+                    self.get_logger().warn(
+                        f"Not found dock name [{request.activity_desc['dock_name']}] in config_file!"
+                    )
                     return response
                 else:
                     dock_request.custom_docking = dock_config.custom_dock
