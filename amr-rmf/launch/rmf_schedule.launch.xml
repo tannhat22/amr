@@ -16,15 +16,15 @@
   </include>
 
   <!-- Fleet server -->
-  <include file="$(find-pkg-share amr-rmf)/launch/amr_ff_server.launch.xml">
+  <include file="$(find-pkg-share amr-rmf)/launch/amr_ff_server.launch.py">
   </include>
 
   <!-- Charger server -->
-  <include file="$(find-pkg-share amr-rmf)/launch/charger_server.launch.xml">
+  <include file="$(find-pkg-share amr-rmf)/launch/charger_server.launch.py">
   </include>
 
   <!-- Machine server -->
-  <!-- <include file="$(find-pkg-share amr-rmf)/launch/machine_server.launch.xml">
+  <!-- <include file="$(find-pkg-share amr-rmf)/launch/machine_server.launch.py">
   </include> -->
 
   <!-- Ldm server -->

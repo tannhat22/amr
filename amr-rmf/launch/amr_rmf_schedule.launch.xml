@@ -14,7 +14,7 @@
     <arg name="use_sim_time" value="$(var use_sim_time)"/>
     <arg name="viz_config_file" value ="$(find-pkg-share amr-rmf)/rviz_config/$(var map_name).rviz"/>
     <arg name="config_file" value="$(find-pkg-share amr-rmf)/maps/$(var map_name).building.yaml"/>
-    <arg name="config_dynamic_charge_file" value="$(find-pkg-share amr_fleet_adapter)/charger_config.yaml"/>
+    <arg name="config_dynamic_charge_file" value="$(find-pkg-share amr_fleet_adapter)/charge_schedule.yaml"/>
     <arg name="use_rmf_panel" value="false"/>
     <arg name="dashboard_config_file" value="$(find-pkg-share amr-rmf)/dashboard_config/$(var map_name)/dashboard_config.json"/>
   </include>

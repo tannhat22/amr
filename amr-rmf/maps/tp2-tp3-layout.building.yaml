@@ -61,6 +61,7 @@ levels:
       - [46, 45, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.40000000000000002]}]
       - [22, 25, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
       - [49, 50, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [23, 55, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
     layers:
       tp2_scan:
         color: [1, 0, 0, 0.5]
@@ -141,6 +142,7 @@ levels:
       - [1728, 755, 0, ""]
       - [2440.8620000000001, 700, 0, ""]
       - [3906.2820000000002, 1134.5050000000001, 0, ""]
+      - [1814.2139999999999, 842, 0, park_tp2_001, {is_parking_spot: [4, true]}]
     walls:
       - [8, 12, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
       - [12, 13, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]

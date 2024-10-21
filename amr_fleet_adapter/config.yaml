@@ -39,7 +39,7 @@ rmf_fleet:
     amr001:
       charger: "charger001--charge"
     amr002:
-      charger: "charger001--charge"
+      charger: "charger002--charge"
   
 fleet_manager:
   ip: "127.0.0.1"
@@ -107,6 +107,9 @@ vertexs:
   clr55_DOFD: 1.57199
   line55_PKFD: 0.0
   line55_DOFD: 0.0
+  park_tp2_001: 3.14
+  waiting_for_lift_tp2: 1.57199
+  lift001-L1: [1.57199, True]
   # ------TP3------:
   # Line90:
   clr90_PKFD: 0.0
@@ -115,10 +118,8 @@ vertexs:
   line90_DOFD: -1.57199
   tramlay1_PKFD: 1.57199
   tramtha1_DOFD: 1.57199
-  waiting_for_lift_tp2: 1.57199
   waiting_for_lift_tp3: 1.57199
   tp3_forward_1: 0.0
-  lift001-L1: [1.57199, True]
   lift001-L2: [1.57199, True]
 
 machines: []
