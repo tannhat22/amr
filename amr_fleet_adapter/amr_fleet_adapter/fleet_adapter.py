@@ -317,6 +317,7 @@ class RobotAdapter:
                 state = rmf_easy.RobotState(data.map, data.position, data.battery_soc)
 
                 if self.update_handle is None:
+                    self.last_known_status = data
                     self.update_handle = self.fleet_handle.add_robot(
                         self.name, state, self.configuration, self.make_callbacks()
                     )
@@ -482,18 +483,22 @@ class RobotAdapter:
 
             # If the nav command coming in is to bring the robot to same waypoint
             # with waypoint robot is at on, we ignore this nav command
-            if self.last_known_status is not None:
-                if (
-                    self.dist(self.last_known_status.position[0:2], destination.xy)
-                    <= 0.25
-                ):
-                    self.node.get_logger().info(
-                        f"[{self.name}] Received navigation command to waypoint but "
-                        f"robot is already at the same waypoint, ignoring command and "
-                        f"marking it as finished."
-                    )
-                    execution.finished()
-                    return
+            if (
+                self.last_known_status is not None
+                and self.dist(self.last_known_status.position[0:2], destination.xy)
+                <= 0.25
+            ):
+
+                self.node.get_logger().info(
+                    f"[{self.name}] Received navigation command to waypoint but "
+                    f"robot is already at the same waypoint, ignoring command and "
+                    f"marking it as finished."
+                )
+                if destination.dock is not None:
+                    self.undock = True
+
+                self.mission = MissionHandle(execution, destination=destination)
+                return
 
             self.cmd_id += 1
             # Check if robot need undock:

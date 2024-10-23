@@ -19,7 +19,7 @@ def generate_launch_description():
         launch_arguments={
             "use_sim_time": "false",
             "map_name": "tp2-tp3-layout",
-            "server_uri": "http://10.7.11.9:8000/_internal",
+            "server_uri": "http://10.7.11.27:8000/_internal",
         }.items(),
     )
     free_fleet = IncludeLaunchDescription(
