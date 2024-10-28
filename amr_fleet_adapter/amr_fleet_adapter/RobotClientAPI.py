@@ -346,4 +346,6 @@ class RobotUpdateData:
         self.last_request_completed = data["last_completed_request"]
 
     def is_command_completed(self, cmd_id):
+        if cmd_id == 0 and self.last_request_completed is None:
+            return True
         return self.last_request_completed == cmd_id

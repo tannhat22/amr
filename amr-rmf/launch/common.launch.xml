@@ -79,11 +79,11 @@
 
 
   <!-- Rmf charging schedule -->
-  <!-- <node pkg="rmf_charging_schedule"
+  <node pkg="rmf_charging_schedule"
         exec="charging_schedule"
         args="$(var config_dynamic_charge_file)"
         output="both">
     <param name="use_sim_time" value="$(var use_sim_time)"/>
-  </node> -->
+  </node>
 
 </launch>

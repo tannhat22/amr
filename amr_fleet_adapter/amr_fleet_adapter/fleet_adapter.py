@@ -126,6 +126,7 @@ def main(argv=sys.argv):
 
     # Initialize robot API for this fleet
     fleet_mgr_yaml = config_yaml["fleet_manager"]
+    docks_name = config_yaml["docks"].keys()
     vertexs_yaml = config_yaml["vertexs"]
     update_period = 1.0 / fleet_mgr_yaml.get("robot_state_update_frequency", 10.0)
     api_prefix = "http://" + fleet_mgr_yaml["ip"] + ":" + str(fleet_mgr_yaml["port"])
@@ -159,6 +160,7 @@ def main(argv=sys.argv):
             node,
             api,
             fleet_handle,
+            docks_name,
             vertexs_config,
             charger_server,
         )
@@ -256,6 +258,7 @@ class RobotAdapter:
         node,
         api: RobotAPI,
         fleet_handle,
+        docks_name,
         vertexs_config: dict[str, VertexInfo],
         charger_server: bool,
     ):
@@ -274,6 +277,7 @@ class RobotAdapter:
         self.disconnect = False
         self.paused = False
         self.paused_mission: MissionHandle | None = None
+        self.docks_name = docks_name
         self.vertexs_config = vertexs_config
         self.charger_server = charger_server
         self.undock = False
@@ -378,9 +382,9 @@ class RobotAdapter:
                 self.teleoperation.update(data)
 
     def on_kill(self, killed):
-        self.node.get_logger().info(f"on_kill result {killed} ")
+        self.node.get_logger().info(f"Robot {self.name}: on_kill result {killed} ")
         if not killed:
-            self.node.get_logger().error(f"on_kill with error")
+            self.node.get_logger().error(f"Robot {self.name}: on_kill with error")
 
     def is_charging(self, status: RobotUpdateData):
         # Note: Not the best way to verify that robot is charging but there's
@@ -494,8 +498,12 @@ class RobotAdapter:
                     f"robot is already at the same waypoint, ignoring command and "
                     f"marking it as finished."
                 )
-                if destination.dock is not None:
+
+                if destination.dock is not None or destination.name in self.docks_name:
                     self.undock = True
+
+                if self.last_known_status.last_request_completed is not None:
+                    self.cmd_id = self.last_known_status.last_request_completed
 
                 self.mission = MissionHandle(execution, destination=destination)
                 return
