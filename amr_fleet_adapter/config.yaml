@@ -92,14 +92,15 @@ docks:
 # up: 1.57199, down: -1.57199, right: 0.0, left: 3.14  
 vertexs:
   # ------TP2------:
+  dropoff_clr90_wp: 3.14
+  park_tp2_001: 3.14
+  waiting_for_lift_tp2: 1.57199
+  lift001-L1: [1.57199, True]
   # Line55:
   clr55_PKFD: 0.0
   clr55_DOFD: 1.57199
   line55_PKFD: 0.0
   line55_DOFD: 0.0
-  park_tp2_001: 3.14
-  waiting_for_lift_tp2: 1.57199
-  lift001-L1: [1.57199, True]
   # ------TP3------:
   # Line90:
   clr90_PKFD: 0.0
