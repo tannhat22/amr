@@ -48,6 +48,7 @@
         "/home/tannhat/ros2_ws/install/costmap_converter_msgs/include/**",
         "/home/tannhat/ros2_ws/install/amr_msgs/include/**",
         "/opt/ros/humble/include/**",
+        "/home/tannhat/rmf_ws/install/*",
         "/home/tannhat/rmf_ws/src/amr/amr-rmf/include/**",
         "/home/tannhat/rmf_ws/src/free_fleet/free_fleet/include/**",
         "/home/tannhat/rmf_ws/src/free_fleet/free_fleet_client_ros2/include/**",

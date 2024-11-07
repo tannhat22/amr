@@ -9,7 +9,6 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
-find_package(gazebo_ros REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -53,23 +52,39 @@ foreach(path ${traffic_editor_paths})
   # Generate Gz world and download Models
   ##############################################################################
 
-  # message(NOTICE "BUILDING WORLDFILE WITH COMMAND: ros2 run rmf_building_map_tools building_map_generator gazebo ${map_path} ${output_world_path} ${output_model_dir}")
-  # message(NOTICE "....Downloading Models and Building to ${output_model_dir}")
-  # add_custom_command(
-  #   OUTPUT ${output_world_path}
-  #   COMMAND ros2 run rmf_building_map_tools building_map_generator gazebo ${map_path} ${output_world_path} ${output_model_dir}
-  #   COMMAND ros2 run rmf_building_map_tools building_map_model_downloader ${map_path} -f -e ${output_model_dir}
-  #   DEPENDS ${map_path}
-  # )
+  # message("BUILDING WORLDFILE WITH COMMAND: ros2 run rmf_building_map_tools building_map_generator gazebo ${map_path} ${output_world_path} ${output_model_dir}")
+  # if (NO_DOWNLOAD_MODELS)
+  #   add_custom_command(
+  #     DEPENDS ${map_path}
+  #     COMMAND ros2 run rmf_building_map_tools building_map_generator gazebo ${map_path} ${output_world_path} ${output_model_dir}
+  #     OUTPUT ${output_world_path}
+  #   )
+  # else()
+  #   message("DOWNLOADING MODELS WITH COMMAND: ros2 run rmf_building_map_tools building_map_model_downloader ${map_path}")
+  #   add_custom_command(
+  #     DEPENDS ${map_path}
+  #     COMMAND ros2 run rmf_building_map_tools building_map_generator gazebo ${map_path} ${output_world_path} ${output_model_dir}
+  #     COMMAND ros2 run rmf_building_map_tools building_map_model_downloader ${map_path} -e ~/.gazebo/models
+  #     OUTPUT ${output_world_path}
+  #   )
+  # endif()
 
-  # add_custom_target(generate_${output_world_name}_world ALL
+  ##############################################################################
+  # generate the navmesh and required files for crowd simulation for gz
+  ##############################################################################
+  
+  # set(crowd_sim_config_resource ${output_dir}/config_resource/)
+
+  # add_custom_command(
+  #   OUTPUT ${world_name}_crowdsim
+  #   COMMAND ros2 run rmf_building_map_tools building_crowdsim ${map_path} ${crowd_sim_config_resource} ${output_world_path}
   #   DEPENDS ${output_world_path}
   # )
 
-  # message(NOTICE "....Downloading and Building Models to ${output_model_dir} >>>>> DONE")
-
-
-  # message(NOTICE "....BUILDING WORLDFILE...DONE")
+  # # This will initiate both custom commands: ${output_world_path} and ${world_name}_crowdsim
+  # add_custom_target(generate_${world_name}_crowdsim ALL
+  #   DEPENDS ${world_name}_crowdsim
+  # )
 
   ##############################################################################
   # Generate the nav graphs
@@ -101,8 +116,6 @@ install(DIRECTORY
   launch
   rviz_config
   maps
-  dashboard_config
-  adapter_config  
 #   models
 #   aseprite_map_drawings
   DESTINATION share/${PROJECT_NAME}

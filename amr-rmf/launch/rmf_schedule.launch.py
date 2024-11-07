@@ -27,7 +27,7 @@ def generate_launch_description():
             os.path.join(
                 get_package_share_directory("amr-rmf"),
                 "launch",
-                "amr_ff_server.launch.py",
+                "amrfleet_server.launch.py",
             )
         )
     )

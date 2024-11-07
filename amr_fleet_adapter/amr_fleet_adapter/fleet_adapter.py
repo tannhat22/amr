@@ -172,6 +172,18 @@ def main(argv=sys.argv):
         await asyncio.gather(*robot_updaters)
 
     def update_loop():
+        # reassign_task_interval = config_yaml["rmf_fleet"].get(
+        #     "reassign_task_interval", 60
+        # )  # seconds
+        # last_task_replan = node.get_clock().now()
+        # while rclpy.ok():
+        #     now = node.get_clock().now()
+        #     interval_sec = (now.nanoseconds -
+        #                     last_task_replan.nanoseconds) / 1e9
+        #     if interval_sec > reassign_task_interval:
+        #         fleet_handle.more().reassign_dispatched_tasks()
+        #         last_task_replan = now
+
         event_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(event_loop)
         event_loop.run_until_complete(state_updates())
@@ -606,10 +618,10 @@ class RobotAdapter:
                 self.node.get_logger().info(
                     f"[{self.name}] in lift with lift_name: {lift_name}"
                 )
-            self.attempt_cmd_until_success(
-                cmd=self.api.localize,
-                args=(self.name, self.cmd_id, estimate.map, estimate.position),
-            )
+                self.attempt_cmd_until_success(
+                    cmd=self.api.localize,
+                    args=(self.name, self.cmd_id, estimate.map, estimate.position),
+                )
 
     def pause(self):
         with self._lock:
@@ -675,6 +687,14 @@ class RobotAdapter:
                 self.teleoperation = Teleoperation(execution)
                 self.attempt_cmd_until_success(
                     cmd=self.api.toggle_teleop, args=(self.name, True)
+                )
+            case "delivery_pickup":
+                self.attempt_cmd_until_success(
+                    cmd=self.api.toggle_attach, args=(self.name, True, self.cmd_id)
+                )
+            case "delivery_dropoff":
+                self.attempt_cmd_until_success(
+                    cmd=self.api.toggle_attach, args=(self.name, False, self.cmd_id)
                 )
 
     def finish_action(self):
@@ -827,10 +847,17 @@ def ros_connections(node, robots: dict[str, RobotAdapter], fleet_handle):
 
     def lane_request_cb(msg):
         if msg.fleet_name is None or msg.fleet_name != fleet_name:
+            print(f"Ignoring lane request for fleet [{msg.fleet_name}]")
             return
 
-        fleet_handle.open_lanes(msg.open_lanes)
-        fleet_handle.close_lanes(msg.close_lanes)
+        if msg.open_lanes:
+            print(f"Opening lanes: {msg.open_lanes}")
+
+        if msg.close_lanes:
+            print(f"Closing lanes: {msg.close_lanes}")
+
+        fleet_handle.more().open_lanes(msg.open_lanes)
+        fleet_handle.more().close_lanes(msg.close_lanes)
 
         for lane_idx in msg.close_lanes:
             closed_lanes.add(lane_idx)

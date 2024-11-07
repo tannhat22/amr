@@ -29,9 +29,8 @@ class State:
 
 class DispenserHandle(Node):
 
-    def __init__(self, config, nav_graph):
+    def __init__(self, config):
         self.config = config
-        self.nav_graph = nav_graph
 
         super().__init__("dispenser_manager")
 
@@ -168,19 +167,12 @@ def main(argv=sys.argv):
         required=True,
         help="Path to the config.yaml file",
     )
-    parser.add_argument(
-        "-n",
-        "--nav_graph",
-        type=str,
-        required=True,
-        help="Path to the nav_graph for this dispenser adapter",
-    )
     args = parser.parse_args(args_without_ros[1:])
 
     with open(args.config_file, "r") as f:
         config = yaml.safe_load(f)
 
-    dispenser_handle = DispenserHandle(config, args.nav_graph)
+    dispenser_handle = DispenserHandle(config)
     executor = MultiThreadedExecutor()
     executor.add_node(dispenser_handle)
 

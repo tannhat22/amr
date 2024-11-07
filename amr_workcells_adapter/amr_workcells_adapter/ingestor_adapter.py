@@ -29,9 +29,8 @@ class State:
 
 class IngestorHandle(Node):
 
-    def __init__(self, config, nav_graph):
+    def __init__(self, config):
         self.config = config
-        self.nav_graph = nav_graph
 
         super().__init__("ingestor_manager")
 
@@ -167,19 +166,12 @@ def main(argv=sys.argv):
         required=True,
         help="Path to the config.yaml file",
     )
-    parser.add_argument(
-        "-n",
-        "--nav_graph",
-        type=str,
-        required=True,
-        help="Path to the nav_graph for this ingestor adapter",
-    )
     args = parser.parse_args(args_without_ros[1:])
 
     with open(args.config_file, "r") as f:
         config = yaml.safe_load(f)
 
-    ingestor_handle = IngestorHandle(config, args.nav_graph)
+    ingestor_handle = IngestorHandle(config)
     executor = MultiThreadedExecutor()
     executor.add_node(ingestor_handle)
 
