@@ -310,6 +310,9 @@ class FleetConflictsHandle(Node):
                     )
                     self.robots[robot1Name].wait_HID = None
                     self.robots[robot1Name].last_mode_request = None
+                    self.get_logger().info(
+                        f"Robot [{robot}] is not moving or pause will reset state!"
+                    )
 
                 if len(self.robots[robot1Name].wait_LID) != 0:
                     for robot in self.robots[robot1Name].wait_LID:

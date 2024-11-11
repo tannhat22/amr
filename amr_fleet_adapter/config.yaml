@@ -33,14 +33,18 @@ rmf_fleet:
     clean: False
   finishing_request: "charge" # [park, charge, nothing]
   responsive_wait: True # Should responsive wait be on/off for the whole fleet by default? False if not specified.
-  charger_server_running: True  # Server charge is running or not
+  charger_server_running: False  # Server charge is running or not
   robots:
     # Here the user is expected to append the configuration for each robot in the fleet.
     amr001:
       charger: "charger001--charge"
     amr002:
-      charger: "charger002--charge"
-  
+      charger: "charger001--charge"
+    amr003:
+      charger: "charger003--charge"
+    amr005:
+      charger: "charger004--charge"
+
 fleet_manager:
   ip: "127.0.0.1"
   port: 7001
@@ -69,6 +73,9 @@ docks:
   line55--dropoff:
     distance_go_out: 0.65
 
+  charger001--charge:
+    distance_go_out: -0.7
+
   # /******************** TP3 *********************/
   clr90--pickup:
     distance_go_out: 0.90
@@ -83,10 +90,10 @@ docks:
   line90--dropoff:
     distance_go_out: 0.65
 
-  charger001--charge:
+  charger003--charge:
     distance_go_out: -0.7
 
-  charger002--charge:
+  charger004--charge:
     distance_go_out: -0.7
 
 # up: 1.57199, down: -1.57199, right: 0.0, left: 3.14  

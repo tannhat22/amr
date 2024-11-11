@@ -6,7 +6,7 @@
   <arg name="map_name" default="tp2-tp3-layout" description="Name of the rmf_demos map to simulate" />
   <!-- <arg name="server_uri" default="http://localhost:8000/_internal" description="Name of the rmf_demos map to simulate" /> -->
   <arg name="server_uri" default="http://10.7.11.9:8000/_internal" description="Name of the rmf_demos map to simulate" />
-  <arg name="enable_experimental_lift_watchdog" default="false" description="experimental lift watchdog"/>
+  <arg name="enable_experimental_lift_watchdog" default="true" description="experimental lift watchdog"/>
 
   <!-- Common launch -->
   <include file="$(find-pkg-share amr-rmf)/launch/common.launch.xml">
@@ -49,8 +49,8 @@
   </include>
 
   <!-- Charger server -->
-  <include file="$(find-pkg-share amr-rmf)/launch/charger_server.launch.py">
-  </include>
+  <!-- <include file="$(find-pkg-share amr-rmf)/launch/charger_server.launch.py">
+  </include> -->
 
   <!-- Machine server -->
   <!-- <include file="$(find-pkg-share amr-rmf)/launch/machine_server.launch.py">
