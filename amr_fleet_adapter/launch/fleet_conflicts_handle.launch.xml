@@ -13,8 +13,8 @@
 
     <!-- <param name="conflicts_distance" type="float" value="4.0"/> -->
     <param name="width_conflict" type="float" value="1.0"/>
-    <param name="height_conflict" type="float" value="2.4"/>
-    <param name="front_extension" type="float" value="1.8"/>
+    <param name="height_conflict" type="float" value="2.0"/>
+    <param name="front_extension" type="float" value="0.5"/>
     <param name="debug" type="bool" value="true"/>
   </node>
 </launch>

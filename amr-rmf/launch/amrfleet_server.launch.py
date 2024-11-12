@@ -19,7 +19,7 @@ def generate_launch_description():
                 parameters=[
                     {
                         "fleet_name": "amr_tayrua",
-                        "fleet_robot_ids": ["amr001", "amr002"],
+                        "fleet_robot_ids": ["amr001", "amr002", "amr003", "amr005"],
                         "fleet_state_topic": "fleet_states",
                         "mode_request_topic": "robot_mode_requests",
                         "path_request_topic": "robot_path_requests",

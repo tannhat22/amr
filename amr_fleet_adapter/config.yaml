@@ -59,6 +59,7 @@ docks:
   # /******************** TP2 *********************/
   clr55--pickup:
     distance_go_out: 0.90
+    tag_names: [tag_frame_0, tag_frame_2, tag_frame_3]
 
   clr55--dropoff:
     distance_go_out: 2.5
@@ -69,6 +70,7 @@ docks:
 
   line55--pickup:
     distance_go_out: 0.85
+    tag_names: [tag_frame_0, tag_frame_2, tag_frame_3]
 
   line55--dropoff:
     distance_go_out: 0.65
@@ -79,6 +81,7 @@ docks:
   # /******************** TP3 *********************/
   clr90--pickup:
     distance_go_out: 0.90
+    tag_names: [tag_frame_1]
 
   clr90--dropoff:
     distance_go_out: 0.70
@@ -86,6 +89,7 @@ docks:
 
   line90--pickup:
     distance_go_out: 0.85
+    tag_names: [tag_frame_1]
 
   line90--dropoff:
     distance_go_out: 0.65
