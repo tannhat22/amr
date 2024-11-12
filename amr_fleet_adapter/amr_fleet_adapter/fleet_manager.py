@@ -43,6 +43,7 @@ from rmf_fleet_msgs.msg import (
     RobotState,
     RobotMode,
     DockMode,
+    DockTag,
     DockSummary,
     Location,
     CancelRequest,
@@ -521,7 +522,10 @@ class FleetManager(Node):
                     )
                     return response
                 else:
-                    dock_request.tag_names = dock_config.tag_names
+                    for tag in dock_config.tag_names:
+                        tagMsg = DockTag()
+                        tagMsg.name = tag
+                        dock_request.tag_names.append(tagMsg)
                     dock_request.parameters.custom_docking = dock_config.custom_dock
                     dock_request.parameters.rotate_to_dock = dock_config.rotate_to_dock
                     dock_request.parameters.rotate_angle = dock_config.rotate_angle
