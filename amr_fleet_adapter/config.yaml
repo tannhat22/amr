@@ -103,7 +103,7 @@ docks:
 # up: 1.57199, down: -1.57199, right: 0.0, left: 3.14  
 vertexs:
   # ------TP2------:
-  dropoff_clr90_wp: 3.14
+  tp2_clr_custom_1: 3.14
   park_tp2_001: 3.14
   waiting_for_lift_tp2: 1.57199
   lift001-L1: [1.57199, True]
@@ -119,7 +119,7 @@ vertexs:
   line90_PKFD: -1.57199
   line90_DOFD: -1.57199
   waiting_for_lift_tp3: 1.57199
-  tp3_forward_1: 0.0
+  tp3_lane_custom_1: 0.0
   lift001-L2: [1.57199, True]
 
 machines: []

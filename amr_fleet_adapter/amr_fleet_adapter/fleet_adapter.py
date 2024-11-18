@@ -725,6 +725,7 @@ class RobotAdapter:
             dock_mode = mode
         else:
             dock_mode = search_mode_docking(dock_name=destination.name)
+
         if dock_mode is None:
             self.node.get_logger().error(
                 f"Can't find mode dock in dock_name: {self.dock_name}. "

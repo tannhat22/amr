@@ -304,29 +304,30 @@ class FleetConflictsHandle(Node):
                 or robot1Mode == RobotMode.MODE_EMERGENCY
                 or robot1Mode == RobotMode.MODE_REQUEST_ERROR
             ):
-                if self.robots[robot1Name].wait_HID is not None:
-                    self.robots[self.robots[robot1Name].wait_HID].wait_LID.remove(
-                        robot1Name
-                    )
-                    self.robots[robot1Name].wait_HID = None
-                    self.robots[robot1Name].last_mode_request = None
-                    self.get_logger().info(
-                        f"Robot [{robot1Name}] is not moving or pause will reset state!"
-                    )
-
-                if len(self.robots[robot1Name].wait_LID) != 0:
-                    for robot in self.robots[robot1Name].wait_LID:
-                        self.mode_request(
-                            fleet_name=fleetName,
-                            robot_name=robot,
-                            mode=RobotMode.MODE_MOVING,
+                if len(dataRobot[i].path) == 0:
+                    if self.robots[robot1Name].wait_HID is not None:
+                        self.robots[self.robots[robot1Name].wait_HID].wait_LID.remove(
+                            robot1Name
                         )
-                        self.robots[robot1Name].wait_LID.remove(robot)
-                        self.robots[robot].wait_HID = None
-                        self.robots[robot].last_mode_request = None
+                        self.robots[robot1Name].wait_HID = None
+                        self.robots[robot1Name].last_mode_request = None
                         self.get_logger().info(
-                            f"Publish RESUME_ACTION for [{robot}] from conflicts handle!"
+                            f"Robot [{robot1Name}] is not moving or pause will reset state!"
                         )
+
+                    if len(self.robots[robot1Name].wait_LID) != 0:
+                        for robot in self.robots[robot1Name].wait_LID:
+                            self.mode_request(
+                                fleet_name=fleetName,
+                                robot_name=robot,
+                                mode=RobotMode.MODE_MOVING,
+                            )
+                            self.robots[robot1Name].wait_LID.remove(robot)
+                            self.robots[robot].wait_HID = None
+                            self.robots[robot].last_mode_request = None
+                            self.get_logger().info(
+                                f"Publish RESUME_ACTION for [{robot}] from conflicts handle!"
+                            )
                 continue
 
             for j in range(dataLen):

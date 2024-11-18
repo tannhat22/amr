@@ -14,132 +14,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import argparse
-import asyncio
+
+# import asyncio
 import json
-import sys
 import uuid
 
 import rclpy
 from rclpy.node import Node
-from rclpy.parameter import Parameter
 from rclpy.qos import QoSDurabilityPolicy as Durability
 from rclpy.qos import QoSHistoryPolicy as History
 from rclpy.qos import QoSProfile
 from rclpy.qos import QoSReliabilityPolicy as Reliability
 from rmf_task_msgs.msg import ApiRequest
-from rmf_task_msgs.msg import ApiResponse
+
+# from rmf_task_msgs.msg import ApiResponse
+from rmf_task_msgs.msg import TaskRequest
 
 ###############################################################################
 
 
 class TaskRequester(Node):
 
-    def __init__(self, argv=sys.argv):
-        super().__init__('task_requester')
-        parser = argparse.ArgumentParser()
-        parser.add_argument(
-            '-p',
-            '--pickups',
-            required=True,
-            type=str,
-            nargs='+',
-            help='Pickup names',
-        )
-        parser.add_argument(
-            '-d',
-            '--dropoffs',
-            required=True,
-            type=str,
-            nargs='+',
-            help='Dropoff names',
-        )
-        parser.add_argument(
-            '-ph',
-            '--pickup_handlers',
-            required=True,
-            type=str,
-            nargs='+',
-            help='Pickup handler names',
-        )
-        parser.add_argument(
-            '-dh',
-            '--dropoff_handlers',
-            required=True,
-            type=str,
-            nargs='+',
-            help='Dropoffs handler names',
-        )
-        parser.add_argument(
-            '-pp',
-            '--pickup_payloads',
-            type=str,
-            nargs='+',
-            default=[],
-            help='Pickup payload [sku,quantity sku2,qty...]',
-        )
-        parser.add_argument(
-            '-dp',
-            '--dropoff_payloads',
-            type=str,
-            nargs='+',
-            default=[],
-            help='Dropoff payload [sku,quantity sku2,qty...]',
-        )
-        parser.add_argument(
-            '-F',
-            '--fleet',
-            type=str,
-            help='Fleet name, should define together with robot',
-        )
-        parser.add_argument(
-            '-R',
-            '--robot',
-            type=str,
-            help='Robot name, should define together with fleet',
-        )
-        parser.add_argument(
-            '-st',
-            '--start_time',
-            help='Start time from now in secs, default: 0',
-            type=int,
-            default=0,
-        )
-        parser.add_argument(
-            '-pt',
-            '--priority',
-            help='Priority value for this request',
-            type=int,
-            default=0,
-        )
-        parser.add_argument(
-            '--use_sim_time',
-            action='store_true',
-            help='Use sim time, default: false',
-        )
-        parser.add_argument(
-            '--requester',
-            help='Entity that is requesting this task',
-            type=str,
-            default='rmf_demos_tasks'
-        )
-
-        self.args = parser.parse_args(argv[1:])
-        self.response = asyncio.Future()
-
-        # check user delivery arg inputs
-        if len(self.args.pickups) != len(self.args.pickup_handlers):
-            self.get_logger().error(
-                'Invalid pickups, [-p] should have the same length as [-ph]'
-            )
-            parser.print_help()
-            sys.exit(1)
-        if len(self.args.dropoffs) != len(self.args.dropoff_handlers):
-            self.get_logger().error(
-                'Invalid dropoffs, [-d] should have the same length as [-dh]'
-            )
-            parser.print_help()
-            sys.exit(1)
+    def __init__(self):
+        super().__init__("amr_delivery_requester")
 
         transient_qos = QoSProfile(
             history=History.KEEP_LAST,
@@ -148,149 +45,177 @@ class TaskRequester(Node):
             durability=Durability.TRANSIENT_LOCAL,
         )
 
-        self.pub = self.create_publisher(
-            ApiRequest, 'task_api_requests', transient_qos
+        # Publishers:
+        self.task_api_req_pub = self.create_publisher(
+            ApiRequest, "task_api_requests", transient_qos
         )
 
-        # enable ros sim time
-        if self.args.use_sim_time:
-            self.get_logger().info('Using Sim Time')
-            param = Parameter('use_sim_time', Parameter.Type.BOOL, True)
-            self.set_parameters([param])
+        # Subcribers:
+        # self.sub = self.create_subscription(
+        #     ApiResponse, "task_api_responses", self.receive_response, 10
+        # )
+
+        self.create_subscription(
+            TaskRequest, "amr_delivery_requests", self.task_requests_callback, 10
+        )
+
+        self.get_logger().info(
+            "Beginning amr_delivery_requester node, shut down with CTRL-C"
+        )
+
+    def task_requests_callback(self, msg: TaskRequest):
+        pickups = json.loads(msg.pickups)
+        dropoffs = json.loads(msg.dropoffs)
+        self.dispatch_delivery(
+            msg.fleet_name,
+            msg.robot_name,
+            msg.start_time,
+            msg.requester,
+            pickups,
+            dropoffs,
+        )
+
+    # pickup: {place: name_pickup_waypoint, handler: pickup_dispenser, sku_qty: ["sku", "quantity"]}
+    def __create_pickup_desc(self, pickup: dict):
+        place = pickup["place"]
+        handler = pickup["handler"]
+        sku_qty = pickup["sku_qty"]
+        assert len(sku_qty) == 2, "please specify sku and qty for pickup payload"
+        payload = [{"sku": sku_qty[0], "quantity": int(sku_qty[1])}]
+
+        return {
+            "place": place,
+            "handler": handler,
+            "payload": payload,
+        }
+
+    # dropoff: {place: name_dropoff_waypoint, handler: dropoff_ingestor, sku_qty: ["sku", "quantity"]}
+    def __create_dropoff_desc(self, dropoff: dict):
+        place = dropoff["place"]
+        handler = dropoff["handler"]
+        sku_qty = dropoff["sku_qty"]
+        assert len(sku_qty) == 2, "please specify sku and qty for dropoff payload"
+        payload = [{"sku": sku_qty[0], "quantity": int(sku_qty[1])}]
+
+        return {
+            "place": place,
+            "handler": handler,
+            "payload": payload,
+        }
+
+    def dispatch_delivery(
+        self,
+        fleet: str = None,
+        robot: str = None,
+        start_time_task: int = 0,
+        requester: str = "amr_task",
+        pickups: list = [],
+        dropoffs: list = [],
+    ):
+        assert (
+            len(pickups) > 0 and len(dropoffs) > 0 and len(pickups) == len(dropoffs)
+        ), "pickups and dropoffs invalid, please check!"
 
         # Construct task
         msg = ApiRequest()
-        msg.request_id = 'delivery_' + str(uuid.uuid4())
+        msg.request_id = "delivery_" + str(uuid.uuid4())
         payload = {}
-        if self.args.fleet and self.args.robot:
+        if fleet and robot:
             self.get_logger().info("Using 'robot_task_request'")
-            payload['type'] = 'robot_task_request'
-            payload['robot'] = self.args.robot
-            payload['fleet'] = self.args.fleet
+            payload["type"] = "robot_task_request"
+            payload["fleet"] = fleet
+            payload["robot"] = robot
         else:
             self.get_logger().info("Using 'dispatch_task_request'")
-            payload['type'] = 'dispatch_task_request'
+            payload["type"] = "dispatch_task_request"
         request = {}
 
         # Set task request request time, start time and requester
         now = self.get_clock().now().to_msg()
-        now.sec = now.sec + self.args.start_time
+        now.sec = now.sec + start_time_task
         start_time = now.sec * 1000 + round(now.nanosec / 10**6)
-        request['unix_millis_request_time'] = start_time
-        request['unix_millis_earliest_start_time'] = start_time
-        request['requester'] = self.args.requester
+        request["unix_millis_request_time"] = start_time
+        request["unix_millis_earliest_start_time"] = start_time
+        request["requester"] = requester
 
-        if self.args.fleet:
-            request['fleet_name'] = self.args.fleet
-
-        def __create_pickup_desc(index):
-            if index < len(self.args.pickup_payloads):
-                sku_qty = self.args.pickup_payloads[index].split(',')
-                assert (
-                    len(sku_qty) == 2
-                ), 'please specify sku and qty for pickup payload'
-                payload = [{'sku': sku_qty[0], 'quantity': int(sku_qty[1])}]
-            else:
-                payload = []
-
-            return {
-                'place': self.args.pickups[index],
-                'handler': self.args.pickup_handlers[index],
-                'payload': payload,
-            }
-
-        def __create_dropoff_desc(index):
-            if index < len(self.args.dropoff_payloads):
-                sku_qty = self.args.dropoff_payloads[index].split(',')
-                assert (
-                    len(sku_qty) == 2
-                ), 'please specify sku and qty for dropoff payload'
-                payload = [{'sku': sku_qty[0], 'quantity': int(sku_qty[1])}]
-            else:
-                payload = []
-
-            return {
-                'place': self.args.dropoffs[index],
-                'handler': self.args.dropoff_handlers[index],
-                'payload': payload,
-            }
+        if fleet:
+            request["fleet_name"] = fleet
 
         # Use standard delivery task type
-        if len(self.args.pickups) == 1 and len(self.args.dropoffs) == 1:
-            request['category'] = 'delivery'
+        if len(pickups) == 1 and len(dropoffs) == 1:
+            request["category"] = "delivery"
             description = {
-                'pickup': __create_pickup_desc(0),
-                'dropoff': __create_dropoff_desc(0),
+                "pickup": self.__create_pickup_desc(pickups[0]),
+                "dropoff": self.__create_dropoff_desc(dropoffs[0]),
             }
         else:
             # Define multi_delivery with request category compose
-            request['category'] = 'compose'
+            request["category"] = "compose"
 
             # Define task request description with phases
             description = {}  # task_description_Compose.json
-            description['category'] = 'multi_delivery'
-            description['phases'] = []
+            description["category"] = "multi_delivery"
+            description["phases"] = []
             activities = []
-            # Add each pickup
-            for i in range(0, len(self.args.pickups)):
+            for i in range(0, len(pickups)):
+                # Add each pickup
                 activities.append(
                     {
-                        'category': 'pickup',
-                        'description': __create_pickup_desc(i),
+                        "category": "pickup",
+                        "description": self.__create_pickup_desc(pickups[i]),
                     }
                 )
-            # Add each dropoff
-            for i in range(0, len(self.args.dropoffs)):
+                # Add each dropoff
                 activities.append(
                     {
-                        'category': 'dropoff',
-                        'description': __create_dropoff_desc(i),
+                        "category": "dropoff",
+                        "description": self.__create_dropoff_desc(dropoffs[i]),
                     }
                 )
+
             # Add activities to phases
-            description['phases'].append(
+            description["phases"].append(
                 {
-                    'activity': {
-                        'category': 'sequence',
-                        'description': {'activities': activities},
+                    "activity": {
+                        "category": "sequence",
+                        "description": {"activities": activities},
                     }
                 }
             )
 
-        request['description'] = description
-        payload['request'] = request
+        request["description"] = description
+        payload["request"] = request
         msg.json_msg = json.dumps(payload)
 
-        def receive_response(response_msg: ApiResponse):
-            if response_msg.request_id == msg.request_id:
-                self.response.set_result(json.loads(response_msg.json_msg))
+        print(f"Json msg payload: \n{json.dumps(payload, indent=2)}")
+        self.task_api_req_pub.publish(msg)
 
-        self.sub = self.create_subscription(
-            ApiResponse, 'task_api_responses', receive_response, 10
-        )
-
-        print(f'Json msg payload: \n{json.dumps(payload, indent=2)}')
-
-        self.pub.publish(msg)
+    # def receive_response(self, response_msg: ApiResponse):
+    #     if response_msg.request_id == msg.request_id:
+    #         self.response.set_result(json.loads(response_msg.json_msg))
 
 
 ###############################################################################
 
 
-def main(argv=sys.argv):
-    rclpy.init(args=sys.argv)
-    args_without_ros = rclpy.utilities.remove_ros_args(sys.argv)
+def main(args=None):
+    rclpy.init(args=args)
 
-    task_requester = TaskRequester(args_without_ros)
-    rclpy.spin_until_future_complete(
-        task_requester, task_requester.response, timeout_sec=5.0
+    task_requester = TaskRequester()
+    task_requester.dispatch_delivery(
+        pickups=[
+            {"place": "wp1", "handler": "machine1", "sku_qty": ["FF180", 1]},
+            {"place": "wp2", "handler": "machine2", "sku_qty": ["FF180", 1]},
+        ],
+        dropoffs=[
+            {"place": "wp3", "handler": "machine3", "sku_qty": ["FF180", 1]},
+            {"place": "wp4", "handler": "machine4", "sku_qty": ["FF180", 1]},
+        ],
     )
-    if task_requester.response.done():
-        print(f'Got response:\n{task_requester.response.result()}')
-    else:
-        print('Did not get a response')
+    rclpy.spin(task_requester)
+    task_requester.destroy_node()
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
-    main(sys.argv)
+if __name__ == "__main__":
+    main()
