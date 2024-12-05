@@ -19,7 +19,7 @@ def generate_launch_description():
                 parameters=[
                     {
                         "fleet_name": "amr_tayrua",
-                        "fleet_robot_ids": ["amr001", "amr002", "amr003", "amr005"],
+                        "robot_names": ["amr001", "amr002", "amr003", "amr005"],
                         "fleet_state_topic": "fleet_states",
                         "mode_request_topic": "robot_mode_requests",
                         "path_request_topic": "robot_path_requests",
@@ -28,7 +28,7 @@ def generate_launch_description():
                         "cancel_request_topic": "robot_cancel_requests",
                         "localize_request_topic": "robot_localize_requests",
                         "dds_domain": 43,
-                        # "dds_robot_state_topic": "robot_state",
+                        "dds_robot_state_topic": "robot_state",
                         "dds_mode_request_topic": "mode_request",
                         "dds_path_request_topic": "path_request",
                         "dds_destination_request_topic": "destination_request",

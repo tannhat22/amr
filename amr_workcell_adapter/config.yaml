@@ -1,0 +1,25 @@
+# WORKCELL CONFIG =================================================================
+# RMF Workcell parameters
+
+rmf_workcell:
+  # dispensers:
+  #   machines: []
+  #   stations: 
+  #     line83TTR_ins--pickup: true
+  #     line90TTR_ins--pickup: true
+  #     line83STR_ins--pickup: true
+  #     line90STR_ins--pickup: true
+  # ingestors:
+  #   machines: []
+  #   stations:
+  #     line83TTR_ins--dropoff: true
+  #     line90TTR_ins--dropoff: true
+  #     line83STR_ins--dropoff: true
+  #     line90STR_ins--dropoff: true
+
+workcell_manager:
+  ip: "127.0.0.1"
+  port: 7002
+  user: "some_user"
+  password: "some_password"
+  workcell_state_update_frequency: 1.0

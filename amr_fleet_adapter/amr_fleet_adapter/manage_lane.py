@@ -34,46 +34,45 @@ def main(argv=sys.argv):
     args_without_ros = rclpy.utilities.remove_ros_args(argv)
 
     parser = argparse.ArgumentParser(
-        prog='manage_lane',
-        description='Open or close a lane between two waypoints'
+        prog="manage_lane", description="Open or close a lane between two waypoints"
     )
     parser.add_argument(
-        'request',
-        choices=['open', 'close'],
-        help='Whether the lane should be open or closed',
+        "request",
+        choices=["open", "close"],
+        help="Whether the lane should be open or closed",
     )
     parser.add_argument(
-        'from_waypoint',
+        "from_waypoint",
         type=str,
-        help='Name of the waypoint at the start of the lane',
+        help="Name of the waypoint at the start of the lane",
     )
     parser.add_argument(
-        'to_waypoint',
+        "to_waypoint",
         type=str,
-        help='Name of the waypoint at the end of the lane',
+        help="Name of the waypoint at the end of the lane",
     )
     parser.add_argument(
-        '-b',
-        '--bidir',
-        action='store_true',
-        help='Apply the state change in both directions (bidirectionally)'
+        "-b",
+        "--bidir",
+        action="store_true",
+        help="Apply the state change in both directions (bidirectionally)",
     )
     parser.add_argument(
-        '-F',
-        '--fleet',
+        "-F",
+        "--fleet",
         type=str,
-        default='',
+        default="",
         help=(
-            'Which fleet should the lane be closed for. '
-            'Empty string (default) indicates all fleets.'
+            "Which fleet should the lane be closed for. "
+            "Empty string (default) indicates all fleets."
         ),
     )
     parser.add_argument(
-        '-n',
-        '--nav_graph',
+        "-n",
+        "--nav_graph",
         type=str,
         required=True,
-        help='Path to the nav_graph that contains the lane',
+        help="Path to the nav_graph that contains the lane",
     )
 
     args = parser.parse_args(args_without_ros[1:])
@@ -88,42 +87,36 @@ def main(argv=sys.argv):
 
     from_waypoint = nav_graph.find_waypoint(args.from_waypoint)
     if from_waypoint is None:
-        raise Exception(
-            f'Unable to find waypoint [{args.from_waypoint}] in graph'
-        )
+        raise Exception(f"Unable to find waypoint [{args.from_waypoint}] in graph")
 
     to_waypoint = nav_graph.find_waypoint(args.to_waypoint)
     if to_waypoint is None:
-        raise Exception(
-            f'Unable to find waypoint [{args.to_waypoint}] in graph'
-        )
+        raise Exception(f"Unable to find waypoint [{args.to_waypoint}] in graph")
 
     lane_indices = []
 
     lane = nav_graph.lane_from(from_waypoint.index, to_waypoint.index)
     if lane is None:
         raise Exception(
-            f'Unable to find a lane that connects [{args.from_waypoint}] '
-            f'to [{args.to_waypoint}]'
+            f"Unable to find a lane that connects [{args.from_waypoint}] "
+            f"to [{args.to_waypoint}]"
         )
 
     lane_indices.append(lane.index)
 
     if args.bidir:
-        reverse_lane = nav_graph.lane_from(
-            to_waypoint.index, from_waypoint.index
-        )
+        reverse_lane = nav_graph.lane_from(to_waypoint.index, from_waypoint.index)
         if reverse_lane is not None:
             lane_indices.append(reverse_lane.index)
 
     request = LaneRequest()
-    if args.request == 'open':
+    if args.request == "open":
         request.open_lanes = lane_indices
-    if args.request == 'close':
+    if args.request == "close":
         request.close_lanes = lane_indices
     request.fleet_name = args.fleet
 
-    node = rclpy.node.Node('manage_lane')
+    node = rclpy.node.Node("manage_lane")
 
     transient_qos = QoSProfile(
         history=History.KEEP_LAST,
@@ -134,7 +127,7 @@ def main(argv=sys.argv):
 
     publisher = node.create_publisher(
         LaneRequest,
-        'lane_closure_requests',
+        "lane_closure_requests",
         qos_profile=transient_qos,
     )
 
@@ -143,7 +136,7 @@ def main(argv=sys.argv):
     rclpy_executor = rclpy.executors.SingleThreadedExecutor()
     rclpy_executor.add_node(node)
 
-    print(f'Sending request:\n{request}')
+    print(f"Sending request:\n{request}")
 
     f = asyncio.Future()
     rclpy_executor.spin_until_future_complete(f, 5.0)
@@ -151,5 +144,5 @@ def main(argv=sys.argv):
     # we see these lanes open/closed
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv)

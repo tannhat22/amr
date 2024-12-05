@@ -11,7 +11,7 @@
   <!-- Fleet manager -->
   <node pkg="amr_fleet_adapter"
         exec="fleet_manager"
-        args="--config_file $(var config_file)"
+        args="-c $(var config_file) -n $(var nav_graph_file)"
         output="$(var output)">
 
     <param name="use_sim_time" value="$(var use_sim_time)"/>

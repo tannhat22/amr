@@ -19,8 +19,17 @@ def generate_launch_description():
     # Arguments
     use_sim_time = "false"
     map_name = "tp2-tp3-layout"
-    server_uri = "http://10.7.11.9:8000/_internal"
+    server_uri = "http://10.7.11.35:8000/_internal"
     enable_experimental_lift_watchdog = "true"
+    nav_graph_file_path = PathJoinSubstitution(
+        [
+            FindPackageShare("amr-rmf"),
+            "maps",
+            map_name,
+            "nav_graphs",
+            "0.yaml",
+        ]
+    )
 
     return LaunchDescription(
         [
@@ -69,9 +78,7 @@ def generate_launch_description():
             # Experimental lift watchdog group (disabled)
             GroupAction(
                 condition=UnlessCondition(enable_experimental_lift_watchdog),
-                actions=[
-                    SetEnvironmentVariable(name="EXPT_LIFT_WATCHDOG_SRV", value="")
-                ],
+                actions=[SetEnvironmentVariable(name="EXPT_LIFT_WATCHDOG_SRV", value="")],
                 scoped=False,
             ),
             # AMR Tayrua fleet adapter
@@ -90,15 +97,7 @@ def generate_launch_description():
                     "config_file": PathJoinSubstitution(
                         [FindPackageShare("amr_fleet_adapter"), "config.yaml"]
                     ),
-                    "nav_graph_file": PathJoinSubstitution(
-                        [
-                            FindPackageShare("amr-rmf"),
-                            "maps",
-                            map_name,
-                            "nav_graphs",
-                            "0.yaml",
-                        ]
-                    ),
+                    "nav_graph_file": nav_graph_file_path,
                     "server_uri": server_uri,
                     "experimental_lift_watchdog_service": EnvironmentVariable(
                         "EXPT_LIFT_WATCHDOG_SRV"
@@ -147,17 +146,17 @@ def generate_launch_description():
             #     )
             # ),
             # Machine server
-            # IncludeLaunchDescription(
-            #     PythonLaunchDescriptionSource(
-            #         PathJoinSubstitution(
-            #             [
-            #                 FindPackageShare("amr-rmf"),
-            #                 "launch",
-            #                 "machine_server.launch.py",
-            #             ]
-            #         )
-            #     )
-            # ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution(
+                        [
+                            FindPackageShare("amr-rmf"),
+                            "launch",
+                            "machine_server.launch.py",
+                        ]
+                    )
+                )
+            ),
             # LDM server
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
@@ -166,17 +165,23 @@ def generate_launch_description():
                     )
                 )
             ),
-            # Workcells adapter
+            # Workcell adapter
             IncludeLaunchDescription(
                 XMLLaunchDescriptionSource(
                     PathJoinSubstitution(
                         [
-                            FindPackageShare("amr_workcells_adapter"),
+                            FindPackageShare("amr_workcell_adapter"),
                             "launch",
-                            "workcells_adapter.launch.xml",
+                            "workcell_adapter.launch.xml",
                         ]
                     )
-                )
+                ),
+                launch_arguments={
+                    "config_file": PathJoinSubstitution(
+                        [FindPackageShare("amr_workcell_adapter"), "config.yaml"]
+                    ),
+                    "nav_graph_file": nav_graph_file_path,
+                }.items(),
             ),
             # LDM RMF adapter
             IncludeLaunchDescription(

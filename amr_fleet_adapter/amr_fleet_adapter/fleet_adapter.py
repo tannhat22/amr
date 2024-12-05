@@ -35,7 +35,8 @@ import rmf_adapter.easy_full_control as rmf_easy
 from rmf_fleet_msgs.msg import ClosedLanes
 from rmf_fleet_msgs.msg import LaneRequest
 from rmf_fleet_msgs.msg import ModeRequest
-from rmf_fleet_msgs.msg import RobotMode
+from rmf_fleet_msgs.msg import RobotMode, Location
+from machine_fleet_msgs.msg import DeviceMode, StationRequest
 import yaml
 
 from .RobotClientAPI import RobotAPI
@@ -47,6 +48,14 @@ class VertexInfo:
     def __init__(self, orientation: float, in_lift: bool) -> None:
         self.orientation = orientation
         self.in_lift = in_lift
+
+
+class DestinationCopy:
+    def __init__(self, name, map, position, speed_limit) -> None:
+        self.name = name
+        self.map = map
+        self.position = position
+        self.speed_limit = speed_limit
 
 
 # ------------------------------------------------------------------------------
@@ -88,9 +97,7 @@ def main(argv=sys.argv):
     config_path = args.config_file
     nav_graph_path = args.nav_graph
 
-    fleet_config = rmf_easy.FleetConfiguration.from_config_files(
-        config_path, nav_graph_path
-    )
+    fleet_config = rmf_easy.FleetConfiguration.from_config_files(config_path, nav_graph_path)
     assert fleet_config, f"Failed to parse config file [{config_path}]"
 
     # Parse the yaml in Python to get the fleet_manager info
@@ -102,8 +109,7 @@ def main(argv=sys.argv):
     node = rclpy.node.Node(f"{fleet_name}_command_handle")
     adapter = Adapter.make(f"{fleet_name}_fleet_adapter")
     assert adapter, (
-        "Unable to initialize fleet adapter. "
-        "Please ensure RMF Schedule Node is running"
+        "Unable to initialize fleet adapter. " "Please ensure RMF Schedule Node is running"
     )
 
     # Enable sim time for testing offline
@@ -140,16 +146,10 @@ def main(argv=sys.argv):
     for vertex in vertexs_yaml:
         if type(vertexs_yaml[vertex]) == list:
             vertexs_config.update(
-                {
-                    str(vertex): VertexInfo(
-                        vertexs_yaml[vertex][0], vertexs_yaml[vertex][1]
-                    )
-                }
+                {str(vertex): VertexInfo(vertexs_yaml[vertex][0], vertexs_yaml[vertex][1])}
             )
         else:
-            vertexs_config.update(
-                {str(vertex): VertexInfo(vertexs_yaml[vertex], False)}
-            )
+            vertexs_config.update({str(vertex): VertexInfo(vertexs_yaml[vertex], False)})
     robots: dict[str, RobotAdapter]
     robots = {}
     for robot_name in fleet_config.known_robots:
@@ -361,11 +361,7 @@ class RobotAdapter:
             self.update_mission_status(data, mission)
 
             # Update RMF with the latest RobotState
-            if (
-                mission is None
-                or (mission.localize and mission.done)
-                or not mission.localize
-            ):
+            if mission is None or (mission.localize and mission.done) or not mission.localize:
                 self.update_handle.update(state, self.activity)
                 self.last_known_status = data
             else:
@@ -397,6 +393,29 @@ class RobotAdapter:
                         ["kill_task"],
                         self.on_kill,
                     )
+
+                    if mission.docking:
+                        dock_mode = search_mode_docking(mission.destination.name)
+                        if dock_mode == "mpickup" or dock_mode == "mdropoff":
+                            machine_process = {
+                                "request_type": "dispenser",
+                                "mode": DeviceMode.MODE_ROBOT_ERROR,
+                            }
+
+                            if dock_mode == "mdropoff":
+                                machine_process.update({"request_type": "ingestor"})
+
+                            self.node.get_logger().info(
+                                f"Robot [{self.name}] request ROBOT_ERROR for machine at dock [{mission.destination.name}]"
+                            )
+
+                            self.attempt_cmd_until_success(
+                                cmd=self.api.machine_request,
+                                args=(
+                                    mission.destination.name,
+                                    machine_process,
+                                ),
+                            )
 
                     mission = None
 
@@ -433,35 +452,69 @@ class RobotAdapter:
 
         if status.is_command_completed(self.cmd_id):
             if mission.charger is not None and self.is_charging(status):
-                self.node.get_logger().info(
-                    f"Robot [{self.name}] has begun charging..."
-                )
+                self.node.get_logger().info(f"Robot [{self.name}] has begun charging...")
             elif mission.docking:
                 self.undock = True
                 mission.docking = False
                 self.node.get_logger().info(f"Robot [{self.name}] has docked finished.")
 
-                if (
-                    mission.destination.name
-                    and search_mode_docking(mission.destination.name) == "charge"
-                    and self.charger_server
-                ):
-                    chargerName = mission.destination.name.split("--")[0]
-                    self.node.get_logger().info(
-                        f"Trigger [{chargerName}] for robot [{self.name}] to charge."
-                    )
-                    process = {
-                        "charger_name": chargerName,
-                        "mode": "charge",
-                    }
-                    self.attempt_cmd_until_success(
-                        cmd=self.api.charger_trigger,
-                        args=(
-                            self.name,
-                            self.cmd_id,
-                            process,
-                        ),
-                    )
+                if mission.destination.name:
+                    dock_mode = search_mode_docking(mission.destination.name)
+                    if dock_mode == "mpickup" or dock_mode == "mdropoff":
+                        machine_process = {
+                            "request_type": "dispenser",
+                            "mode": DeviceMode.MODE_ROBOT_DOCKED_IN,
+                        }
+
+                        if dock_mode == "mdropoff":
+                            machine_process.update({"request_type": "ingestor"})
+
+                        self.node.get_logger().info(
+                            f"Robot [{self.name}] respone ROBOT_DOCKED_IN for machine at dock [{mission.destination.name}]"
+                        )
+
+                        self.attempt_cmd_until_success(
+                            cmd=self.api.machine_request,
+                            args=(
+                                mission.destination.name,
+                                machine_process,
+                            ),
+                        )
+
+                    elif dock_mode == "charge":
+                        if self.charger_server:
+                            chargerName = mission.destination.name.split("--")[0]
+                            self.node.get_logger().info(
+                                f"Trigger [{chargerName}] for robot [{self.name}] to charge."
+                            )
+                            process = {
+                                "charger_name": chargerName,
+                                "mode": "charge",
+                            }
+                            self.attempt_cmd_until_success(
+                                cmd=self.api.charger_trigger,
+                                args=(
+                                    self.name,
+                                    self.cmd_id,
+                                    process,
+                                ),
+                            )
+                    else:
+                        station_process = {
+                            "station_type": dock_mode,
+                            "mode": StationRequest.MODE_EMPTY,
+                        }
+
+                        if dock_mode == "dropoff":
+                            station_process.update({"mode": StationRequest.MODE_FILLED})
+
+                        self.attempt_cmd_until_success(
+                            cmd=self.api.station_request,
+                            args=(
+                                mission.destination.name,
+                                station_process,
+                            ),
+                        )
 
             elif mission.localize:
                 mission.localize = False
@@ -494,9 +547,7 @@ class RobotAdapter:
                 category, description, execution
             ),
         )
-        callbacks.localize = lambda estimate, execution: self.localize(
-            estimate, execution
-        )
+        callbacks.localize = lambda estimate, execution: self.localize(estimate, execution)
         return callbacks
 
     def navigate(self, destination, execution):
@@ -511,8 +562,8 @@ class RobotAdapter:
             # with waypoint robot is at on, we ignore this nav command
             if (
                 self.last_known_status is not None
-                and self.dist(self.last_known_status.position[0:2], destination.xy)
-                <= 0.25
+                and self.last_known_status.destination_arrival is None
+                and self.dist(self.last_known_status.position[0:2], destination.xy) <= 0.25
             ):
 
                 self.node.get_logger().info(
@@ -528,14 +579,21 @@ class RobotAdapter:
                     self.cmd_id = self.last_known_status.last_request_completed
 
                 self.mission = MissionHandle(execution, destination=destination)
+                self.mission.done = True
                 return
 
             self.cmd_id += 1
             # Check if robot need undock:
             if self.undock:
                 self.undock = False
-                if self.mission is not None:
-                    destinationUndock = self.mission.destination
+                mission = self.mission
+                if mission is not None:
+                    destinationUndock = DestinationCopy(
+                        mission.destination.name,
+                        mission.destination.map,
+                        mission.destination.position,
+                        mission.destination.speed_limit,
+                    )
                     self.mission = MissionHandle(execution, destination=destination)
                     self.node.get_logger().info(
                         f"[{self.name}] Received navigation command but "
@@ -545,7 +603,7 @@ class RobotAdapter:
                         cmd=self.perform_docking,
                         args=(
                             destinationUndock,
-                            "undock",
+                            True,
                         ),
                     )
                     return
@@ -557,19 +615,17 @@ class RobotAdapter:
             elif self.unlift:
                 self.mission = MissionHandle(execution, destination=destination)
                 self.unlift = False
-                unliftDis = -self.dist(
-                    self.last_known_status.position[0:2], destination.xy
-                )
+                unliftDist = -self.dist(self.last_known_status.position[0:2], destination.xy)
                 self.node.get_logger().info(
                     f"[{self.name}] Received navigation command but "
-                    f"robot will unlift: {unliftDis} first."
+                    f"robot will unlift: {unliftDist} first."
                 )
                 self.attempt_cmd_until_success(
                     cmd=self.perform_docking,
                     args=(
                         destination,
-                        "undock",
-                        unliftDis,
+                        True,
+                        unliftDist,
                     ),
                 )
                 return
@@ -579,18 +635,12 @@ class RobotAdapter:
                     f"[{self.name}] Received navigation command to "
                     f"dock, will trigger docking to '{destination.name}'"
                 )
-                self.mission = MissionHandle(
-                    execution, docking=True, destination=destination
-                )
-                self.attempt_cmd_until_success(
-                    cmd=self.perform_docking, args=(destination,)
-                )
+                self.mission = MissionHandle(execution, docking=True, destination=destination)
+                self.attempt_cmd_until_success(cmd=self.perform_docking, args=(destination,))
                 return
 
             # Navigation normal:
-            self.mission = MissionHandle(
-                execution, navigate=True, destination=destination
-            )
+            self.mission = MissionHandle(execution, navigate=True, destination=destination)
             vertex = None
             if destination.name != "":
                 vertex = self.vertexs_config.get(destination.name, None)
@@ -625,9 +675,7 @@ class RobotAdapter:
             )
             if estimate.inside_lift:
                 lift_name = estimate.inside_lift.name
-                self.node.get_logger().info(
-                    f"[{self.name}] in lift with lift_name: {lift_name}"
-                )
+                self.node.get_logger().info(f"[{self.name}] in lift with lift_name: {lift_name}")
                 self.attempt_cmd_until_success(
                     cmd=self.api.localize,
                     args=(self.name, self.cmd_id, estimate.map, estimate.position),
@@ -642,16 +690,12 @@ class RobotAdapter:
                     self.paused = True
                     self.cmd_id += 1
                     # self.paused_mission = mission
-                    self.node.get_logger().info(
-                        f"[PAUSE] {self.name}: current mission saved!"
-                    )
+                    self.node.get_logger().info(f"[PAUSE] {self.name}: current mission saved!")
                     self.attempt_cmd_until_success(
                         cmd=self.api.pause, args=(self.name, self.cmd_id)
                     )
                 else:
-                    self.node.get_logger().info(
-                        f"[PAUSE] {self.name}: robot was paused!"
-                    )
+                    self.node.get_logger().info(f"[PAUSE] {self.name}: robot was paused!")
             else:
                 self.node.get_logger().info(
                     f"{self.name}: receive paused action but robot don't have mission!"
@@ -662,29 +706,19 @@ class RobotAdapter:
             """Unset pause flag and substitute paused mission if no paths exist."""
             if self.paused:
                 self.cmd_id += 1
-                self.attempt_cmd_until_success(
-                    cmd=self.api.resume, args=(self.name, self.cmd_id)
-                )
+                self.attempt_cmd_until_success(cmd=self.api.resume, args=(self.name, self.cmd_id))
                 self.paused = False
                 # self.mission = self.paused_mission
-                self.node.get_logger().info(
-                    f"[RESUME] {self.name}: saved mission restored!"
-                )
+                self.node.get_logger().info(f"[RESUME] {self.name}: saved mission restored!")
 
     def stop(self, activity):
         with self._lock:
             self.cmd_id += 1
             mission = self.mission
             if mission is not None:
-                if mission.execution is not None and activity.is_same(
-                    mission.execution.identifier
-                ):
-                    self.node.get_logger().info(
-                        f"[{self.name}] Stop requested from RMF!"
-                    )
-                    self.attempt_cmd_until_success(
-                        cmd=self.api.stop, args=(self.name, self.cmd_id)
-                    )
+                if mission.execution is not None and activity.is_same(mission.execution.identifier):
+                    self.node.get_logger().info(f"[{self.name}] Stop requested from RMF!")
+                    self.attempt_cmd_until_success(cmd=self.api.stop, args=(self.name, self.cmd_id))
                     self.mission = None
                     self.paused = False
 
@@ -695,9 +729,7 @@ class RobotAdapter:
         match category:
             case "teleop":
                 self.teleoperation = Teleoperation(execution)
-                self.attempt_cmd_until_success(
-                    cmd=self.api.toggle_teleop, args=(self.name, True)
-                )
+                self.attempt_cmd_until_success(cmd=self.api.toggle_teleop, args=(self.name, True))
             case "delivery_pickup":
                 self.attempt_cmd_until_success(
                     cmd=self.api.toggle_attach, args=(self.name, True, self.cmd_id)
@@ -714,24 +746,62 @@ class RobotAdapter:
         if self.execution is not None:
             self.execution.finished()
             self.execution = None
-            self.attempt_cmd_until_success(
-                cmd=self.api.toggle_teleop, args=(self.name, False)
-            )
+            self.attempt_cmd_until_success(cmd=self.api.toggle_teleop, args=(self.name, False))
 
-    def perform_docking(
-        self, destination, mode: str | None = None, unlift: float | None = None
-    ):
-        if mode is not None:
-            dock_mode = mode
+    def perform_docking(self, destination, undock: bool = False, undock_dist: float | None = None):
+        if undock:
+            dock_mode = "undock"
         else:
             dock_mode = search_mode_docking(dock_name=destination.name)
 
         if dock_mode is None:
             self.node.get_logger().error(
-                f"Can't find mode dock in dock_name: {self.dock_name}. "
+                f"Can't find mode dock in dock_name: {destination.name}. "
                 f"Please ensure, dock_name liked that *****--mode_dock!"
             )
             return False
+
+        if dock_mode == "mpickup" or dock_mode == "mdropoff":
+            machine_process = {
+                "request_type": "dispenser",
+                "mode": DeviceMode.MODE_ACCEPT_DOCKIN,
+            }
+
+            if dock_mode == "mdropoff":
+                machine_process.update({"request_type": "ingestor"})
+
+            self.node.get_logger().info(
+                f"Robot [{self.name}] request DOCK_IN machine at dock [{destination.name}]"
+            )
+
+            self.attempt_cmd_until_success(
+                cmd=self.api.machine_request,
+                args=(
+                    destination.name,
+                    machine_process,
+                ),
+            )
+
+            while rclpy.ok():
+                machineData = self.api.get_machine_data(destination.name)
+                if machineData is None:
+                    self.node.get_logger().error(
+                        f"Can't get_machine_data of dock {destination.name}!"
+                    )
+                    return False
+
+                machine_mode = machineData.dispenser_mode
+                if dock_mode == "mdropoff":
+                    machine_mode = machineData.ingestor_mode
+
+                if machine_mode == DeviceMode.MODE_ACCEPT_DOCKIN:
+                    self.node.get_logger().info(
+                        f"Robot [{self.name}] was accepted DOCK_IN at dock [{destination.name}]"
+                    )
+                    break
+
+                if self.cancel_cmd_event.wait(0.5):
+                    break
 
         location = {
             "x": destination.position[0],
@@ -745,8 +815,8 @@ class RobotAdapter:
             "location": location,
         }
 
-        if unlift is not None:
-            activity_des.update({"unlift": unlift})
+        if undock_dist is not None:
+            activity_des.update({"undock_dist": undock_dist})
 
         match self.api.start_activity(
             self.name, self.cmd_id, "dock", activity_des, destination.map
@@ -807,9 +877,7 @@ class Teleoperation:
     def update(self, data: RobotUpdateData):
         if self.last_position is None:
             print("about to override schedule with " f"{data.map}: {[data.position]}")
-            self.override = self.execution.override_schedule(
-                data.map, [data.position], 30.0
-            )
+            self.override = self.execution.override_schedule(data.map, [data.position], 30.0)
             self.last_position = data.position
         else:
             dx = self.last_position[0] - data.position[0]
@@ -817,27 +885,8 @@ class Teleoperation:
             dist = math.sqrt(dx * dx + dy * dy)
             if dist > 0.1:
                 print("about to replace override schedule")
-                self.override = self.execution.override_schedule(
-                    data.map, [data.position], 30.0
-                )
+                self.override = self.execution.override_schedule(data.map, [data.position], 30.0)
                 self.last_position = data.position
-
-
-# @parallel
-# def update_robot(robot: RobotAdapter):
-#     data = robot.api.get_data(robot.name)
-#     if data is None:
-#         return
-
-#     state = rmf_easy.RobotState(data.map, data.position, data.battery_soc)
-
-#     if robot.update_handle is None:
-#         robot.update_handle = robot.fleet_handle.add_robot(
-#             robot.name, state, robot.configuration, robot.make_callbacks()
-#         )
-#         return
-
-#     robot.update(state, data)
 
 
 def ros_connections(node, robots: dict[str, RobotAdapter], fleet_handle):
@@ -850,9 +899,7 @@ def ros_connections(node, robots: dict[str, RobotAdapter], fleet_handle):
         durability=Durability.TRANSIENT_LOCAL,
     )
 
-    closed_lanes_pub = node.create_publisher(
-        ClosedLanes, "closed_lanes", qos_profile=transient_qos
-    )
+    closed_lanes_pub = node.create_publisher(ClosedLanes, "closed_lanes", qos_profile=transient_qos)
 
     closed_lanes = set()
 
@@ -882,11 +929,7 @@ def ros_connections(node, robots: dict[str, RobotAdapter], fleet_handle):
         closed_lanes_pub.publish(state_msg)
 
     def mode_request_cb(msg: ModeRequest):
-        if (
-            msg.fleet_name is None
-            or msg.fleet_name != fleet_name
-            or msg.robot_name is None
-        ):
+        if msg.fleet_name is None or msg.fleet_name != fleet_name or msg.robot_name is None:
             return
 
         robot = robots.get(msg.robot_name)

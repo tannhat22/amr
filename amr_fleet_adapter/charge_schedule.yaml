@@ -1,7 +1,7 @@
 amr_tayrua:
   "00:00": { amr001: charger001--charge, amr002: park_tp2_001 }
-  "06:00": { amr001: park_tp2_001, amr002: charger001--charge }
-  "12:00": { amr001: charger001--charge, amr002: park_tp2_001 }
+  "06:00": { amr002: park_tp2_001, amr001: charger001--charge }
+  "12:00": { amr002: charger001--charge, amr001: park_tp2_001 }
   "18:00": { amr001: park_tp2_001, amr002: charger001--charge }
 
 parking: ["park_tp2_001"]

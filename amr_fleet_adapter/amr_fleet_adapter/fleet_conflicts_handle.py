@@ -139,14 +139,10 @@ class FleetConflictsHandle(Node):
 
             code = PriotityCode.PATH_DISTANCE_PRIORITY
             if robotA_path_dis is None:
-                self.get_logger().warn(
-                    f"[{robot_A.name}] don't have path, please check!"
-                )
+                self.get_logger().warn(f"[{robot_A.name}] don't have path, please check!")
                 return [B, A]
             elif robotB_path_dis is None:
-                self.get_logger().warn(
-                    f"[{robot_B.name}] don't have path, please check!"
-                )
+                self.get_logger().warn(f"[{robot_B.name}] don't have path, please check!")
                 return [A, B]
 
             if robotA_path_dis >= robotB_path_dis:
@@ -193,9 +189,7 @@ class FleetConflictsHandle(Node):
 
         return theta_radians
 
-    def calculate_rectangle_corners(
-        self, position: Location, width, height, front_extension
-    ):
+    def calculate_rectangle_corners(self, position: Location, width, height, front_extension):
         # Tính cosine và sine của yaw
         cos_yaw = math.cos(position.yaw)
         sin_yaw = math.sin(position.yaw)
@@ -306,9 +300,7 @@ class FleetConflictsHandle(Node):
             ):
                 if len(dataRobot[i].path) == 0:
                     if self.robots[robot1Name].wait_HID is not None:
-                        self.robots[self.robots[robot1Name].wait_HID].wait_LID.remove(
-                            robot1Name
-                        )
+                        self.robots[self.robots[robot1Name].wait_HID].wait_LID.remove(robot1Name)
                         self.robots[robot1Name].wait_HID = None
                         self.robots[robot1Name].last_mode_request = None
                         self.get_logger().info(
@@ -379,13 +371,8 @@ class FleetConflictsHandle(Node):
                                         )
                                     if theta > 3.0:
                                         if (
-                                            self.robots[
-                                                dataRobot[i].name
-                                            ].last_mode_request
-                                            is None
-                                            and self.robots[
-                                                dataRobot[j].name
-                                            ].last_mode_request
+                                            self.robots[dataRobot[i].name].last_mode_request is None
+                                            and self.robots[dataRobot[j].name].last_mode_request
                                             is None
                                         ):
                                             # Lựa chọn robot nào sẽ có độ ưu tiên cao hơn
@@ -406,17 +393,13 @@ class FleetConflictsHandle(Node):
                                                 )
                                                 self.robots[
                                                     dataRobot[prioLID].name
-                                                ].last_mode_request = (
-                                                    RobotMode.MODE_PAUSED
+                                                ].last_mode_request = RobotMode.MODE_PAUSED
+                                                self.robots[dataRobot[prioLID].name].wait_HID = (
+                                                    dataRobot[prioHID].name
                                                 )
-                                                self.robots[
-                                                    dataRobot[prioLID].name
-                                                ].wait_HID = dataRobot[prioHID].name
                                                 self.robots[
                                                     dataRobot[prioHID].name
-                                                ].wait_LID.append(
-                                                    dataRobot[prioLID].name
-                                                )
+                                                ].wait_LID.append(dataRobot[prioLID].name)
                                                 self.get_logger().info(
                                                     f"Publish PAUSED_ACTION for [{dataRobot[prioLID].name}] (waiting [{dataRobot[prioHID].name}])!"
                                                 )
@@ -448,8 +431,7 @@ class FleetConflictsHandle(Node):
                             if (
                                 robot1Mode == RobotMode.MODE_PAUSED
                                 and self.robots[robot1Name].wait_HID == robot2Name
-                                and self.robots[robot1Name].last_mode_request
-                                is not None
+                                and self.robots[robot1Name].last_mode_request is not None
                             ):
                                 self.mode_request(
                                     fleet_name=fleetName,
@@ -487,12 +469,13 @@ class FleetConflictsHandle(Node):
 # Main
 # ------------------------------------------------------------------------------
 def main(argv=sys.argv):
-    # Init rclpy and adapter
+    # Init rclpy
     rclpy.init(args=argv)
     args_without_ros = rclpy.utilities.remove_ros_args(argv)
 
     parser = argparse.ArgumentParser(
-        prog="fleet_adapter", description="Configure and spin up the fleet adapter"
+        prog="fleet_conflicts_handle",
+        description="Configure and spin up the fleet conflict handle",
     )
     parser.add_argument(
         "-c",
@@ -502,7 +485,7 @@ def main(argv=sys.argv):
         help="Path to the config.yaml file",
     )
     args = parser.parse_args(args_without_ros[1:])
-    print(f"Starting fleet manager...")
+    print(f"Starting fleet conflicts handle...")
 
     with open(args.config_file, "r") as f:
         config = yaml.safe_load(f)

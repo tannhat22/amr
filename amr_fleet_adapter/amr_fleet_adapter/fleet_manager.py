@@ -21,6 +21,7 @@ import math
 import sys
 import threading
 import time
+import re
 from typing import Optional
 
 from fastapi import FastAPI
@@ -42,7 +43,9 @@ from rmf_fleet_msgs.msg import (
     FleetState,
     RobotState,
     RobotMode,
+    DockLimit,
     DockMode,
+    DockParam,
     DockTag,
     DockSummary,
     Location,
@@ -51,6 +54,13 @@ from rmf_fleet_msgs.msg import (
     LocalizeRequest,
     ModeRequest,
     PathRequest,
+)
+from machine_fleet_msgs.msg import (
+    DeviceMode,
+    FleetMachineState,
+    MachineState,
+    MachineRequest,
+    StationRequest,
 )
 import socketio
 import uvicorn
@@ -68,12 +78,20 @@ class Request(BaseModel):
     data: Optional[dict] = None
     speed_limit: Optional[float] = None
     toggle: Optional[bool] = None
+    machine_desc: Optional[dict] = None
+    station_desc: Optional[dict] = None
 
 
 class Response(BaseModel):
     data: Optional[dict] = None
     success: bool
     msg: str
+
+
+# Machine state:
+class MCState:
+    def __init__(self, state: MachineState = None) -> None:
+        self.state = state
 
 
 # ------------------------------------------------------------------------------
@@ -105,26 +123,36 @@ class State:
 class DockInfo:
     def __init__(
         self,
-        tag_names: list[str] = [],
-        distance_go_out: float = 0.0,
-        rotate_to_dock: int = 0,
-        custom_dock: bool = False,
-        rotate_angle: int = 0,
-        rotate_orientation: int = 0,
+        machine_name: str = None,
+        response_state: str = None,
+        dock_limit: DockLimit = None,
+        tag_names: list[DockTag] = [],
+        go_in_dock: list[DockParam] = [],
+        go_out_dock: list[DockParam] = [],
     ) -> None:
+        self.machine_name = machine_name
+        self.response_state = response_state
         self.tag_names = tag_names
-        self.distance_go_out = distance_go_out
-        self.rotate_to_dock = rotate_to_dock
-        self.custom_dock = custom_dock
-        self.rotate_angle = rotate_angle
-        self.rotate_orientation = rotate_orientation
+        self.dock_limit = dock_limit
+        self.go_in_dock = go_in_dock
+        self.go_out_dock = go_out_dock
+
+
+def search_mode_docking(dock_name: str):
+    match = re.search(r"--(.+)", dock_name)
+    if match:
+        result = match.group(1)
+        return result
+    else:
+        return None
 
 
 class FleetManager(Node):
     _dock_context: dict[str, DockInfo]
     robots: dict[str, State]
+    machines: dict[str, MCState]
 
-    def __init__(self, config):
+    def __init__(self, config, nav_graph):
         self.debug = False
         self.config = config
         self.fleet_name = self.config["rmf_fleet"]["name"]
@@ -144,58 +172,30 @@ class FleetManager(Node):
         self.robots = {}  # Map robot name to state
         self.action_paths = {}  # Map activities to paths
         self._dock_context = {}
+        self.machines = {}  # Map machine name to state
 
         if "docks" in self.config:
-            for dock in self.config["docks"]:
-                dockConf = self.config["docks"][dock]
-                tag_names = dockConf.get("tag_names", [])
-                distance_go_out = dockConf.get("distance_go_out", None)
-                rotate_to_dock = dockConf.get("rotate_to_dock", 0)
-                custom_dock_conf = dockConf.get("custom_dock", None)
-                if custom_dock_conf is not None:
-                    custom_dock = True
-                    rotate_angle = custom_dock_conf.get("rotate_angle", 0)
-                    rotate_orientation = custom_dock_conf.get("rotate_orientation", 0)
-                else:
-                    custom_dock = False
-                    rotate_angle = 0
-                    rotate_orientation = 0
-
-                assert distance_go_out is not None
-                assert rotate_to_dock is not None
-
-                dInf = DockInfo(
-                    tag_names,
-                    distance_go_out,
-                    rotate_to_dock,
-                    custom_dock,
-                    rotate_angle,
-                    rotate_orientation,
-                )
-                self._dock_context.update({dock: dInf})
-
+            self.add_dock_context()
         assert len(self._dock_context) > 0
 
+        # Add robot context:
         for robot_name, _ in self.config["rmf_fleet"]["robots"].items():
             self.robots[robot_name] = State()
         assert len(self.robots) > 0
 
+        # Add machine context:
+        self.add_machine_context(nav_graph)
+
         profile = traits.Profile(
-            geometry.make_final_convex_circle(
-                self.config["rmf_fleet"]["profile"]["footprint"]
-            ),
-            geometry.make_final_convex_circle(
-                self.config["rmf_fleet"]["profile"]["vicinity"]
-            ),
+            geometry.make_final_convex_circle(self.config["rmf_fleet"]["profile"]["footprint"]),
+            geometry.make_final_convex_circle(self.config["rmf_fleet"]["profile"]["vicinity"]),
         )
         self.vehicle_traits = traits.VehicleTraits(
             linear=traits.Limits(*self.config["rmf_fleet"]["limits"]["linear"]),
             angular=traits.Limits(*self.config["rmf_fleet"]["limits"]["angular"]),
             profile=profile,
         )
-        self.vehicle_traits.differential.reversible = self.config["rmf_fleet"][
-            "reversible"
-        ]
+        self.vehicle_traits.differential.reversible = self.config["rmf_fleet"]["reversible"]
 
         fleet_manager_config = self.config["fleet_manager"]
         self.action_paths = fleet_manager_config.get("action_paths", {})
@@ -225,6 +225,13 @@ class FleetManager(Node):
             FleetState,
             "fleet_states",
             self.fleet_states_cb,
+            100,
+        )
+
+        self.create_subscription(
+            FleetMachineState,
+            "fleet_machine_state",
+            self.fleet_machine_state_cb,
             100,
         )
 
@@ -269,10 +276,23 @@ class FleetManager(Node):
             qos_profile=qos_profile_system_default,
         )
 
-        self.charger_pub = self.create_publisher(
+        self.machine_req_pub = self.create_publisher(
+            MachineRequest,
+            "adapter_machine_requests",
+            qos_profile=qos_profile_system_default,
+        )
+
+        self.station_req_pub = self.create_publisher(
+            StationRequest,
+            "station_requests",
+            qos_profile=qos_profile_system_default,
+        )
+
+        self.charger_req_pub = self.create_publisher(
             ChargerRequest, "charger_request", qos_profile=qos_profile_system_default
         )
 
+        # ---------------------------- ROBOT --------------------------------- #
         @app.get("/open-rmf/rmf_vdm_fm/status/", response_model=Response)
         async def status(robot_name: Optional[str] = None):
             response = {"data": {}, "success": False, "msg": ""}
@@ -282,9 +302,7 @@ class FleetManager(Node):
                     state = self.robots.get(robot_name)
                     if state is None or state.state is None:
                         return response
-                    response["data"]["all_robots"].append(
-                        self.get_robot_state(state, robot_name)
-                    )
+                    response["data"]["all_robots"].append(self.get_robot_state(state, robot_name))
             else:
                 state = self.robots.get(robot_name)
                 if state is None or state.state is None:
@@ -374,7 +392,7 @@ class FleetManager(Node):
             return response
 
         @app.get("/open-rmf/rmf_vdm_fm/wait_robot/", response_model=Response)
-        async def wait(robot_name: str, cmd_id: str):
+        async def wait(robot_name: str, cmd_id: int):
             response = {"success": False, "msg": ""}
             if robot_name not in self.robots:
                 return response
@@ -396,7 +414,7 @@ class FleetManager(Node):
             return response
 
         @app.get("/open-rmf/rmf_vdm_fm/resume_robot/", response_model=Response)
-        async def resume(robot_name: str, cmd_id: str):
+        async def resume(robot_name: str, cmd_id: int):
             response = {"success": False, "msg": ""}
             if robot_name not in self.robots:
                 return response
@@ -465,12 +483,12 @@ class FleetManager(Node):
                     dock_request.dock_mode.mode = DockMode.MODE_CHARGE
                 elif (
                     request.activity_desc["mode"] == "pickup"
-                    or request.activity_desc["mode"] == "mcpickup"
+                    or request.activity_desc["mode"] == "mpickup"
                 ):
                     dock_request.dock_mode.mode = DockMode.MODE_PICKUP
                 elif (
                     request.activity_desc["mode"] == "dropoff"
-                    or request.activity_desc["mode"] == "mcdropoff"
+                    or request.activity_desc["mode"] == "mdropoff"
                 ):
                     dock_request.dock_mode.mode = DockMode.MODE_DROPOFF
                 elif request.activity_desc["mode"] == "undock":
@@ -479,11 +497,9 @@ class FleetManager(Node):
                     response["msg"] = "Mode dock does not support. Please check mode!"
                     return response
 
-                unliftDis = request.activity_desc.get("unlift", None)
+                undock_dist = request.activity_desc.get("undock_dist", None)
 
-                dock_config = self._dock_context.get(
-                    request.activity_desc["dock_name"], None
-                )
+                dock_config = self._dock_context.get(request.activity_desc["dock_name"], None)
 
                 target_loc = Location()
                 target_loc.level_name = request.map_name
@@ -510,11 +526,11 @@ class FleetManager(Node):
                 dock_request.robot_name = robot_name
                 dock_request.dock_name = request.activity_desc["dock_name"]
 
-                if (
-                    dock_request.dock_mode.mode == DockMode.MODE_UNDOCK
-                    and unliftDis is not None
-                ):
-                    dock_request.parameters.distance_go_out = unliftDis
+                if dock_request.dock_mode.mode == DockMode.MODE_UNDOCK and undock_dist is not None:
+                    dockParam = DockParam()
+                    dockParam.action_type = DockParam.TYPE_MOVE
+                    dockParam.value = undock_dist
+                    dock_request.go_out_dock.append(dockParam)
                 elif dock_config is None:
                     response["msg"] = "Not found dock name in config!"
                     self.get_logger().warn(
@@ -522,19 +538,10 @@ class FleetManager(Node):
                     )
                     return response
                 else:
-                    for tag in dock_config.tag_names:
-                        tagMsg = DockTag()
-                        tagMsg.name = tag
-                        dock_request.tag_names.append(tagMsg)
-                    dock_request.parameters.custom_docking = dock_config.custom_dock
-                    dock_request.parameters.rotate_to_dock = dock_config.rotate_to_dock
-                    dock_request.parameters.rotate_angle = dock_config.rotate_angle
-                    dock_request.parameters.rotate_orientation = (
-                        dock_config.rotate_orientation
-                    )
-                    dock_request.parameters.distance_go_out = (
-                        dock_config.distance_go_out
-                    )
+                    dock_request.dock_limit = dock_config.dock_limit
+                    dock_request.tag_names = dock_config.tag_names
+                    dock_request.go_in_dock = dock_config.go_in_dock
+                    dock_request.go_out_dock = dock_config.go_out_dock
 
                 dock_request.task_id = str(cmd_id)
                 self.dock_pub.publish(dock_request)
@@ -617,8 +624,119 @@ class FleetManager(Node):
             return response
 
         # ///////////////////////////////////////////////////////////////////////
+
+        # ---------------------------- MACHINE --------------------------------- #
+        @app.get("/open-rmf/rmf_vdm_fm/machine_status/", response_model=Response)
+        async def machine_status(dock_name: str):
+            response = {"data": {}, "success": False, "msg": ""}
+
+            dock_config = self._dock_context.get(dock_name, None)
+            if dock_config is None:
+                response["msg"] = "dock_config not found. Please check dock_name!"
+                return response
+
+            machine_name = dock_config.machine_name
+            if machine_name is None:
+                response["msg"] = "machine_name not found. Please check dock_config!"
+                return response
+            else:
+                state = self.machines.get(machine_name)
+                if state is None or state.state is None:
+                    return response
+                response["data"] = self.get_machine_state(state, machine_name)
+            response["success"] = True
+            return response
+
+        @app.post("/open-rmf/rmf_vdm_fm/machine_request/", response_model=Response)
+        async def machine_request(dock_name: str, task: Request):
+            response = {"success": False, "msg": ""}
+
+            dock_config = self._dock_context.get(dock_name, None)
+            if dock_config is None:
+                return response
+
+            machine_name = dock_config.machine_name
+
+            machine_request = MachineRequest()
+            if task.machine_desc["request_type"] == "dispenser":
+                machine_request.request_type = MachineRequest.REQUEST_DISPENSER
+            elif task.machine_desc["request_type"] == "ingestor":
+                machine_request.request_type = MachineRequest.REQUEST_INGESTOR
+            else:
+                response["msg"] = (
+                    "request_type machine does not support. Please check request_type!"
+                )
+                return response
+
+            if task.machine_desc["mode"] == DeviceMode.MODE_IDLE:
+                machine_request.request_mode.mode = DeviceMode.MODE_IDLE
+            elif task.machine_desc["mode"] == DeviceMode.MODE_ACCEPT_DOCKIN:
+                machine_request.request_mode.mode = DeviceMode.MODE_ACCEPT_DOCKIN
+            elif task.machine_desc["mode"] == DeviceMode.MODE_ROBOT_DOCKED_IN:
+                machine_request.request_mode.mode = DeviceMode.MODE_ROBOT_DOCKED_IN
+            elif task.machine_desc["mode"] == DeviceMode.MODE_ACCEPT_DOCKOUT:
+                machine_request.request_mode.mode = DeviceMode.MODE_ACCEPT_DOCKOUT
+            elif task.machine_desc["mode"] == DeviceMode.MODE_CANCEL:
+                machine_request.request_mode.mode = DeviceMode.MODE_CANCEL
+            elif task.machine_desc["mode"] == DeviceMode.MODE_ROBOT_ERROR:
+                machine_request.request_mode.mode = DeviceMode.MODE_ROBOT_ERROR
+            else:
+                response["msg"] = "Mode device request does not support. Please check mode!"
+                return response
+
+            machine_request.machine_name = machine_name
+            machine_request.time = self.get_clock().now().to_msg()
+            self.machine_req_pub.publish(machine_request)
+
+            if self.debug:
+                print(f"Sending adapter machine request for {machine_name}")
+
+            response["success"] = True
+            return response
+
+        @app.post("/open-rmf/rmf_vdm_fm/station_request/", response_model=Response)
+        async def station_request(station_name: str, task: Request):
+            response = {"success": False, "msg": ""}
+
+            dock_config = self._dock_context.get(station_name, None)
+            if dock_config is None:
+                return response
+
+            station_request = StationRequest()
+            if task.station_desc["station_type"] == "pickup":
+                station_request.station_type = StationRequest.TYPE_PICKUP
+            elif task.station_desc["station_type"] == "dropoff":
+                station_request.station_type = StationRequest.TYPE_DROPOFF
+            else:
+                response["msg"] = "station_type does not support. Please check station_type!"
+                return response
+
+            if task.station_desc["mode"] == StationRequest.MODE_EMPTY:
+                station_request.mode = StationRequest.MODE_EMPTY
+            elif task.station_desc["mode"] == StationRequest.MODE_FILLED:
+                station_request.mode = StationRequest.MODE_FILLED
+            else:
+                response["msg"] = "Mode station request does not support. Please check mode!"
+                return response
+
+            if dock_config.response_state is None:
+                station_request.station_name = station_name
+            else:
+                station_request.station_name = dock_config.response_state
+                station_request.station_type = StationRequest.TYPE_PICKUP
+
+            station_request.time = self.get_clock().now().to_msg()
+            self.station_req_pub.publish(station_request)
+
+            if self.debug:
+                print(f"Sending adapter station request for {station_name}")
+
+            response["success"] = True
+            return response
+
         # ///////////////////////////////////////////////////////////////////////
 
+        # ---------------------------- CHARGER --------------------------------- #
         @app.post("/open-rmf/rmf_vdm_fm/charger_trigger/", response_model=Response)
         async def charger_trigger(robot_name: str, cmd_id: int, request: Request):
             response = {"success": False, "msg": ""}
@@ -637,7 +755,7 @@ class FleetManager(Node):
             charger_request.robot_name = robot_name
             charger_request.request_id = str(cmd_id)
 
-            self.charger_pub.publish(charger_request)
+            self.charger_req_pub.publish(charger_request)
 
             if self.debug:
                 print(
@@ -646,6 +764,97 @@ class FleetManager(Node):
 
             response["success"] = True
             return response
+
+        # ///////////////////////////////////////////////////////////////////////
+
+    def add_dock_context(self):
+        for dock in self.config["docks"]:
+            dockConf = self.config["docks"][dock]
+            machine_name = dockConf.get("machine_name", None)
+            response_state = dockConf.get("response_state", None)
+            tag_names_conf = dockConf.get("tag_names", [])
+            go_in_dock_conf = dockConf.get("go_in_dock", None)
+            go_out_dock_conf = dockConf.get("go_out_dock", None)
+            dock_limit_conf = dockConf.get("limits", None)
+
+            dock_limit = DockLimit()
+            if dock_limit_conf is not None:
+                dock_limit.rotate_angle = dock_limit_conf.get("rotate_angle", 0)
+                dock_limit.rotate_orientation = dock_limit_conf.get("rotate_orientation", 0)
+
+            assert go_out_dock_conf is not None, f"dock [{dock}] need config go_out_dock!"
+
+            # add tag names
+            tag_names = []
+            for tag in tag_names_conf:
+                dockTag = DockTag()
+                dockTag.name = tag
+                tag_names.append(dockTag)
+
+            # add action of go_in_dock
+            go_in_dock = []
+            if go_in_dock_conf is not None:
+                for action_conf in go_in_dock_conf:
+                    action = action_conf.split(":")
+                    assert (
+                        action[0] == "rot" or action[0] == "mov"
+                    ), f"dock [{dock}] - go_in_dock: {action} invalid, format (mov:value or rot:value)!"
+                    param = DockParam()
+                    if action[0] == "rot":
+                        param.action_type = DockParam.TYPE_ROTATE
+                    else:
+                        param.action_type = DockParam.TYPE_MOVE
+                    param.value = float(action[1])
+                    go_in_dock.append(param)
+            else:
+                go_in_dock.append(DockParam())
+
+            # add action of go_out_dock
+            go_out_dock = []
+            for action_conf in go_out_dock_conf:
+                action = action_conf.split(":")
+                assert (
+                    action[0] == "rot" or action[0] == "mov"
+                ), f"dock [{dock}] - go_out_dock: {action} invalid, format (mov:value or rot:value)!"
+                param = DockParam()
+                if action[0] == "rot":
+                    param.action_type = DockParam.TYPE_ROTATE
+                else:
+                    param.action_type = DockParam.TYPE_MOVE
+                param.value = float(action[1])
+                go_out_dock.append(param)
+
+            dInf = DockInfo(
+                machine_name,
+                response_state,
+                dock_limit,
+                tag_names,
+                go_in_dock,
+                go_out_dock,
+            )
+            self._dock_context.update({dock: dInf})
+        return
+
+    def add_machine_context(self, nav_graph):
+        for level in nav_graph["levels"]:
+            for wp in nav_graph["levels"][level]["vertices"]:
+                assert len(wp) == 3, "Vertical structure not match, please check!"
+
+                machine_name = None
+                if (
+                    "pickup_dispenser" in wp[2]
+                    and search_mode_docking(wp[2]["dock_name"]) == "mpickup"
+                ):
+                    machine_name = wp[2]["pickup_dispenser"]
+                elif (
+                    "dropoff_ingestor" in wp[2]
+                    and search_mode_docking(wp[2]["dock_name"]) == "mdropoff"
+                ):
+                    machine_name = wp[2]["dropoff_ingestor"]
+
+                if machine_name is not None and machine_name not in self.machines:
+                    self.machines[machine_name] = MCState()
+        return
 
     def _make_mode_request(self, robot_name, cmd_id, mode, action=""):
         mode_msg = ModeRequest()
@@ -722,6 +931,14 @@ class FleetManager(Node):
                         f'Detect robot "{robotMsg.name}" is not in config file, pleascheck!'
                     )
 
+    def fleet_machine_state_cb(self, msg: FleetMachineState):
+        dataMachine = msg.machines
+        machineMsg: MachineState
+        for machineMsg in dataMachine:
+            if machineMsg.machine_name in self.machines:
+                machine = self.machines[machineMsg.machine_name]
+                machine.state = machineMsg
+
     def dock_summary_cb(self, msg):
         for fleet in msg.docks:
             if fleet.fleet_name == self.fleet_name:
@@ -785,6 +1002,14 @@ class FleetManager(Node):
         data["mode"] = robot.state.mode.mode
         return data
 
+    def get_machine_state(self, machine: MCState, machine_name):
+        data = {}
+        data["machine_name"] = machine_name
+        data["dispenser_mode"] = machine.state.dispenser_mode.mode
+        data["ingestor_mode"] = machine.state.ingestor_mode.mode
+        data["mode"] = machine.state.machine_mode
+        return data
+
     def disp(self, A, B):
         return math.sqrt((A[0] - B[0]) ** 2 + (A[1] - B[1]) ** 2)
 
@@ -809,13 +1034,26 @@ def main(argv=sys.argv):
         required=True,
         help="Path to the config.yaml file",
     )
+    parser.add_argument(
+        "-n",
+        "--nav_graph",
+        type=str,
+        required=True,
+        help="Path to the nav_graph for this fleet manager",
+    )
     args = parser.parse_args(args_without_ros[1:])
     print("Starting fleet manager...")
 
-    with open(args.config_file, "r") as f:
+    config_path = args.config_file
+    nav_graph_path = args.nav_graph
+
+    with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
-    fleet_manager = FleetManager(config)
+    with open(nav_graph_path, "r") as f:
+        nav_graph = yaml.safe_load(f)
+
+    fleet_manager = FleetManager(config, nav_graph)
 
     spin_thread = threading.Thread(target=rclpy.spin, args=(fleet_manager,))
     spin_thread.start()

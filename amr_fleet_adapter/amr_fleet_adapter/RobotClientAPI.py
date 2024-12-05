@@ -193,7 +193,7 @@ class RobotAPI:
             print(f"Other error: {err}")
         return False
 
-    def wait(self, robot_name: str, cmd_id: str):
+    def wait(self, robot_name: str, cmd_id: int):
         """Command the robot to wait.
         Return True if robot has successfully waited. Else False"""
         url = (
@@ -212,7 +212,7 @@ class RobotAPI:
             print(f"Other error: {err}")
         return False
 
-    def resume(self, robot_name: str, cmd_id: str):
+    def resume(self, robot_name: str, cmd_id: int):
         """Command the robot to resume.
         Return True if robot has successfully resumed. Else False"""
         url = (
@@ -259,9 +259,7 @@ class RobotAPI:
 
         Return True if the toggle request is successful
         """
-        url = (
-            self.prefix + f"/open-rmf/rmf_vdm_fm/toggle_teleop?robot_name={robot_name}"
-        )
+        url = self.prefix + f"/open-rmf/rmf_vdm_fm/toggle_teleop?robot_name={robot_name}"
         data = {"toggle": toggle}
         try:
             response = requests.post(url, timeout=self.timeout, json=data)
@@ -328,13 +326,67 @@ class RobotAPI:
         return None
 
     # ///////////////////////////////////////////////////////////////////////////
+    # API for machine:
+    def get_machine_data(self, dock_name: str):
+        """
+        Return a MachineUpdateData
+        """
+        url = self.prefix + f"/open-rmf/rmf_vdm_fm/machine_status?dock_name={dock_name}"
+        try:
+            response = requests.get(url, timeout=self.timeout)
+            response.raise_for_status()
+            if self.debug:
+                print(f"Response: {response.json()}")
+            return MachineUpdateData(response.json()["data"])
+        except HTTPError as http_err:
+            print(f"HTTP error for {dock_name} in get_machine_data , {http_err}")
+        except Exception as err:
+            # print(f"Other error for {machine_name} in get_data: {err}")
+            pass
+        return None
+
+    def machine_request(self, dock_name: str, process: dict):
+        """Request the machine to begin a process
+        Return True if the machine has accepted the request, else False"""
+        url = self.prefix + f"/open-rmf/rmf_vdm_fm/machine_request?dock_name={dock_name}"
+
+        data = {"machine_desc": process}
+        try:
+            response = requests.post(url, timeout=self.timeout, json=data)
+            response.raise_for_status()
+            if self.debug:
+                print(f"Response: {response.json()}")
+            return response.json()["success"]
+        except HTTPError as http_err:
+            print(f"HTTP error: {http_err}")
+        except Exception as err:
+            print(f"Other error: {err}")
+        return False
+
+    def station_request(self, station_name: str, process: dict):
+        """Request the station to begin a process
+        Return True if the station has accepted the request, else False"""
+        url = self.prefix + f"/open-rmf/rmf_vdm_fm/station_request?station_name={station_name}"
+
+        data = {"station_desc": process}
+        try:
+            response = requests.post(url, timeout=self.timeout, json=data)
+            response.raise_for_status()
+            if self.debug:
+                print(f"Response: {response.json()}")
+            return response.json()["success"]
+        except HTTPError as http_err:
+            print(f"HTTP error: {http_err}")
+        except Exception as err:
+            print(f"Other error: {err}")
+        return False
+
     # API for charger:
     def charger_trigger(self, robot_name: str, cmd_id: int, process: dict):
         """Request the charger to begin a process
         Return True if the charger has accepted the request, else False"""
         url = (
-            self.prefix
-            + f"/open-rmf/rmf_vdm_fm/charger_trigger?robot_name={robot_name}"
+            self.prefix + f"/open-rmf/rmf_vdm_fm/charger_trigger?robot_name={robot_name}"
             f"&cmd_id={cmd_id}"
         )
 
@@ -364,6 +416,7 @@ class RobotUpdateData:
         self.position = [x, y, yaw]
         self.map = data["map_name"]
         self.battery_soc = data["battery"] / 100.0
+        self.destination_arrival = data["destination_arrival"]
         self.mode = data["mode"]
         self.requires_replan = data.get("replan", False)
         self.last_request_completed = data["last_completed_request"]
@@ -372,3 +425,13 @@ class RobotUpdateData:
         if cmd_id == 0 and self.last_request_completed is None:
             return True
         return self.last_request_completed == cmd_id
+
+
+class MachineUpdateData:
+    """Update data for a single machine."""
+
+    def __init__(self, data):
+        self.machine_name = data["machine_name"]
+        self.dispenser_mode = data["dispenser_mode"]
+        self.ingestor_mode = data["ingestor_mode"]
+        self.mode = data["mode"]

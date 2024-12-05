@@ -1,0 +1,21 @@
+<?xml version='1.0' ?>
+
+<launch>
+  <arg name="config_file" default="$(find-pkg-share amr_workcell_adapter)/config.yaml" description="The config file that provides important parameters for setting up the adapter"/>
+  <arg name="nav_graph_file"  default="$(find-pkg-share amr-rmf)/maps/tp2-tp3-layout/nav_graphs/0.yaml" description="The graph that this workcell should use for config"/>
+  <arg name="output" default="screen"/>
+
+  <!-- Workcell manager -->
+  <node pkg="amr_workcell_adapter"
+        exec="workcell_manager"
+        args="-c $(var config_file) -n $(var nav_graph_file)"
+        output="$(var output)">
+  </node>
+  
+  <!-- Workcell adapter -->
+  <node pkg="amr_workcell_adapter"
+        exec="workcell_adapter"
+        args="-c $(var config_file) -n $(var nav_graph_file)"
+        output="$(var output)">
+  </node>
+</launch>

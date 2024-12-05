@@ -24,7 +24,7 @@ def generate_launch_description():
                         "dds_domain": 53,
                         "dds_charger_state_topic": "charger_state",
                         "dds_charger_request_topic": "charger_request",
-                        "update_state_frequency": 5.0,
+                        "update_state_frequency": 2.0,
                         "publish_state_frequency": 1.0,
                     }
                 ],

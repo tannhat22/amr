@@ -31,7 +31,7 @@ rmf_fleet:
     loop: True
     delivery: True
     clean: False
-  finishing_request: "charge" # [park, charge, nothing]
+  finishing_request: "nothing" # [park, charge, nothing]
   responsive_wait: True # Should responsive wait be on/off for the whole fleet by default? False if not specified.
   charger_server_running: False  # Server charge is running or not
   robots:
@@ -56,71 +56,168 @@ fleet_manager:
 # Docks config:
 docks:
   # Here the user is expected to append the configuration for each dock in the fleet
+  # rotate_to_dock: Use (-) or (+) to define value
+  # rotate_orientation: Use clockwise or counter clockwise
+  #                          --------------
+  #                          |            |
+  #                          |            |
+  #                          |   ROBOT    |
+  #                          |            |
+  #                          |            |
+  #                          --------------
+  #                              |    |
+  #                              |    |
+  #                              |    |
+  #                              |    |
+  #    Clockwise (-)(LEFT) <---- `````` ----> Counter clockwise (+)(RIGHT)
+
   # /******************** TP2 *********************/
+  # LINE 55
   clr55--pickup:
-    distance_go_out: 0.90
+    go_out_dock: [mov:0.90]
     tag_names: [tag_frame_0, tag_frame_2, tag_frame_3]
 
   clr55--dropoff:
-    distance_go_out: 2.5
-    rotate_to_dock: 0
-    custom_dock:
+    go_in_dock: [rot:180]
+    go_out_dock: [mov:2.5]
+    limits:
       rotate_angle: 30
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   line55--pickup:
-    distance_go_out: 0.85
+    go_out_dock: [mov:0.85]
     tag_names: [tag_frame_0, tag_frame_2, tag_frame_3]
 
   line55--dropoff:
-    distance_go_out: 0.65
+    go_out_dock: [mov:0.65]
 
+  # LINE 56
+  clr56--pickup:
+    go_out_dock: [mov:0.90]
+    tag_names: [tag_frame_4]
+
+  clr56--dropoff:
+    go_in_dock: [rot:90]
+    go_out_dock: [mov:0.7]
+
+  line56--pickup:
+    go_out_dock: [mov:1.3, rot:-90]
+    tag_names: [tag_frame_4]
+    limits:
+      rotate_angle: 30
+      rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  line56--dropoff:
+    go_out_dock: [mov:0.4, rot:-90]  
+    limits:
+      rotate_angle: 45
+      rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  # Chargers
   charger001--charge:
-    distance_go_out: -0.7
+    go_out_dock: [mov:-0.7]
 
   # /******************** TP3 *********************/
+  # Test:
+  test--pickup:
+    go_out_dock: [mov:0.85]
+    tag_names: []
+  
+  test--dropoff:
+    go_out_dock: [mov:0.65]
+
+
+  # LINE 90
   clr90--pickup:
-    distance_go_out: 0.90
+    go_out_dock: [mov:0.90]
     tag_names: [tag_frame_1]
 
   clr90--dropoff:
-    distance_go_out: 0.70
-    rotate_to_dock: 90
+    go_in_dock: [rot:-90]
+    go_out_dock: [mov:0.5]
 
   line90--pickup:
-    distance_go_out: 0.85
+    go_out_dock: [mov:0.85]
     tag_names: [tag_frame_1]
 
   line90--dropoff:
-    distance_go_out: 0.65
+    go_out_dock: [mov:0.65]
 
+  # LINE 85
+  line85--pickup:
+    go_in_dock: [rot:180]
+    go_out_dock: [mov:0.77, rot:12, mov:1.5]
+    tag_names: [tag_frame_1]
+    limits:
+      rotate_angle: 45
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  line85--dropoff:
+    go_out_dock: [mov:0.65]
+    limits:
+      rotate_angle: 45
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  # Chargers 
   charger003--charge:
-    distance_go_out: -0.7
+    go_in_dock: [rot:0]
+    go_out_dock: [mov:-0.7]
 
   charger004--charge:
-    distance_go_out: -0.7
+    go_in_dock: [rot:0]
+    go_out_dock: [mov:-0.7]
 
-# up: 1.57199, down: -1.57199, right: 0.0, left: 3.14  
+  # full dock config:
+  # dock_name:
+  #   machine_name: nqvlm104
+  #   response_state: line90_ins--pickup
+  #   go_in_dock: [rot:0]
+  #   go_out_dock: [mov:10, rot:30]
+  #   tag_names: []
+  #   limits:
+  #     rotate_angle: 30
+  #     rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise    
+
+
+# up: 1.57199 (y), down: -1.57199 (-y), right: 0.0 (x), left: 3.14 (-x) (See map frame below)
+#             ^ y
+#             |
+#             |
+#             |
+#             |
+#            -|----------> x
+# Orientation of vertexs defined through map frame coordinate above 
 vertexs:
   # ------TP2------:
   tp2_clr_custom_1: 3.14
   park_tp2_001: 3.14
   waiting_for_lift_tp2: 1.57199
   lift001-L1: [1.57199, True]
-  # Line55:
+  # LINE 55:
   clr55_PKFD: 0.0
-  clr55_DOFD: 1.57199
+  clr55_DOFD: -1.57199
   line55_PKFD: 0.0
   line55_DOFD: 0.0
+  # LINE 56:
+  clr56_PKFD: 0.0
+  clr56_DOFD: 0.0
+  line56_PKFD: 0.0
+  line56_DOFD: 1.57199
+  line56_lane_custom1: 0.0
+  line56_lane_custom2: -1.57199
+  line56_lane_custom3: 3.14
+
   # ------TP3------:
-  # Line90:
+  testPKFD: -1.57199
+  testDOFD: -1.57199
+  # LINE 90
   clr90_PKFD: 0.0
-  clr90_DOFD: 0.0
+  clr90_DOFD: 3.14
   line90_PKFD: -1.57199
   line90_DOFD: -1.57199
+  # LINE 85
+  line85_PKFD: 1.57199
+  line85_DOFD: -1.57199
   waiting_for_lift_tp3: 1.57199
   tp3_lane_custom_1: 0.0
   lift001-L2: [1.57199, True]
-
-machines: []
-stations: []

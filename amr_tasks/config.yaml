@@ -1,0 +1,18 @@
+# AUTOTASK CONFIG =================================================================
+# Auto task parameters
+
+TaskRequester:
+  machines:
+    machine001:
+        sku: "RF370CB"
+        dispenser: "wp1--mpickup"
+        ingestor: "wp1--dropoff"
+        pickup_stations: ["pk1","pk2","pk3"]
+        dropoff_stations: ["do1","do2","do3"]
+  stations:
+    station001:
+      sku: "FF180"
+      dropoff_stations: ["do1","do2","do3"]
+    station002:
+      sku: "RF370CB"
+      dropoff_stations: ["do1"]

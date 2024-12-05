@@ -25,7 +25,7 @@ def generate_launch_description():
                         "dds_lift_state_topic": "lift_state",
                         "dds_lift_request_topic": "lift_request",
                         "dds_register_request_topic": "register_request",
-                        "update_state_frequency": 5.0,
+                        "update_state_frequency": 2.0,
                         "publish_state_frequency": 1.0,
                     }
                 ],

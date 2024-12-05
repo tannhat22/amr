@@ -28,7 +28,7 @@ from rclpy.qos import QoSReliabilityPolicy as Reliability
 from rmf_task_msgs.msg import ApiRequest
 
 # from rmf_task_msgs.msg import ApiResponse
-from rmf_task_msgs.msg import TaskRequest
+from machine_fleet_msgs.msg import DeliveryRequest, DeliveryParams
 
 ###############################################################################
 
@@ -56,32 +56,21 @@ class TaskRequester(Node):
         # )
 
         self.create_subscription(
-            TaskRequest, "amr_delivery_requests", self.task_requests_callback, 10
+            DeliveryRequest, "amr_delivery_requests", self.task_requests_callback, 10
         )
 
-        self.get_logger().info(
-            "Beginning amr_delivery_requester node, shut down with CTRL-C"
-        )
+        self.get_logger().info("Beginning amr_delivery_requester node, shut down with CTRL-C")
 
-    def task_requests_callback(self, msg: TaskRequest):
-        pickups = json.loads(msg.pickups)
-        dropoffs = json.loads(msg.dropoffs)
+    def task_requests_callback(self, msg: DeliveryRequest):
         self.dispatch_delivery(
-            msg.fleet_name,
-            msg.robot_name,
-            msg.start_time,
-            msg.requester,
-            pickups,
-            dropoffs,
+            msg.fleet_name, msg.robot_name, msg.start_time, msg.requester, msg.delivery_params
         )
 
-    # pickup: {place: name_pickup_waypoint, handler: pickup_dispenser, sku_qty: ["sku", "quantity"]}
-    def __create_pickup_desc(self, pickup: dict):
-        place = pickup["place"]
-        handler = pickup["handler"]
-        sku_qty = pickup["sku_qty"]
-        assert len(sku_qty) == 2, "please specify sku and qty for pickup payload"
-        payload = [{"sku": sku_qty[0], "quantity": int(sku_qty[1])}]
+    # pickup_descriptions
+    def __create_pickup_desc(self, pickup: DeliveryParams):
+        place = pickup.pickup_place_name
+        handler = pickup.pickup_dispenser
+        payload = [{"sku": pickup.pickup_items.sku, "quantity": pickup.pickup_items.quantity}]
 
         return {
             "place": place,
@@ -89,19 +78,40 @@ class TaskRequester(Node):
             "payload": payload,
         }
 
-    # dropoff: {place: name_dropoff_waypoint, handler: dropoff_ingestor, sku_qty: ["sku", "quantity"]}
-    def __create_dropoff_desc(self, dropoff: dict):
-        place = dropoff["place"]
-        handler = dropoff["handler"]
-        sku_qty = dropoff["sku_qty"]
-        assert len(sku_qty) == 2, "please specify sku and qty for dropoff payload"
-        payload = [{"sku": sku_qty[0], "quantity": int(sku_qty[1])}]
+    # dropoff_descriptions
+    def __create_dropoff_desc(self, dropoff: DeliveryParams):
+        place = dropoff.dropoff_place_name
+        handler = dropoff.dropoff_ingestor
+        payload = [{"sku": dropoff.dropoff_items.sku, "quantity": dropoff.dropoff_items.quantity}]
 
         return {
             "place": place,
             "handler": handler,
             "payload": payload,
         }
+
+    def demo_json_task_delivery(self):
+        params = []
+        msgExp = DeliveryParams()
+        msgExp.pickup_place_name = "wp1"
+        msgExp.pickup_dispenser = "machine1"
+        msgExp.pickup_items.sku = "FF180"
+        msgExp.pickup_items.quantity = 1
+        msgExp.dropoff_place_name = "wp3"
+        msgExp.dropoff_ingestor = "machine3"
+        msgExp.dropoff_items.sku = "FF180"
+        msgExp.dropoff_items.quantity = 1
+        params.append(msgExp)
+        msgExp.pickup_place_name = "wp2"
+        msgExp.pickup_dispenser = "machine2"
+        msgExp.pickup_items.sku = "FF180"
+        msgExp.pickup_items.quantity = 1
+        msgExp.dropoff_place_name = "wp4"
+        msgExp.dropoff_ingestor = "machine4"
+        msgExp.dropoff_items.sku = "FF180"
+        msgExp.dropoff_items.quantity = 1
+        params.append(msgExp)
+        self.dispatch_delivery(delivery_params=params)
 
     def dispatch_delivery(
         self,
@@ -109,12 +119,9 @@ class TaskRequester(Node):
         robot: str = None,
         start_time_task: int = 0,
         requester: str = "amr_task",
-        pickups: list = [],
-        dropoffs: list = [],
+        delivery_params: list[DeliveryParams] = [],
     ):
-        assert (
-            len(pickups) > 0 and len(dropoffs) > 0 and len(pickups) == len(dropoffs)
-        ), "pickups and dropoffs invalid, please check!"
+        assert len(delivery_params) > 0, "delivery_params invalid, please check!"
 
         # Construct task
         msg = ApiRequest()
@@ -142,11 +149,11 @@ class TaskRequester(Node):
             request["fleet_name"] = fleet
 
         # Use standard delivery task type
-        if len(pickups) == 1 and len(dropoffs) == 1:
+        if len(delivery_params) == 1:
             request["category"] = "delivery"
             description = {
-                "pickup": self.__create_pickup_desc(pickups[0]),
-                "dropoff": self.__create_dropoff_desc(dropoffs[0]),
+                "pickup": self.__create_pickup_desc(delivery_params[0]),
+                "dropoff": self.__create_dropoff_desc(delivery_params[0]),
             }
         else:
             # Define multi_delivery with request category compose
@@ -157,19 +164,19 @@ class TaskRequester(Node):
             description["category"] = "multi_delivery"
             description["phases"] = []
             activities = []
-            for i in range(0, len(pickups)):
+            for i in range(0, len(delivery_params)):
                 # Add each pickup
                 activities.append(
                     {
                         "category": "pickup",
-                        "description": self.__create_pickup_desc(pickups[i]),
+                        "description": self.__create_pickup_desc(delivery_params[i]),
                     }
                 )
                 # Add each dropoff
                 activities.append(
                     {
                         "category": "dropoff",
-                        "description": self.__create_dropoff_desc(dropoffs[i]),
+                        "description": self.__create_dropoff_desc(delivery_params[i]),
                     }
                 )
 
@@ -202,17 +209,8 @@ def main(args=None):
     rclpy.init(args=args)
 
     task_requester = TaskRequester()
-    task_requester.dispatch_delivery(
-        pickups=[
-            {"place": "wp1", "handler": "machine1", "sku_qty": ["FF180", 1]},
-            {"place": "wp2", "handler": "machine2", "sku_qty": ["FF180", 1]},
-        ],
-        dropoffs=[
-            {"place": "wp3", "handler": "machine3", "sku_qty": ["FF180", 1]},
-            {"place": "wp4", "handler": "machine4", "sku_qty": ["FF180", 1]},
-        ],
-    )
     rclpy.spin(task_requester)
+
     task_requester.destroy_node()
     rclpy.shutdown()
 
