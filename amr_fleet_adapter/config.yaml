@@ -74,6 +74,7 @@ docks:
   # /******************** TP2 *********************/
   # LINE 55
   clr55--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
     tag_names: [tag_frame_0, tag_frame_2, tag_frame_3]
 
@@ -85,14 +86,17 @@ docks:
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   line55--pickup:
+    go_in_dock: [rot:-90]
     go_out_dock: [mov:0.85]
     tag_names: [tag_frame_0, tag_frame_2, tag_frame_3]
 
   line55--dropoff:
+    go_in_dock: [rot:90]
     go_out_dock: [mov:0.65]
 
   # LINE 56
   clr56--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
     tag_names: [tag_frame_4]
 
@@ -129,6 +133,7 @@ docks:
 
   # LINE 90
   clr90--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
     tag_names: [tag_frame_1]
 
@@ -137,11 +142,13 @@ docks:
     go_out_dock: [mov:0.5]
 
   line90--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.85]
     tag_names: [tag_frame_1]
 
   line90--dropoff:
-    go_out_dock: [mov:0.65]
+    go_in_dock: [rot:60]
+    go_out_dock: [mov:0.5]
 
   # LINE 85
   line85--pickup:
@@ -153,10 +160,24 @@ docks:
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   line85--dropoff:
+    go_in_dock: [rot:45]
     go_out_dock: [mov:0.65]
     limits:
       rotate_angle: 45
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
+  
+  # LINE 83
+  line83--pickup:
+    go_in_dock: [rot:180]
+    go_out_dock: [mov:0.73, rot:55, mov:0.7]
+    tag_names: [tag_frame_1]
+
+  line83--dropoff:
+    go_in_dock: [rot:45]
+    go_out_dock: [mov:0.5]
+    limits:
+      rotate_angle: 45
+      rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Chargers 
   charger003--charge:
@@ -186,7 +207,9 @@ docks:
 #             |
 #             |
 #            -|----------> x
-# Orientation of vertexs defined through map frame coordinate above 
+# Orientation of vertexs defined through map frame coordinate above
+# Note: 0 = 0.0, 30 = 0.5236, 45 = 0.7854, 60 = 1.0472, 90 = 1.5708
+#       120 = 2.0944, 135 = 2.3562, 150 = 2.618, 180 = 3.1416
 vertexs:
   # ------TP2------:
   tp2_clr_custom_1: 3.14
@@ -194,12 +217,12 @@ vertexs:
   waiting_for_lift_tp2: 1.57199
   lift001-L1: [1.57199, True]
   # LINE 55:
-  clr55_PKFD: 0.0
+  clr55_PKFD: 3.1416
   clr55_DOFD: -1.57199
-  line55_PKFD: 0.0
-  line55_DOFD: 0.0
+  line55_PKFD: 1.57199
+  line55_DOFD: -1.5708
   # LINE 56:
-  clr56_PKFD: 0.0
+  clr56_PKFD: 3.1416
   clr56_DOFD: 0.0
   line56_PKFD: 0.0
   line56_DOFD: 1.57199
@@ -210,14 +233,21 @@ vertexs:
   # ------TP3------:
   testPKFD: -1.57199
   testDOFD: -1.57199
+  
   # LINE 90
-  clr90_PKFD: 0.0
+  clr90_PKFD: 3.1416
   clr90_DOFD: 3.14
-  line90_PKFD: -1.57199
-  line90_DOFD: -1.57199
+  line90_PKFD: 1.57199
+  line90_DOFD: -2.618
+  
   # LINE 85
   line85_PKFD: 1.57199
-  line85_DOFD: -1.57199
+  line85_DOFD: -2.3562
+
+  # LINE 83
+  line83_PKFD: 1.57199
+  line83_DOFD: -2.3562
+
   waiting_for_lift_tp3: 1.57199
   tp3_lane_custom_1: 0.0
   lift001-L2: [1.57199, True]

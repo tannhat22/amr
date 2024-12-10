@@ -36,17 +36,20 @@ class FleetConflictsHandle(Node):
         super().__init__(f"fleet_conflicts_handle")
 
         # Params:
-        self.declare_parameter("conflicts_distance", 3.0)
         self.declare_parameter("width_conflict", 1.0)
         self.declare_parameter("height_conflict", 2.0)
         self.declare_parameter("front_extension", 1.0)
         self.declare_parameter("debug", True)
 
-        self.conflicts_distance = self.get_parameter("conflicts_distance").value
         self.width_conflict = self.get_parameter("width_conflict").value
         self.height_conflict = self.get_parameter("height_conflict").value
         self.front_extension = self.get_parameter("front_extension").value
         self.debug = self.get_parameter("debug").value
+
+        if self.debug:
+            self.get_logger().info(f"width_conflict: {self.width_conflict}")
+            self.get_logger().info(f"height_conflict: {self.height_conflict}")
+            self.get_logger().info(f"front_extension: {self.front_extension}")
 
         self.robots = {}
         for robot_name, robot_config in self.config["rmf_fleet"]["robots"].items():
@@ -151,11 +154,11 @@ class FleetConflictsHandle(Node):
                 result = [B, A]
 
         if result[0] == A:
-            self.get_logger().info(
+            self.get_logger().warn(
                 f"[{robot_B.name}] will pause for conflicts handle (code: {code})!"
             )
         else:
-            self.get_logger().info(
+            self.get_logger().warn(
                 f"[{robot_A.name}] will pause for conflicts handle (code: {code})!"
             )
         return result
@@ -400,7 +403,7 @@ class FleetConflictsHandle(Node):
                                                 self.robots[
                                                     dataRobot[prioHID].name
                                                 ].wait_LID.append(dataRobot[prioLID].name)
-                                                self.get_logger().info(
+                                                self.get_logger().warn(
                                                     f"Publish PAUSED_ACTION for [{dataRobot[prioLID].name}] (waiting [{dataRobot[prioHID].name}])!"
                                                 )
 
@@ -423,7 +426,7 @@ class FleetConflictsHandle(Node):
                                     )
                                     self.robots[robot1Name].wait_HID = robot2Name
                                     self.robots[robot2Name].wait_LID.append(robot1Name)
-                                    self.get_logger().info(
+                                    self.get_logger().warn(
                                         f"Publish PAUSED_ACTION for [{robot1Name}] (waiting [{robot2Name}])!"
                                     )
                         else:
