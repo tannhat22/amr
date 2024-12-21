@@ -134,6 +134,7 @@ def main(argv=sys.argv):
     fleet_mgr_yaml = config_yaml["fleet_manager"]
     docks_name = config_yaml["docks"].keys()
     vertexs_yaml = config_yaml["vertexs"]
+    distance_tolerance = config_yaml["rmf_fleet"]["distance_tolerance"]
     update_period = 1.0 / fleet_mgr_yaml.get("robot_state_update_frequency", 10.0)
     api_prefix = "http://" + fleet_mgr_yaml["ip"] + ":" + str(fleet_mgr_yaml["port"])
     api = RobotAPI(api_prefix, fleet_mgr_yaml["user"], fleet_mgr_yaml["password"])
@@ -162,6 +163,7 @@ def main(argv=sys.argv):
             fleet_handle,
             docks_name,
             vertexs_config,
+            distance_tolerance,
             charger_server,
         )
 
@@ -244,6 +246,7 @@ class MissionHandle:
         localize=False,
         charger=None,
         destination=None,
+        is_last_destination=False,
     ):
         self.execution = execution
         self.navigate = navigate
@@ -251,6 +254,7 @@ class MissionHandle:
         self.localize = localize
         self.charger = charger
         self.destination = destination
+        self.is_last_destination = is_last_destination
         self.done = False
         # self.mission_queue_id = None
         # self.mutex = threading.Lock()
@@ -282,6 +286,7 @@ class RobotAdapter:
         fleet_handle,
         docks_name,
         vertexs_config: dict[str, VertexInfo],
+        distance_tolerance: float,
         charger_server: bool,
     ):
         self.name = name
@@ -295,11 +300,12 @@ class RobotAdapter:
         self.api = api
         self.fleet_handle = fleet_handle
         self.override = None
+        self.docks_name = docks_name
+        self.distance_tolerance = distance_tolerance
 
         self.disconnect = False
         self.paused = False
         self.paused_mission: MissionHandle | None = None
-        self.docks_name = docks_name
         self.vertexs_config = vertexs_config
         self.charger_server = charger_server
         self.undock = False
@@ -523,13 +529,23 @@ class RobotAdapter:
                 )
             elif mission.navigate:
                 mission.navigate = False
-                self.node.get_logger().info(
-                    f"Robot [{self.name}] has navigated finished (inside_lift: {mission.destination.inside_lift})."
-                )
+                self.node.get_logger().info(f"Robot [{self.name}] has navigated finished!")
                 if mission.destination.inside_lift:
                     self.unlift = True
 
             mission.done = True
+        # Will finished goal early if goal don't have name
+        elif mission.navigate and not mission.is_last_destination:
+            dist2GoalNoname = self.dist(
+                self.last_known_status.position[0:2], mission.destination.xy
+            )
+            if dist2GoalNoname <= self.distance_tolerance:
+                mission.navigate = False
+                mission.done = True
+                self.node.get_logger().info(
+                    f"Robot [{self.name}] has navigated finished early because"
+                    f" this is not last destination of the path!"
+                )
         else:
             if (
                 status.mode == RobotMode.MODE_REQUEST_ERROR
@@ -541,7 +557,9 @@ class RobotAdapter:
 
     def make_callbacks(self):
         callbacks = rmf_easy.RobotCallbacks(
-            lambda destination, execution: self.navigate(destination, execution),
+            lambda destination, last_destination, execution: self.navigate(
+                destination, last_destination, execution
+            ),
             lambda activity: self.stop(activity),
             lambda category, description, execution: self.execute_action(
                 category, description, execution
@@ -550,7 +568,7 @@ class RobotAdapter:
         callbacks.localize = lambda estimate, execution: self.localize(estimate, execution)
         return callbacks
 
-    def navigate(self, destination, execution):
+    def navigate(self, destination, last_destination, execution):
         with self._lock:
             # self.execution = execution
             self.node.get_logger().info(
@@ -640,7 +658,23 @@ class RobotAdapter:
                 return
 
             # Navigation normal:
-            self.mission = MissionHandle(execution, navigate=True, destination=destination)
+            is_last_destination = False
+            if (
+                destination.xy[0] == last_destination.xy[0]
+                and destination.xy[1] == last_destination.xy[1]
+            ):
+                is_last_destination = True
+                self.node.get_logger().info(
+                    f"[{self.name}] to navigate to last destination "
+                    f"on map [{destination.map}]: cmd_id {self.cmd_id}"
+                )
+
+            self.mission = MissionHandle(
+                execution,
+                navigate=True,
+                destination=destination,
+                is_last_destination=is_last_destination,
+            )
             vertex = None
             if destination.name != "":
                 vertex = self.vertexs_config.get(destination.name, None)

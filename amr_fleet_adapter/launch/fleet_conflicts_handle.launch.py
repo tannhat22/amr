@@ -33,6 +33,7 @@ def generate_launch_description():
                 arguments=["--config_file", config_file],
                 parameters=[
                     {
+                        "update_frequency": 10.0,
                         "width_conflict": 1.0,
                         "height_conflict": 2.0,
                         "front_extension": 1.0,
