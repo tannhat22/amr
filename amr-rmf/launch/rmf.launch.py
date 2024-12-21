@@ -21,13 +21,22 @@ def generate_launch_description():
     map_name = "tp2-tp3-layout"
     server_uri = "http://10.7.11.35:8000/_internal"
     enable_experimental_lift_watchdog = "true"
-    nav_graph_file_path = PathJoinSubstitution(
+    nav_graph_tp2_file_path = PathJoinSubstitution(
         [
             FindPackageShare("amr-rmf"),
             "maps",
             map_name,
             "nav_graphs",
             "0.yaml",
+        ]
+    )
+    nav_graph_tp3_file_path = PathJoinSubstitution(
+        [
+            FindPackageShare("amr-rmf"),
+            "maps",
+            map_name,
+            "nav_graphs",
+            "1.yaml",
         ]
     )
 
@@ -81,7 +90,7 @@ def generate_launch_description():
                 actions=[SetEnvironmentVariable(name="EXPT_LIFT_WATCHDOG_SRV", value="")],
                 scoped=False,
             ),
-            # AMR Tayrua fleet adapter
+            # AMR_TP3 fleet adapter
             IncludeLaunchDescription(
                 XMLLaunchDescriptionSource(
                     PathJoinSubstitution(
@@ -95,9 +104,9 @@ def generate_launch_description():
                 launch_arguments={
                     "use_sim_time": use_sim_time,
                     "config_file": PathJoinSubstitution(
-                        [FindPackageShare("amr_fleet_adapter"), "config.yaml"]
+                        [FindPackageShare("amr_fleet_adapter"), "tp3_config.yaml"]
                     ),
-                    "nav_graph_file": nav_graph_file_path,
+                    "nav_graph_file": nav_graph_tp3_file_path,
                     "server_uri": server_uri,
                     "experimental_lift_watchdog_service": EnvironmentVariable(
                         "EXPT_LIFT_WATCHDOG_SRV"
@@ -105,30 +114,30 @@ def generate_launch_description():
                 }.items(),
             ),
             # Fleet conflicts handle
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    PathJoinSubstitution(
-                        [
-                            FindPackageShare("amr_fleet_adapter"),
-                            "launch",
-                            "fleet_conflicts_handle.launch.py",
-                        ]
-                    )
-                ),
-                launch_arguments={
-                    "config_file": PathJoinSubstitution(
-                        [FindPackageShare("amr_fleet_adapter"), "config.yaml"]
-                    )
-                }.items(),
-            ),
-            # AMR Fleet server
+            # IncludeLaunchDescription(
+            #     PythonLaunchDescriptionSource(
+            #         PathJoinSubstitution(
+            #             [
+            #                 FindPackageShare("amr_fleet_adapter"),
+            #                 "launch",
+            #                 "fleet_conflicts_handle.launch.py",
+            #             ]
+            #         )
+            #     ),
+            #     launch_arguments={
+            #         "config_file": PathJoinSubstitution(
+            #             [FindPackageShare("amr_fleet_adapter"), "tp3_config.yaml"]
+            #         )
+            #     }.items(),
+            # ),
+            # AMR_TP3 Fleet server
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     PathJoinSubstitution(
                         [
                             FindPackageShare("amr-rmf"),
                             "launch",
-                            "amrfleet_server.launch.py",
+                            "amr_tp3_fleet_server.launch.py",
                         ]
                     )
                 )
@@ -180,7 +189,7 @@ def generate_launch_description():
                     "config_file": PathJoinSubstitution(
                         [FindPackageShare("amr_workcell_adapter"), "config.yaml"]
                     ),
-                    "nav_graph_file": nav_graph_file_path,
+                    "nav_graph_file": nav_graph_tp3_file_path,
                 }.items(),
             ),
             # LDM RMF adapter

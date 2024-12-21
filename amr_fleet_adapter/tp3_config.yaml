@@ -2,7 +2,7 @@
 # RMF Fleet parameters
 
 rmf_fleet:
-  name: "amr_tayrua"
+  name: "amr_tp3"
   limits:
     linear: [0.5, 0.9] # velocity, acceleration
     angular: [0.5, 1.0] # velocity, acceleration
@@ -38,13 +38,11 @@ rmf_fleet:
   robots:
     # Here the user is expected to append the configuration for each robot in the fleet.
     amr001:
-      charger: "charger001--charge"
+      charger: "charger003--charge"
     amr002:
-      charger: "charger001--charge"
+      charger: "charger004--charge"
     amr003:
       charger: "charger003--charge"
-    amr005:
-      charger: "charger004--charge"
 
 fleet_manager:
   ip: "127.0.0.1"
@@ -72,82 +70,103 @@ docks:
   #                              |    |
   #    Clockwise (-)(LEFT) <---- `````` ----> Counter clockwise (+)(RIGHT)
 
-  # /******************** TP2 *********************/
-  # LINE 55
-  clr55--pickup:
-    go_in_dock: [rot:180]
-    go_out_dock: [mov:0.90]
-    tag_names: [tag_frame_0, tag_frame_2, tag_frame_3]
-
-  clr55--dropoff:
-    go_in_dock: [rot:180]
-    go_out_dock: [mov:2.5]
-    limits:
-      rotate_angle: 30
-      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  line55--pickup:
+  # /******************** TP3 *********************/
+  # LINE 82
+  line82--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.85]
-    tag_names: [tag_frame_0, tag_frame_2, tag_frame_3]
+    go_out_dock: [mov:0.77, rot:-90]
+    tag_names: [tag_frame_1]
 
-  line55--dropoff:
-    go_in_dock: [rot:90]
-    go_out_dock: [mov:0.65]
-
-  # LINE 56
-  clr56--pickup:
-    go_in_dock: [rot:180]
-    go_out_dock: [mov:0.90]
-    tag_names: [tag_frame_4]
-
-  clr56--dropoff:
-    go_in_dock: [rot:90]
-    go_out_dock: [mov:0.7]
-
-  line56--pickup:
-    go_out_dock: [mov:1.3, rot:-90]
-    tag_names: [tag_frame_4]
-    limits:
-      rotate_angle: 30
-      rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  line56--dropoff:
-    go_out_dock: [mov:0.4, rot:-90]  
+  line82--dropoff:
+    go_out_dock: [mov:0.5]
     limits:
       rotate_angle: 45
-      rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
-  # Chargers
-  charger001--charge:
-    go_out_dock: [mov:-0.7]
+  transit82_str--pickup:
+    go_out_dock: [mov:0.77]
+    tag_names: [tag_frame_1]
 
-  # /******************** TP3 *********************/
-  # LINE 90
-  clr90--pickup:
+  transit82_ttr--dropoff:
+    go_out_dock: [mov:0.5]
+
+  # LINE 83
+  line83--pickup:
     go_in_dock: [rot:180]
-    go_out_dock: [mov:0.90]
+    go_out_dock: [mov:0.77, rot:55, mov:0.6, rot:-55]
     tag_names: [tag_frame_1]
 
-  clr90--dropoff:
-    go_in_dock: [rot:-90]
+  line83--dropoff:
+    go_out_dock: [mov:0.5]
+    limits:
+      rotate_angle: 45
+      rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  transit83_str--pickup:
+    go_out_dock: [mov:0.77]
+    tag_names: [tag_frame_1]
+
+  transit83_ttr--dropoff:
     go_out_dock: [mov:0.5]
 
-  line90--pickup:
-    go_in_dock: [rot:90]
-    go_out_dock: [mov:0.77, rot:30, mov:0.85]
+  # LINE 84
+  line84--pickup:
+    go_in_dock: [rot:180]
+    go_out_dock: [mov:0.77, rot:15, mov:0.5, rot:-15]
     tag_names: [tag_frame_1]
 
-  line90--dropoff:
+  line84--dropoff:
+    go_out_dock: [mov:0.5]
+    limits:
+      rotate_angle: 45
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  transit84_str--pickup:
+    go_out_dock: [mov:0.77]
+    tag_names: [tag_frame_1]
+
+  transit84_ttr--dropoff:
     go_out_dock: [mov:0.5]
 
-  # LINE 89
-  line89--pickup:
+  # LINE 85
+  line85--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.77, rot:-60, mov:-0.4, rot:-30, mov:0.5]
+    go_out_dock: [mov:0.77, rot:-60, mov:-0.65, rot:-30, mov:0.563]
     tag_names: [tag_frame_1]
 
-  line89--dropoff:
+  line85--dropoff:
+    go_out_dock: [mov:0.5]
+    limits:
+      rotate_angle: 45
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  transit85_str--pickup:
+    go_out_dock: [mov:0.77]
+    tag_names: [tag_frame_1]
+
+  transit85_ttr--dropoff:
+    go_out_dock: [mov:0.5]
+
+  # LINE 86
+  line86--pickup:
+    go_in_dock: [rot:180]
+    go_out_dock: [mov:0.77]
+    tag_names: [tag_frame_1]
+    limits:
+      rotate_angle: 45
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  line86--dropoff:
+    go_out_dock: [mov:0.5]
+    limits:
+      rotate_angle: 45
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  transit86_str--pickup:
+    go_out_dock: [mov:0.77]
+    tag_names: [tag_frame_1]
+
+  transit86_ttr--dropoff:
     go_out_dock: [mov:0.5]
 
   # LINE 87
@@ -165,68 +184,52 @@ docks:
       rotate_angle: 45
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
-  # LINE 86
-  line86--pickup:
-    go_in_dock: [rot:180]
+  transit87_str--pickup:
     go_out_dock: [mov:0.77]
     tag_names: [tag_frame_1]
-    limits:
-      rotate_angle: 45
-      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
-  line86--dropoff:
+  transit87_ttr--dropoff:
     go_out_dock: [mov:0.5]
-    limits:
-      rotate_angle: 45
-      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
-  # LINE 85
-  line85--pickup:
+  # LINE 88
+  transit88_str--pickup:
+    go_out_dock: [mov:0.77]
+    tag_names: [tag_frame_1]
+
+  transit88_ttr--dropoff:
+    go_out_dock: [mov:0.5]
+
+  # LINE 89
+  line89--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.77, rot:-60, mov:-0.65, rot:-30, mov:0.563]
+    go_out_dock: [mov:0.77, rot:-60, mov:-0.4, rot:-30, mov:0.5]
     tag_names: [tag_frame_1]
 
-  line85--dropoff:
+  line89--dropoff:
     go_out_dock: [mov:0.5]
-    limits:
-      rotate_angle: 45
-      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
-  
-  # LINE 84
-  line84--pickup:
-    go_in_dock: [rot:180]
-    go_out_dock: [mov:0.77, rot:15, mov:0.5, rot:-15]
+
+  transit89_str--pickup:
+    go_out_dock: [mov:0.77]
     tag_names: [tag_frame_1]
 
-  line84--dropoff:
+  transit89_ttr--dropoff:
     go_out_dock: [mov:0.5]
-    limits:
-      rotate_angle: 45
-      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
-  # LINE 83
-  line83--pickup:
-    go_in_dock: [rot:180]
-    go_out_dock: [mov:0.77, rot:55, mov:0.6, rot:-55]
+  # LINE 90
+  line90--pickup:
+    go_in_dock: [rot:90]
+    go_out_dock: [mov:0.77, rot:30, mov:0.85]
     tag_names: [tag_frame_1]
 
-  line83--dropoff:
+  line90--dropoff:
     go_out_dock: [mov:0.5]
-    limits:
-      rotate_angle: 45
-      rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
 
-  # LINE 82
-  line82--pickup:
-    go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.77, rot:-90]
+  transit89_str--pickup:
+    go_out_dock: [mov:0.77]
     tag_names: [tag_frame_1]
 
-  line82--dropoff:
+  transit89_ttr--dropoff:
     go_out_dock: [mov:0.5]
-    limits:
-      rotate_angle: 45
-      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   # Chargers 
   charger003--charge:
@@ -260,61 +263,50 @@ docks:
 # Note: 0 = 0.0, 30 = 0.5236, 45 = 0.7854, 60 = 1.0472, 90 = 1.5708
 #       120 = 2.0944, 135 = 2.3562, 150 = 2.618, 180 = 3.1416
 vertexs:
-  # ------TP2------:
-  tp2_clr_custom_1: 3.14
-  park_tp2_001: 3.14
-  waiting_for_lift_tp2: 1.57199
-  lift001-L1: [1.57199, True]
-  # LINE 55:
-  clr55_PKFD: 3.1416
-  clr55_DOFD: -1.57199
-  line55_PKFD: 1.57199
-  line55_DOFD: -1.5708
-  # LINE 56:
-  clr56_PKFD: 3.1416
-  clr56_DOFD: 0.0
-  line56_PKFD: 0.0
-  line56_DOFD: 1.57199
-  line56_lane_custom1: 0.0
-  line56_lane_custom2: -1.57199
-  line56_lane_custom3: 3.14
-
   # ------TP3------:
-  # LINE 90
-  clr90_PKFD: 3.1416
-  clr90_DOFD: 3.14
-  line90_PKFD: 3.14
-  line90_DOFD: -1.57199
-
-  # LINE 89
-  line89_PKFD: -1.57199
-  line89_DOFD:  1.57199
-
-  # LINE 87
-  line87_PKFD: 1.57199
-  line87_DOFD: -1.57199
-
-  # LINE 86
-  line86_PKFD: 1.57199
-  line86_DOFD: -1.57199
-  
-  # LINE 85
-  line85_PKFD: 1.57199
-  line85_DOFD: -1.57199
-
-  # LINE 84
-  line84_PKFD: -1.57199
-  line84_DOFD: 1.57199
-
-  # LINE 83
-  line83_PKFD: 1.57199
-  line83_DOFD: -1.57199
-
   # LINE 82
   line82_PKFD: -1.57199
   line82_DOFD: 1.57199
+  transit82_str_PKFD: -1.57199
+  transit82_ttr_DOFD: -1.57199
+  # LINE 83
+  line83_PKFD: 1.57199
+  line83_DOFD: -1.57199
+  transit83_str_PKFD: -1.57199
+  transit83_ttr_DOFD: -1.57199
+  # LINE 84
+  line84_PKFD: -1.57199
+  line84_DOFD: 1.57199
+  transit84_str_PKFD: -1.57199
+  transit84_ttr_DOFD: -1.57199
+  # LINE 85
+  line85_PKFD: 1.57199
+  line85_DOFD: -1.57199
+  transit85_str_PKFD: -1.57199
+  transit85_ttr_DOFD: -1.57199
+  # LINE 86
+  line86_PKFD: 1.57199
+  line86_DOFD: -1.57199
+  transit86_str_PKFD: -1.57199
+  transit86_ttr_DOFD: -1.57199
+  # LINE 87
+  line87_PKFD: 1.57199
+  line87_DOFD: -1.57199
+  transit87_str_PKFD: -1.57199
+  transit87_ttr_DOFD: -1.57199
+  # LINE 88
+  transit88_str_PKFD: -1.57199
+  transit88_ttr_DOFD: -1.57199
+  # LINE 89
+  line89_PKFD: -1.57199
+  line89_DOFD:  1.57199
+  transit89_str_PKFD: -1.57199
+  transit89_ttr_DOFD: -1.57199
+  # LINE 90
+  line90_PKFD: 3.14
+  line90_DOFD: -1.57199
+  transit90_str_PKFD: -1.57199
+  transit90_ttr_DOFD: -1.57199
 
-  waiting_for_lift_tp3: 1.57199
-  lift001-L2: [1.57199, True]
   rf370cb_waiting_01: 0.0
   rf370cb_waiting_02: 0.0

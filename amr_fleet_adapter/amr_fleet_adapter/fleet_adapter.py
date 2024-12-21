@@ -245,12 +245,14 @@ class MissionHandle:
         docking=False,
         localize=False,
         charger=None,
+        undock=None,
         destination=None,
         is_last_destination=False,
     ):
         self.execution = execution
         self.navigate = navigate
         self.docking = docking
+        self.undock = undock
         self.localize = localize
         self.charger = charger
         self.destination = destination
@@ -459,6 +461,27 @@ class RobotAdapter:
         if status.is_command_completed(self.cmd_id):
             if mission.charger is not None and self.is_charging(status):
                 self.node.get_logger().info(f"Robot [{self.name}] has begun charging...")
+            elif mission.undock is not None:
+                self.node.get_logger().info(f"Robot [{self.name}] has undock finished.")
+                dock_mode = search_mode_docking(mission.undock.name)
+                station_process = {
+                    "station_type": dock_mode,
+                    "mode": StationRequest.MODE_EMPTY,
+                }
+
+                if dock_mode == "dropoff":
+                    station_process.update({"mode": StationRequest.MODE_FILLED})
+
+                self.attempt_cmd_until_success(
+                    cmd=self.api.station_request,
+                    args=(
+                        mission.undock.name,
+                        station_process,
+                    ),
+                )
+                mission.undock = None
+                self.undock = False
+
             elif mission.docking:
                 self.undock = True
                 mission.docking = False
@@ -505,22 +528,6 @@ class RobotAdapter:
                                     process,
                                 ),
                             )
-                    else:
-                        station_process = {
-                            "station_type": dock_mode,
-                            "mode": StationRequest.MODE_EMPTY,
-                        }
-
-                        if dock_mode == "dropoff":
-                            station_process.update({"mode": StationRequest.MODE_FILLED})
-
-                        self.attempt_cmd_until_success(
-                            cmd=self.api.station_request,
-                            args=(
-                                mission.destination.name,
-                                station_process,
-                            ),
-                        )
 
             elif mission.localize:
                 mission.localize = False
@@ -603,24 +610,25 @@ class RobotAdapter:
             self.cmd_id += 1
             # Check if robot need undock:
             if self.undock:
-                self.undock = False
                 mission = self.mission
                 if mission is not None:
-                    destinationUndock = DestinationCopy(
-                        mission.destination.name,
-                        mission.destination.map,
-                        mission.destination.position,
-                        mission.destination.speed_limit,
+                    undockWp = None
+                    if mission.undock is not None:
+                        undockWp = mission.undock
+                    else:
+                        undockWp = mission.destination
+
+                    self.mission = MissionHandle(
+                        execution, undock=undockWp, destination=destination
                     )
-                    self.mission = MissionHandle(execution, destination=destination)
                     self.node.get_logger().info(
-                        f"[{self.name}] Received navigation command but "
-                        f"robot will undock first."
+                        f"[{self.name}] received navigate command but "
+                        f"robot will undock '{undockWp.name}' first."
                     )
                     self.attempt_cmd_until_success(
                         cmd=self.perform_docking,
                         args=(
-                            destinationUndock,
+                            undockWp,
                             True,
                         ),
                     )
