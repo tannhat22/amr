@@ -19,7 +19,7 @@ rmf_workcell:
 
 workcell_manager:
   ip: "127.0.0.1"
-  port: 7002
+  port: 7003
   user: "some_user"
   password: "some_password"
   workcell_state_update_frequency: 1.0

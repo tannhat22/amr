@@ -94,7 +94,7 @@ def search_mode_docking(dock_name: str):
 class WorkCellManager(Node):
     machines: dict[str, State]
 
-    def __init__(self, config, nav_graph):
+    def __init__(self, config, nav_graphs):
         self.debug = False
         self.config = config
 
@@ -102,24 +102,28 @@ class WorkCellManager(Node):
 
         self.machines = {}  # Map machine name to state
 
-        for level in nav_graph["levels"]:
-            for wp in nav_graph["levels"][level]["vertices"]:
-                assert len(wp) == 3, "Vertical structure not match, please check!"
+        for nav_graph in nav_graphs:
+            if nav_graph is None:
+                continue
 
-                machine_name = None
-                if (
-                    "pickup_dispenser" in wp[2]
-                    and search_mode_docking(wp[2]["dock_name"]) == "mpickup"
-                ):
-                    machine_name = wp[2]["pickup_dispenser"]
-                elif (
-                    "dropoff_ingestor" in wp[2]
-                    and search_mode_docking(wp[2]["dock_name"]) == "mdropoff"
-                ):
-                    machine_name = wp[2]["dropoff_ingestor"]
+            for level in nav_graph["levels"]:
+                for wp in nav_graph["levels"][level]["vertices"]:
+                    assert len(wp) == 3, "Vertical structure not match, please check!"
 
-                if machine_name is not None and machine_name not in self.machines:
-                    self.machines[machine_name] = State()
+                    machine_name = None
+                    if (
+                        "pickup_dispenser" in wp[2]
+                        and search_mode_docking(wp[2]["dock_name"]) == "mpickup"
+                    ):
+                        machine_name = wp[2]["pickup_dispenser"]
+                    elif (
+                        "dropoff_ingestor" in wp[2]
+                        and search_mode_docking(wp[2]["dock_name"]) == "mdropoff"
+                    ):
+                        machine_name = wp[2]["dropoff_ingestor"]
+
+                    if machine_name is not None and machine_name not in self.machines:
+                        self.machines[machine_name] = State()
 
         self.create_subscription(
             FleetMachineState,
@@ -330,25 +334,36 @@ def main(argv=sys.argv):
         help="Path to the config.yaml file",
     )
     parser.add_argument(
-        "-n",
-        "--nav_graph",
+        "-n1",
+        "--nav_graph_1",
         type=str,
         required=True,
-        help="Path to the nav_graph for this workcell manager",
+        help="Path to the nav_graph_1 for this workcell manager",
+    )
+    parser.add_argument(
+        "-n2",
+        "--nav_graph_2",
+        type=str,
+        required=True,
+        help="Path to the nav_graph_2 for this workcell manager",
     )
     args = parser.parse_args(args_without_ros[1:])
     print("Starting workcell manager...")
 
     config_path = args.config_file
-    nav_graph_path = args.nav_graph
+    nav_graph_1_path = args.nav_graph_1
+    nav_graph_2_path = args.nav_graph_2
 
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
-    with open(nav_graph_path, "r") as f:
-        nav_graph = yaml.safe_load(f)
+    with open(nav_graph_1_path, "r") as f:
+        nav_graph_1 = yaml.safe_load(f)
 
-    workcell_manager = WorkCellManager(config, nav_graph)
+    with open(nav_graph_2_path, "r") as f:
+        nav_graph_2 = yaml.safe_load(f)
+
+    workcell_manager = WorkCellManager(config, [nav_graph_1, nav_graph_2])
 
     spin_thread = threading.Thread(target=rclpy.spin, args=(workcell_manager,))
     spin_thread.start()

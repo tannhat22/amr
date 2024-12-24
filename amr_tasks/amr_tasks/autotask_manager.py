@@ -153,29 +153,34 @@ class AutoTaskManager(Node):
     _mreq_context_dict: dict[str, MachineRequester]
     _sreq_context_dict: dict[str, StationRequester]
 
-    def __init__(self, config, nav_graph) -> None:
+    def __init__(self, config, nav_graphs) -> None:
         super().__init__("autotask_manager")
 
         self._pickup_context_dict = {}
         self._dropoff_context_dict = {}
-        for level in nav_graph["levels"]:
-            for wp in nav_graph["levels"][level]["vertices"]:
-                assert len(wp) == 3, "Vertical structure not match, please check!"
 
-                if "dock_name" in wp[2]:
-                    dock_name = wp[2]["dock_name"]
-                    mode_dock = search_mode_docking(dock_name)
-                    if mode_dock == "mpickup" or mode_dock == "mdropoff":
-                        continue
+        for nav_graph in nav_graphs:
+            if nav_graph is None:
+                continue
 
-                    if "pickup_dispenser" in wp[2]:
-                        self._pickup_context_dict.update(
-                            {dock_name: StationContext(dock_name, wp[2]["pickup_dispenser"])}
-                        )
-                    elif "dropoff_ingestor" in wp[2]:
-                        self._dropoff_context_dict.update(
-                            {dock_name: StationContext(dock_name, wp[2]["dropoff_ingestor"])}
-                        )
+            for level in nav_graph["levels"]:
+                for wp in nav_graph["levels"][level]["vertices"]:
+                    assert len(wp) == 3, "Vertical structure not match, please check!"
+
+                    if "dock_name" in wp[2]:
+                        dock_name = wp[2]["dock_name"]
+                        mode_dock = search_mode_docking(dock_name)
+                        if mode_dock == "mpickup" or mode_dock == "mdropoff":
+                            continue
+
+                        if "pickup_dispenser" in wp[2]:
+                            self._pickup_context_dict.update(
+                                {dock_name: StationContext(dock_name, wp[2]["pickup_dispenser"])}
+                            )
+                        elif "dropoff_ingestor" in wp[2]:
+                            self._dropoff_context_dict.update(
+                                {dock_name: StationContext(dock_name, wp[2]["dropoff_ingestor"])}
+                            )
 
         task_requester_yaml = config["TaskRequester"]
 
@@ -432,28 +437,39 @@ def main(argv=sys.argv):
         help="Path to the config.yaml file",
     )
     parser.add_argument(
-        "-n",
-        "--nav_graph",
+        "-n1",
+        "--nav_graph_1",
         type=str,
         required=True,
-        help="Path to the nav_graph for this autotask manager",
+        help="Path to the nav_graph_1 for this autotask manager",
+    )
+    parser.add_argument(
+        "-n2",
+        "--nav_graph_2",
+        type=str,
+        required=True,
+        help="Path to the nav_graph_2 for this autotask manager",
     )
 
     args = parser.parse_args(args_without_ros[1:])
 
     config_path = args.config_file
-    nav_graph_path = args.nav_graph
+    nav_graph_1_path = args.nav_graph_1
+    nav_graph_2_path = args.nav_graph_2
 
     # Parse the yaml in Python to get the autotask_manager info
     with open(config_path, "r") as f:
         config_yaml = yaml.safe_load(f)
 
-    with open(nav_graph_path, "r") as f:
-        nav_graph = yaml.safe_load(f)
+    with open(nav_graph_1_path, "r") as f:
+        nav_graph_1 = yaml.safe_load(f)
+
+    with open(nav_graph_2_path, "r") as f:
+        nav_graph_2 = yaml.safe_load(f)
 
     time.sleep(1.0)
 
-    autotask_manager = AutoTaskManager(config_yaml, nav_graph)
+    autotask_manager = AutoTaskManager(config_yaml, [nav_graph_1, nav_graph_2])
     rclpy.spin(autotask_manager)
     autotask_manager.destroy_node()
     rclpy.shutdown()

@@ -50,9 +50,7 @@ class PriotityCode(IntEnum):
 class FleetConflictsHandle(Node):
     robots: dict[str, State]
 
-    def __init__(self, config):
-        self.config = config
-
+    def __init__(self, configs):
         super().__init__(f"fleet_conflicts_handle")
 
         # Callback groups:
@@ -77,21 +75,30 @@ class FleetConflictsHandle(Node):
             self.get_logger().info(f"height_conflict: {self.height_conflict}")
             self.get_logger().info(f"front_extension: {self.front_extension}")
 
+            # Chart
+            self.fig, self.axs = plt.subplots(
+                2, 1, figsize=(8, 6)
+            )  # Tạo một figure và axes cho biểu đồ
+            self.levels_ax = {"L1": self.axs[0], "L2": self.axs[1]}
+            plt.ion()  # Bật chế độ interactive để vẽ động (tự động cập nhật)
+            plt.show()
+
+        self.detect_robot = False
         self.robots = {}
-        for robot_name, robot_config in self.config["rmf_fleet"]["robots"].items():
-            self.robots[robot_name] = State(fleet_name=self.config["rmf_fleet"]["name"])
-        self.robots_length = len(self.robots)
+        for config in configs:
+            if config == "":
+                continue
+
+            for robot_name, robot_config in config["rmf_fleet"]["robots"].items():
+                self.robots[robot_name] = State(fleet_name=config["rmf_fleet"]["name"])
+            self.robots_length = len(self.robots)
         assert self.robots_length > 0
 
-        self.recharge_threshold = self.config["rmf_fleet"]["recharge_threshold"]
+        self.recharge_threshold = config["rmf_fleet"]["recharge_threshold"]
         update_period = 1.0 / self.update_frequency
 
         # Threading variables
         # self._lock = threading.Lock()
-
-        self.fig, self.ax = plt.subplots()  # Tạo một figure và axes cho biểu đồ
-        plt.ion()  # Bật chế độ interactive để vẽ động (tự động cập nhật)
-        plt.show()
 
         self.mode_request_pub = self.create_publisher(
             ModeRequest,
@@ -107,17 +114,17 @@ class FleetConflictsHandle(Node):
         """Euclidian distance between A(x,y) and B(x,y)"""
         return math.sqrt((A.x - B.x) ** 2 + (A.y - B.y) ** 2)
 
-    def plot_rectangle(self, corners, label):
+    def plot_rectangle(self, ax, corners, label):
         x_vals = [corner[0] for corner in corners]
         y_vals = [corner[1] for corner in corners]
         x_vals.append(x_vals[0])
         y_vals.append(y_vals[0])
-        self.ax.plot(x_vals, y_vals)
+        ax.plot(x_vals, y_vals)
 
-    def plot_yaw_vector(self, position: Location, length=1):
+    def plot_yaw_vector(self, ax, position: Location, length=1):
         end_x = position.x + length * math.cos(position.yaw)
         end_y = position.y + length * math.sin(position.yaw)
-        self.ax.arrow(
+        ax.arrow(
             position.x,
             position.y,
             end_x - position.x,
@@ -129,42 +136,40 @@ class FleetConflictsHandle(Node):
             label="Yaw Direction",
         )
 
-    def update_plot(self, dataRobot: list[State]):
+    def update_plot(self, robots_on_level: dict[str, State]):
         # Tạo hoặc vẽ lại biểu đồ cho vị trí các robot
-        self.ax.clear()  # Xóa biểu đồ cũ trước khi vẽ mới
-
         # Lặp qua các robot và vẽ biểu đồ cho chúng
-        for robot in dataRobot:
-            if robot.state is not None:
-                x = robot.state.location.x
-                y = robot.state.location.y
-                name = robot.state.name
+        for level, robots in robots_on_level.items():
+            ax = self.levels_ax[level]
+            ax.clear()
+            ax.set_title(f"LEVELS: [{level}]")
+            ax.set_xlabel("X")
+            ax.set_ylabel("Y")
+            # ax.set_xlim(-200, 200)
+            # ax.set_ylim(-200, 200)
+            ax.set_aspect("equal", adjustable="box")
+            ax.grid(True)
 
-                # Vẽ điểm của robot
-                self.ax.scatter(x, y, label=name)
+            for robot in robots:
+                if robot.state is not None:
+                    x = robot.state.location.x
+                    y = robot.state.location.y
+                    name = robot.state.name
 
-                # Vẽ hình chữ nhật (hoặc mô hình di chuyển của robot)
-                rect = self.calculate_rectangle(
-                    robot.state.location,
-                    self.width_conflict,
-                    self.height_conflict,
-                    self.front_extension,
-                )
-                self.plot_rectangle(rect.corners, name)
-                self.plot_yaw_vector(robot.state.location)
+                    # Vẽ điểm của robot
+                    ax.scatter(x, y, label=name)
 
-        # Hiển thị biểu đồ với các thông tin cập nhật
-        # Thiết lập giới hạn trục X và Y
-        # self.ax.set_xlim(0, 160)  # Giới hạn trục X
-        # self.ax.set_ylim(-150, 0)  # Giới hạn trục Y
+                    # Vẽ hình chữ nhật (hoặc mô hình di chuyển của robot)
+                    rect = self.calculate_rectangle(
+                        robot.state.location,
+                        self.width_conflict,
+                        self.height_conflict,
+                        self.front_extension,
+                    )
+                    self.plot_rectangle(ax, rect.corners, name)
+                    self.plot_yaw_vector(ax, robot.state.location, 1)
 
-        # Cố định tỷ lệ giữa trục X và Y
-        self.ax.set_aspect("equal", adjustable="box")
-
-        # Các thiết lập khác như lưới, tiêu đề, legend, etc.
-        self.ax.legend()
-        self.ax.grid(True)
-        self.ax.set_title("Robot Fleet Position and Movement")
+            ax.legend()
 
         self.fig.canvas.draw()  # Cập nhật biểu đồ
         self.fig.canvas.flush_events()  # Đảm bảo sự kiện được thực thi
@@ -366,12 +371,17 @@ class FleetConflictsHandle(Node):
             return dist
 
     def _conflict_handle_cb(self):
-        if self.debug:
-            self.update_plot(list(self.robots.values()))
-
+        robot_on_levels = {}
         for robot1Name, robot1State in self.robots.items():
             if robot1State.state is None:
                 continue
+
+            robot1Level = robot1State.state.location.level_name
+            if self.debug and robot1Level != "":
+                if robot1Level not in robot_on_levels:
+                    robot_on_levels.update({robot1Level: [robot1State]})
+                else:
+                    robot_on_levels[robot1Level].append(robot1State)
 
             robot1Mode = robot1State.state.mode.mode
             if (
@@ -410,7 +420,7 @@ class FleetConflictsHandle(Node):
 
                 robot2Mode = robot2State.state.mode.mode
                 # Kiểm tra xem 2 robot này có cùng tầng không:
-                if robot1State.state.location.level_name == robot2State.state.location.level_name:
+                if robot1Level == robot2State.state.location.level_name:
                     posA = robot1State.state.location
                     posB = robot2State.state.location
                     if len(robot1State.state.path) > 0 and len(robot2State.state.path) > 0:
@@ -531,6 +541,8 @@ class FleetConflictsHandle(Node):
                     self.get_logger().info(
                         f"Publish RESUME_ACTION for [{robot1Name}] from conflicts handle!"
                     )
+        if len(robot_on_levels) != 0:
+            self.update_plot(robot_on_levels)
 
     def fleet_states_cb(self, msg: FleetState):
         robotsData = msg.robots
@@ -552,19 +564,32 @@ def main(argv=sys.argv):
         description="Configure and spin up the fleet conflict handle",
     )
     parser.add_argument(
-        "-c",
-        "--config_file",
+        "-c1",
+        "--config_file_1",
         type=str,
         required=True,
-        help="Path to the config.yaml file",
+        help="Path to the all config.yaml file",
+    )
+    parser.add_argument(
+        "-c2",
+        "--config_file_2",
+        type=str,
+        required=True,
+        help="Path to the all config.yaml file",
     )
     args = parser.parse_args(args_without_ros[1:])
     print(f"Starting fleet conflicts handle...")
 
-    with open(args.config_file, "r") as f:
+    configs = []
+    with open(args.config_file_1, "r") as f:
         config = yaml.safe_load(f)
+        configs.append(config)
 
-    fleet_conflicts_handle = FleetConflictsHandle(config)
+    with open(args.config_file_2, "r") as f:
+        config = yaml.safe_load(f)
+        configs.append(config)
+
+    fleet_conflicts_handle = FleetConflictsHandle(configs)
     # executor = MultiThreadedExecutor()
     # executor.add_node(fleet_conflicts_handle)
     # try:

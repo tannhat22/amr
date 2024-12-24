@@ -46,7 +46,7 @@ rmf_fleet:
 
 fleet_manager:
   ip: "127.0.0.1"
-  port: 7001
+  port: 7002
   user: "some_user"
   password: "some_password"
   robot_state_update_frequency: 10.0
@@ -84,10 +84,12 @@ docks:
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   transit82_str--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.77]
     tag_names: [tag_frame_1]
 
   transit82_ttr--dropoff:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 83
@@ -103,10 +105,12 @@ docks:
       rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
 
   transit83_str--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.77]
     tag_names: [tag_frame_1]
 
   transit83_ttr--dropoff:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 84
@@ -122,10 +126,12 @@ docks:
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   transit84_str--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.77]
     tag_names: [tag_frame_1]
 
   transit84_ttr--dropoff:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 85
@@ -141,10 +147,12 @@ docks:
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   transit85_str--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.77]
     tag_names: [tag_frame_1]
 
   transit85_ttr--dropoff:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 86
@@ -163,10 +171,12 @@ docks:
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   transit86_str--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.77]
     tag_names: [tag_frame_1]
 
   transit86_ttr--dropoff:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 87
@@ -185,18 +195,22 @@ docks:
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   transit87_str--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.77]
     tag_names: [tag_frame_1]
 
   transit87_ttr--dropoff:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 88
   transit88_str--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.77]
     tag_names: [tag_frame_1]
 
   transit88_ttr--dropoff:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 89
@@ -209,10 +223,12 @@ docks:
     go_out_dock: [mov:0.5]
 
   transit89_str--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.77]
     tag_names: [tag_frame_1]
 
   transit89_ttr--dropoff:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 90
@@ -224,11 +240,13 @@ docks:
   line90--dropoff:
     go_out_dock: [mov:0.5]
 
-  transit89_str--pickup:
+  transit90_str--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.77]
     tag_names: [tag_frame_1]
 
-  transit89_ttr--dropoff:
+  transit90_ttr--dropoff:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # Chargers 
@@ -267,46 +285,46 @@ vertexs:
   # LINE 82
   line82_PKFD: -1.57199
   line82_DOFD: 1.57199
-  transit82_str_PKFD: -1.57199
-  transit82_ttr_DOFD: -1.57199
+  # transit82_str_PKFD: -1.57199
+  # transit82_ttr_DOFD: -1.57199
   # LINE 83
   line83_PKFD: 1.57199
   line83_DOFD: -1.57199
-  transit83_str_PKFD: -1.57199
-  transit83_ttr_DOFD: -1.57199
+  # transit83_str_PKFD: -1.57199
+  # transit83_ttr_DOFD: -1.57199
   # LINE 84
   line84_PKFD: -1.57199
   line84_DOFD: 1.57199
-  transit84_str_PKFD: -1.57199
-  transit84_ttr_DOFD: -1.57199
+  # transit84_str_PKFD: -1.57199
+  # transit84_ttr_DOFD: -1.57199
   # LINE 85
   line85_PKFD: 1.57199
   line85_DOFD: -1.57199
-  transit85_str_PKFD: -1.57199
-  transit85_ttr_DOFD: -1.57199
+  # transit85_str_PKFD: -1.57199
+  # transit85_ttr_DOFD: -1.57199
   # LINE 86
   line86_PKFD: 1.57199
   line86_DOFD: -1.57199
-  transit86_str_PKFD: -1.57199
-  transit86_ttr_DOFD: -1.57199
+  # transit86_str_PKFD: -1.57199
+  # transit86_ttr_DOFD: -1.57199
   # LINE 87
   line87_PKFD: 1.57199
   line87_DOFD: -1.57199
-  transit87_str_PKFD: -1.57199
-  transit87_ttr_DOFD: -1.57199
+  # transit87_str_PKFD: -1.57199
+  # transit87_ttr_DOFD: -1.57199
   # LINE 88
-  transit88_str_PKFD: -1.57199
-  transit88_ttr_DOFD: -1.57199
+  # transit88_str_PKFD: -1.57199
+  # transit88_ttr_DOFD: -1.57199
   # LINE 89
   line89_PKFD: -1.57199
   line89_DOFD:  1.57199
-  transit89_str_PKFD: -1.57199
-  transit89_ttr_DOFD: -1.57199
+  # transit89_str_PKFD: -1.57199
+  # transit89_ttr_DOFD: -1.57199
   # LINE 90
   line90_PKFD: 3.14
   line90_DOFD: -1.57199
-  transit90_str_PKFD: -1.57199
-  transit90_ttr_DOFD: -1.57199
+  # transit90_str_PKFD: -1.57199
+  # transit90_ttr_DOFD: -1.57199
 
   rf370cb_waiting_01: 0.0
   rf370cb_waiting_02: 0.0

@@ -68,25 +68,42 @@ def main(argv=sys.argv):
         help="Path to the config.yaml file",
     )
     parser.add_argument(
-        "-n",
-        "--nav_graph",
+        "-n1",
+        "--nav_graph_1",
         type=str,
         required=True,
-        help="Path to the nav_graph for this workcell adapter",
+        help="Path to the nav_graph_1 for this workcell adapter",
+    )
+    parser.add_argument(
+        "-n2",
+        "--nav_graph_2",
+        type=str,
+        required=True,
+        help="Path to the nav_graph_2 for this workcell adapter",
     )
 
     args = parser.parse_args(args_without_ros[1:])
     print("Starting workcell adapter...")
 
     config_path = args.config_file
-    nav_graph_path = args.nav_graph
+    nav_graph_1_path = args.nav_graph_1
+    nav_graph_2_path = args.nav_graph_2
 
     # Parse the yaml in Python to get the workcell_manager info
     with open(config_path, "r") as f:
         config_yaml = yaml.safe_load(f)
 
-    with open(nav_graph_path, "r") as f:
-        nav_graph = yaml.safe_load(f)
+    if nav_graph_1_path == "":
+        nav_graph_1 = None
+    else:
+        with open(nav_graph_1_path, "r") as f:
+            nav_graph_1 = yaml.safe_load(f)
+
+    if nav_graph_2_path == "":
+        nav_graph_2 = None
+    else:
+        with open(nav_graph_2_path, "r") as f:
+            nav_graph_2 = yaml.safe_load(f)
 
     # ROS 2 node for the command handle
     node = rclpy.node.Node("workcell_command_handle")
@@ -114,49 +131,54 @@ def main(argv=sys.argv):
     ingestors: dict[str, IngestorAdapter]
     ingestors = {}
 
-    for level in nav_graph["levels"]:
-        for wp in nav_graph["levels"][level]["vertices"]:
-            assert len(wp) == 3, "Vertical structure not match, please check!"
+    nav_graphs = [nav_graph_1, nav_graph_2]
+    for nav_graph in nav_graphs:
+        if nav_graph is None:
+            continue
 
-            # add Dispenser context
-            if "pickup_dispenser" in wp[2]:
-                dispenser_name = wp[2]["pickup_dispenser"]
-                assert (
-                    dispenser_name not in dispensers
-                ), f"Pickup_dispenser [{dispenser_name}] is duplicated, please check!"
+        for level in nav_graph["levels"]:
+            for wp in nav_graph["levels"][level]["vertices"]:
+                assert len(wp) == 3, "Vertical structure not match, please check!"
 
-                is_machine = False
-                if search_mode_docking(wp[2]["dock_name"]) == "mpickup":
-                    is_machine = True
+                # add Dispenser context
+                if "pickup_dispenser" in wp[2]:
+                    dispenser_name = wp[2]["pickup_dispenser"]
+                    assert (
+                        dispenser_name not in dispensers
+                    ), f"Pickup_dispenser [{dispenser_name}] is duplicated, please check!"
 
-                dispensers[dispenser_name] = DispenserAdapter(
-                    name=dispenser_name,
-                    node=node,
-                    state_pub=dispenser_state_pub,
-                    result_pub=dispenser_result_pub,
-                    is_machine=is_machine,
-                    api=api,
-                )
+                    is_machine = False
+                    if search_mode_docking(wp[2]["dock_name"]) == "mpickup":
+                        is_machine = True
 
-            # add Ingestor context
-            elif "dropoff_ingestor" in wp[2]:
-                ingestor_name = wp[2]["dropoff_ingestor"]
-                assert (
-                    ingestor_name not in ingestors
-                ), f"Dropoff_ingestor [{ingestor_name}] is duplicated, please check!"
+                    dispensers[dispenser_name] = DispenserAdapter(
+                        name=dispenser_name,
+                        node=node,
+                        state_pub=dispenser_state_pub,
+                        result_pub=dispenser_result_pub,
+                        is_machine=is_machine,
+                        api=api,
+                    )
 
-                is_machine = False
-                if search_mode_docking(wp[2]["dock_name"]) == "mdropoff":
-                    is_machine = True
+                # add Ingestor context
+                elif "dropoff_ingestor" in wp[2]:
+                    ingestor_name = wp[2]["dropoff_ingestor"]
+                    assert (
+                        ingestor_name not in ingestors
+                    ), f"Dropoff_ingestor [{ingestor_name}] is duplicated, please check!"
 
-                ingestors[ingestor_name] = IngestorAdapter(
-                    name=ingestor_name,
-                    node=node,
-                    state_pub=ingestor_state_pub,
-                    result_pub=ingestor_result_pub,
-                    is_machine=is_machine,
-                    api=api,
-                )
+                    is_machine = False
+                    if search_mode_docking(wp[2]["dock_name"]) == "mdropoff":
+                        is_machine = True
+
+                    ingestors[ingestor_name] = IngestorAdapter(
+                        name=ingestor_name,
+                        node=node,
+                        state_pub=ingestor_state_pub,
+                        result_pub=ingestor_result_pub,
+                        is_machine=is_machine,
+                        api=api,
+                    )
 
     async def state_updates():
         workcell_updaters = []

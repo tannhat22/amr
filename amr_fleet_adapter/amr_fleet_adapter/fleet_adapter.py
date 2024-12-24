@@ -763,6 +763,7 @@ class RobotAdapter:
                     self.attempt_cmd_until_success(cmd=self.api.stop, args=(self.name, self.cmd_id))
                     self.mission = None
                     self.paused = False
+                    self.undock = False
 
     def execute_action(self, category: str, description: dict, execution):
         self.cmd_id += 1

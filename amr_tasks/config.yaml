@@ -3,16 +3,22 @@
 
 TaskRequester:
   machines:
-    machine001:
-        sku: "RF370CB"
-        dispenser: "wp1--mpickup"
-        ingestor: "wp1--dropoff"
-        pickup_stations: ["pk1","pk2","pk3"]
-        dropoff_stations: ["do1","do2","do3"]
+    # machine001:
+    #     sku: "RF370CB"
+    #     dispenser: "wp1--mpickup"
+    #     ingestor: "wp1--dropoff"
+    #     pickup_stations: ["pk1","pk2","pk3"]
+    #     dropoff_stations: ["do1","do2","do3"]
   stations:
-    station001:
-      sku: "FF180"
-      dropoff_stations: ["do1","do2","do3"]
+    transit90_str--pickup:
+      step1:
+        sku: "RF370CB_STR"
+        pickup_station: transit90_str--pickup
+        dropoff_stations: ["line90--dropoff"]
+      step2:
+        sku: "RF370CB_TTR"
+        pickup_station: line90--pickup
+        dropoff_stations: ["transit90_ttr--dropoff"]
     station002:
       sku: "RF370CB"
       dropoff_stations: ["do1"]
