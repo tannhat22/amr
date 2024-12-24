@@ -56,7 +56,7 @@ def generate_launch_description():
                 package="amr_tasks",
                 namespace="",
                 executable="autotask_manager",
-                name="autotask_manager",
+                name="amr_autotask_manager",
                 output="screen",
                 emulate_tty=True,
                 respawn=False,
@@ -68,19 +68,15 @@ def generate_launch_description():
                     "--nav_graph_2",
                     nav_graph_2_file,
                 ],
-                # parameters=[
-                #     {
-                #     }
-                # ],
             ),
-            Node(
-                package="amr_tasks",
-                namespace="",
-                executable="dispatch_delivery_task",
-                name="amr_delivery_requester",
-                output="screen",
-                emulate_tty=True,
-                respawn=False,
-            ),
+            # Node(
+            #     package="amr_tasks",
+            #     namespace="",
+            #     executable="dispatch_delivery_task",
+            #     name="amr_delivery_requester",
+            #     output="screen",
+            #     emulate_tty=True,
+            #     respawn=False,
+            # ),
         ]
     )

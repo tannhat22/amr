@@ -31,7 +31,7 @@ rmf_fleet:
     loop: True
     delivery: True
     clean: False
-  finishing_request: "nothing" # [park, charge, nothing]
+  finishing_request: "charge" # [park, charge, nothing]
   responsive_wait: True # Should responsive wait be on/off for the whole fleet by default? False if not specified.
   charger_server_running: False  # Server charge is running or not
   distance_tolerance: 0.2 # Distance_tolerance to the next destination if destination is not last
@@ -137,26 +137,31 @@ docks:
 
   # LINE 86
   clr86--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
     tag_names: [tag_frame_1]
 
   # LINE 87
   clr87--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
     tag_names: [tag_frame_1]
 
   # LINE 88
   clr88--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
     tag_names: [tag_frame_1]
 
   # LINE 89
   clr89--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
     tag_names: [tag_frame_1]
 
   # LINE 90
   clr90--pickup:
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
     tag_names: [tag_frame_1]
 
@@ -183,7 +188,7 @@ docks:
   # LINE82:
   transit82_ttr--pickup:
     go_in_dock: [rot:180]
-    go_out_dock: [mov:0.90]
+    go_out_dock: [mov:1.0]
     tag_names: [tag_frame_1]
 
   transit82_str--dropoff:
@@ -194,7 +199,7 @@ docks:
   # LINE83:
   transit83_ttr--pickup:
     go_in_dock: [rot:180]
-    go_out_dock: [mov:0.90]
+    go_out_dock: [mov:1.0]
     tag_names: [tag_frame_1]
 
   transit83_str--dropoff:
@@ -205,7 +210,7 @@ docks:
   # LINE84:
   transit84_ttr--pickup:
     go_in_dock: [rot:180]
-    go_out_dock: [mov:0.90]
+    go_out_dock: [mov:1.0]
     tag_names: [tag_frame_1]
 
   transit84_str--dropoff:
@@ -216,7 +221,7 @@ docks:
   # LINE85:
   transit85_ttr--pickup:
     go_in_dock: [rot:180]
-    go_out_dock: [mov:0.90]
+    go_out_dock: [mov:1.0]
     tag_names: [tag_frame_1]
 
   transit85_str--dropoff:
@@ -227,7 +232,7 @@ docks:
   # LINE86:
   transit86_ttr--pickup:
     go_in_dock: [rot:180]
-    go_out_dock: [mov:0.90]
+    go_out_dock: [mov:1.0]
     tag_names: [tag_frame_1]
 
   transit86_str--dropoff:
@@ -238,7 +243,7 @@ docks:
   # LINE87:
   transit87_ttr--pickup:
     go_in_dock: [rot:180]
-    go_out_dock: [mov:0.90]
+    go_out_dock: [mov:1.0]
     tag_names: [tag_frame_1]
 
   transit87_str--dropoff:
@@ -249,7 +254,7 @@ docks:
   # LINE88:
   transit88_ttr--pickup:
     go_in_dock: [rot:180]
-    go_out_dock: [mov:0.90]
+    go_out_dock: [mov:1.0]
     tag_names: [tag_frame_1]
 
   transit88_str--dropoff:
@@ -260,7 +265,7 @@ docks:
   # LINE89:
   transit89_ttr--pickup:
     go_in_dock: [rot:180]
-    go_out_dock: [mov:0.90]
+    go_out_dock: [mov:1.0]
     tag_names: [tag_frame_1]
 
   transit89_str--dropoff:
@@ -271,7 +276,7 @@ docks:
   # LINE90:
   transit90_ttr--pickup:
     go_in_dock: [rot:180]
-    go_out_dock: [mov:0.90]
+    go_out_dock: [mov:1.0]
     tag_names: [tag_frame_1]
 
   transit90_str--dropoff:
@@ -311,27 +316,27 @@ vertexs:
   waiting_for_lift_tp2: 1.57199
   lift001-L1: [1.57199, True]
   # LINE 55:
-  clr55_PKFD: 3.14
-  clr55_DOFD: 3.14
+  # clr55_PKFD: 3.14
+  # clr55_DOFD: 3.14
   line55_PKFD: 1.57199
   line55_DOFD: -1.5708
   # LINE 56:
-  clr56_PKFD: 3.14
-  clr56_DOFD: 3.14
+  # clr56_PKFD: 3.14
+  # clr56_DOFD: 3.14
   line56_PKFD: 0.0
   line56_DOFD: 1.57199
   line56_lane_custom2: -1.57199
   line56_lane_custom3: 3.14
   # STR:
-  clr82_PKFD:  1.57199
-  clr83_PKFD:  1.57199
-  clr84_PKFD:  1.57199
-  clr85_PKFD:  1.57199
-  clr86_PKFD:  3.14
-  clr87_PKFD:  3.14
-  clr88_PKFD:  3.14
-  clr89_PKFD:  3.14
-  clr90_PKFD:  3.14
+  # clr82_PKFD:  1.57199
+  # clr83_PKFD:  1.57199
+  # clr84_PKFD:  1.57199
+  # clr85_PKFD:  1.57199
+  # clr86_PKFD:  3.14
+  # clr87_PKFD:  3.14
+  # clr88_PKFD:  3.14
+  # clr89_PKFD:  3.14
+  # clr90_PKFD:  3.14
   # TTR:
   clr001_DOFD: 3.14
   clr002_DOFD: 3.14

@@ -158,7 +158,7 @@ class AutoTaskManager(Node):
     _mreq_context_dict: dict[str, MachineRequester]
     _sreq_context_dict: dict[str, StationRequester]
 
-    def __init__(self, config, nav_graphs) -> None:
+    def __init__(self, config, nav_graphs):
         super().__init__("autotask_manager")
 
         self._pickup_context_dict = {}
@@ -204,7 +204,7 @@ class AutoTaskManager(Node):
                     pks_context = self._pickup_context_dict.get(pks, None)
                     assert (
                         pks_context is not None
-                    ), f"pickup_station [{pks} not match with nav_graph]"
+                    ), f"pickup_station [{pks}] not match with nav_graph"
                     pkss_context.append(pks_context)
 
                 doss_context = []
@@ -212,7 +212,7 @@ class AutoTaskManager(Node):
                     dos_context = self._dropoff_context_dict.get(dos, None)
                     assert (
                         dos_context is not None
-                    ), f"dropoff_station [{dos} not match with nav_graph]"
+                    ), f"dropoff_station [{dos}] not match with nav_graph"
                     doss_context.append(dos_context)
 
                 self._mreq_context_dict.update(
@@ -240,14 +240,14 @@ class AutoTaskManager(Node):
                     pks_context = self._pickup_context_dict.get(pks, None)
                     assert (
                         pks_context is not None
-                    ), f"pickup_station [{pks} not match with nav_graph]"
+                    ), f"pickup_station [{pks}] not match with nav_graph"
 
                     doss_context = []
                     for dos in doss:
                         dos_context = self._dropoff_context_dict.get(dos, None)
                         assert (
                             dos_context is not None
-                        ), f"dropoff_station [{dos} not match with nav_graph]"
+                        ), f"dropoff_station [{dos}] not match with nav_graph"
                         doss_context.append(dos_context)
 
                     deliverySteps.append(DeliveryStep(sku, pks_context, doss_context))
@@ -288,6 +288,7 @@ class AutoTaskManager(Node):
         self._delivery_request_pub.publish(msg)
 
     def station_request_callback(self, request: StationRequest):
+        self.get_logger().info(f"RECIVEEEEEEEEEEEEE: {request.station_name}")
         stationContext = None
         if request.station_type == StationRequest.TYPE_PICKUP:
             stationContext = self._pickup_context_dict.get(request.station_name, None)
@@ -335,7 +336,7 @@ class AutoTaskManager(Node):
 
     def fleet_machine_state_cb(self, states: FleetMachineState):
         state: MachineState
-        for state in states:
+        for state in states.machines:
             if state.machine_name in self._mreq_context_dict:
                 requester = self._mreq_context_dict.get(state.machine_name)
 
@@ -521,7 +522,9 @@ def main(argv=sys.argv):
     time.sleep(1.0)
 
     autotask_manager = AutoTaskManager(config_yaml, [nav_graph_1, nav_graph_2])
+    autotask_manager.get_logger().info("Beginning client, shut down with CTRL-C")
     rclpy.spin(autotask_manager)
+
     autotask_manager.destroy_node()
     rclpy.shutdown()
     # executor = MultiThreadedExecutor()

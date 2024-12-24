@@ -385,16 +385,16 @@ class RobotAdapter:
                     data.mode == RobotMode.MODE_EMERGENCY
                     or data.mode == RobotMode.MODE_REQUEST_ERROR
                 ):
-                    if data.mode == RobotMode.MODE_REQUEST_ERROR:
-                        self.node.get_logger().error(
-                            f"Robot {self.name} has ERROR when process last requested "
-                            f"with task_id: {self.update_handle.more().current_task_id()}."
-                        )
-                    elif data.mode == RobotMode.MODE_EMERGENCY:
-                        self.node.get_logger().error(
-                            f"Robot {self.name} has EMERGENCY_STOP when process last requested "
-                            f"with task_id: {self.update_handle.more().current_task_id()}."
-                        )
+                    # if data.mode == RobotMode.MODE_REQUEST_ERROR:
+                    #     self.node.get_logger().error(
+                    #         f"Robot {self.name} has ERROR when process last requested "
+                    #         f"with task_id: {self.update_handle.more().current_task_id()}."
+                    #     )
+                    # elif data.mode == RobotMode.MODE_EMERGENCY:
+                    #     self.node.get_logger().error(
+                    #         f"Robot {self.name} has EMERGENCY_STOP when process last requested "
+                    #         f"with task_id: {self.update_handle.more().current_task_id()}."
+                    #     )
 
                     self.update_handle.more().kill_task(
                         self.update_handle.more().current_task_id(),
@@ -431,6 +431,7 @@ class RobotAdapter:
                 self.teleoperation.update(data)
 
     def on_kill(self, killed):
+        return
         self.node.get_logger().info(f"Robot {self.name}: on_kill result {killed} ")
         if not killed:
             self.node.get_logger().error(f"Robot {self.name}: on_kill with error")
@@ -446,6 +447,9 @@ class RobotAdapter:
         if not mission.execution:
             return
         mission.execution.finished()
+        self.node.get_logger().warn(
+            f"[{self.name}] da hoan thanh nhiem vu mission.execution.finished()!!!!!!!!!!!"
+        )
         mission.execution = None
 
     def update_mission_status(self, status: RobotUpdateData, mission: MissionHandle):
@@ -604,7 +608,7 @@ class RobotAdapter:
                     self.cmd_id = self.last_known_status.last_request_completed
 
                 self.mission = MissionHandle(execution, destination=destination)
-                self.mission.done = True
+                # self.mission.done = True
                 return
 
             self.cmd_id += 1
@@ -618,12 +622,12 @@ class RobotAdapter:
                     else:
                         undockWp = mission.destination
 
-                    self.mission = MissionHandle(
-                        execution, undock=undockWp, destination=destination
-                    )
                     self.node.get_logger().info(
                         f"[{self.name}] received navigate command but "
                         f"robot will undock '{undockWp.name}' first."
+                    )
+                    self.mission = MissionHandle(
+                        execution, undock=undockWp, destination=destination
                     )
                     self.attempt_cmd_until_success(
                         cmd=self.perform_docking,
