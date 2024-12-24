@@ -194,7 +194,7 @@ class TaskRequester(Node):
         payload["request"] = request
         msg.json_msg = json.dumps(payload)
 
-        print(f"Json msg payload: \n{json.dumps(payload, indent=2)}")
+        # print(f"Json msg payload: \n{json.dumps(payload, indent=2)}")
         self.task_api_req_pub.publish(msg)
 
     # def receive_response(self, response_msg: ApiResponse):

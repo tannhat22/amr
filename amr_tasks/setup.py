@@ -13,6 +13,7 @@ setup(
         ("share/" + package_name, ["package.xml"]),
         ("share/" + package_name, ["config.yaml"]),
         (os.path.join("share", package_name, "launch"), glob("launch/*.launch.xml")),
+        (os.path.join("share", package_name, "launch"), glob("launch/*.launch.py")),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
@@ -25,6 +26,7 @@ setup(
         "console_scripts": [
             "autotask_manager=amr_tasks.autotask_manager:main",
             "dispatch_delivery_task=amr_tasks.dispatch_delivery:main",
+            "test_autotask=amr_tasks.test_autotask:main",
         ],
     },
 )

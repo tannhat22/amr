@@ -65,6 +65,20 @@ class StationContext:
         return self._state
 
 
+class DeliveryStep:
+    def __init__(
+        self,
+        sku: str,
+        pickup_station: StationContext,
+        dropoff_stations: list[StationContext],
+    ):
+        self.item = DeliveryItem()
+        self.item.sku = sku
+        self.item.quantity = 1
+        self.pickup_station = pickup_station
+        self.dropoff_stations = dropoff_stations
+
+
 class MachineRequester:
     _lock: threading.Lock
 
@@ -77,8 +91,8 @@ class MachineRequester:
         sku: str,
         dispenser: str,
         ingestor: str,
-        pickup_stations: list[str],
-        dropoff_stations: list[str],
+        pickup_stations: list[StationContext],
+        dropoff_stations: list[StationContext],
     ) -> None:
         self.name = name
         self.dispenser = dispenser
@@ -114,18 +128,9 @@ class StationRequester:
 
     _destination_dropoff: str
 
-    def __init__(
-        self,
-        name: str,
-        sku: str,
-        dropoff_stations: list[str],
-    ) -> None:
+    def __init__(self, name: str, delivery_steps: list[DeliveryStep]) -> None:
         self.name = name
-        self.dropoff_stations = dropoff_stations
-        self.delivery_item = DeliveryItem()
-        self.delivery_item.sku = sku
-        self.delivery_item.quantity = 1
-
+        self.delivery_steps = delivery_steps
         self._destination_dropoff = ""
 
         self._lock = threading.Lock()
@@ -186,39 +191,73 @@ class AutoTaskManager(Node):
 
         # Add machine requester context
         self._mreq_context_dict = {}
-        for machine_name, machine_config in task_requester_yaml["machines"].items():
-            sku = machine_config["sku"]
-            dispenser = machine_config["dispenser"]
-            ingestor = machine_config["ingestor"]
-            pks = machine_config["pickup_stations"]
-            dos = machine_config["dropoff_stations"]
-            self._mreq_context_dict.update(
-                {
-                    machine_name: MachineRequester(
-                        name=machine_name,
-                        sku=sku,
-                        dispenser=dispenser,
-                        ingestor=ingestor,
-                        pickup_stations=pks,
-                        dropoff_stations=dos,
-                    )
-                }
-            )
+        if task_requester_yaml["machines"] is not None:
+            for machine_name, machine_config in task_requester_yaml["machines"].items():
+                sku = machine_config["sku"]
+                dispenser = machine_config["dispenser"]
+                ingestor = machine_config["ingestor"]
+                pkss = machine_config["pickup_stations"]
+                doss = machine_config["dropoff_stations"]
+
+                pkss_context = []
+                for pks in pkss:
+                    pks_context = self._pickup_context_dict.get(pks, None)
+                    assert (
+                        pks_context is not None
+                    ), f"pickup_station [{pks} not match with nav_graph]"
+                    pkss_context.append(pks_context)
+
+                doss_context = []
+                for dos in doss:
+                    dos_context = self._dropoff_context_dict.get(dos, None)
+                    assert (
+                        dos_context is not None
+                    ), f"dropoff_station [{dos} not match with nav_graph]"
+                    doss_context.append(dos_context)
+
+                self._mreq_context_dict.update(
+                    {
+                        machine_name: MachineRequester(
+                            name=machine_name,
+                            sku=sku,
+                            dispenser=dispenser,
+                            ingestor=ingestor,
+                            pickup_stations=pkss_context,
+                            dropoff_stations=doss_context,
+                        )
+                    }
+                )
 
         # Add station requester context
         self._sreq_context_dict = {}
-        for station_name, station_config in task_requester_yaml["stations"].items():
-            sku = station_config["sku"]
-            dos = station_config["dropoff_stations"]
-            self._sreq_context_dict.update(
-                {
-                    station_name: StationRequester(
-                        name=station_name,
-                        sku=sku,
-                        dropoff_stations=dos,
-                    )
-                }
-            )
+        if task_requester_yaml["stations"] is not None:
+            for station_name, station_config in task_requester_yaml["stations"].items():
+                deliverySteps = []
+                for step, step_config in station_config.items():
+                    sku = step_config["sku"]
+                    pks = step_config["pickup_station"]
+                    doss = step_config["dropoff_stations"]
+                    pks_context = self._pickup_context_dict.get(pks, None)
+                    assert (
+                        pks_context is not None
+                    ), f"pickup_station [{pks} not match with nav_graph]"
+
+                    doss_context = []
+                    for dos in doss:
+                        dos_context = self._dropoff_context_dict.get(dos, None)
+                        assert (
+                            dos_context is not None
+                        ), f"dropoff_station [{dos} not match with nav_graph]"
+                        doss_context.append(dos_context)
+
+                    deliverySteps.append(DeliveryStep(sku, pks_context, doss_context))
+                self._sreq_context_dict.update(
+                    {
+                        station_name: StationRequester(
+                            name=station_name, delivery_steps=deliverySteps
+                        )
+                    }
+                )
 
         # Publishers:
         self._delivery_request_pub = self.create_publisher(
@@ -240,20 +279,12 @@ class AutoTaskManager(Node):
         self._pub_station_state_timer = self.create_timer(1.0, self._publish_station_states)
 
     def publish_delivery_requests(
-        self, requester: str, start_time: int, pickup: list, dropoff: list
+        self, requester: str, start_time: int, params: list[DeliveryParams]
     ):
-        deliveryParam = DeliveryParams()
-        deliveryParam.pickup_place_name = pickup[0]
-        deliveryParam.pickup_dispenser = pickup[1]
-        deliveryParam.pickup_items = pickup[2]
-        deliveryParam.dropoff_place_name = dropoff[0]
-        deliveryParam.dropoff_ingestor = dropoff[1]
-        deliveryParam.dropoff_items = dropoff[2]
-
         msg = DeliveryRequest()
         msg.requester = requester
         msg.start_time = start_time
-        msg.delivery_params.append(deliveryParam)
+        msg.delivery_params = params
         self._delivery_request_pub.publish(msg)
 
     def station_request_callback(self, request: StationRequest):
@@ -276,6 +307,30 @@ class AutoTaskManager(Node):
             return
 
         stationContext.set_state(mode=request.mode)
+
+        # Đoạn code tạm thời chờ bắt sensor trạm dùng chung:
+        stationCLR = [
+            "clr001--dropoff",
+            "clr002--dropoff",
+            "clr003--dropoff",
+            "clr004--dropoff",
+            "clr005--dropoff",
+        ]
+        fullCLR = True
+        for station in stationCLR:
+            stationCLRContext = self._dropoff_context_dict.get(station)
+            if stationCLRContext.get_state().mode == StationRequest.MODE_EMPTY:
+                fullCLR = False
+                break
+
+        if fullCLR:
+            self.get_logger().warn("all station TTR at CLR is full filled, will reset to empty!")
+            for station in stationCLR:
+                stationCLRContext = self._dropoff_context_dict.get(station)
+                stationCLRContext.reset()
+                stationCLRContext.set_state(mode=StationRequest.MODE_EMPTY)
+
+        # /////////////////////////////////////////////////////////////////
         return
 
     def fleet_machine_state_cb(self, states: FleetMachineState):
@@ -287,34 +342,25 @@ class AutoTaskManager(Node):
                 # Handle pickup request
                 if state.request_pickup:
                     if requester.get_destination_dropoff() == "":
-                        for dropoff_name in requester.dropoff_stations:
-                            station_context = self._dropoff_context_dict.get(dropoff_name, None)
+                        for station_context in requester.dropoff_stations:
                             if (
-                                station_context is not None
-                                and station_context.get_state().mode == StationState.MODE_EMPTY
+                                station_context.get_state().mode == StationState.MODE_EMPTY
                                 and station_context.set_occupant(requester.name)
                             ):
-                                self.get_logger().info(
+                                param = DeliveryParams()
+                                param.pickup_items = requester.delivery_item
+                                param.pickup_dispenser = requester.dispenser
+                                param.pickup_place_name = requester.name
+                                param.dropoff_items = requester.delivery_item
+                                param.dropoff_ingestor = station_context._handler
+                                param.dropoff_place_name = station_context.get_state().station_name
+                                self.get_logger().warn(
                                     f"detect pickup request from machine [{requester.name}] will send task for delivery it"
                                 )
-                                requester.set_destination_dropoff(dropoff_name)
-
-                                pk_info = [
-                                    requester.dispenser,
-                                    requester.name,
-                                    requester.delivery_item,
-                                ]
-                                do_info = [
-                                    dropoff_name,
-                                    station_context._handler,
-                                    requester.delivery_item,
-                                ]
                                 self.publish_delivery_requests(
-                                    requester=requester.name,
-                                    start_time=0,
-                                    pickup=pk_info,
-                                    dropoff=do_info,
+                                    requester=requester.name, start_time=0, params=[param]
                                 )
+                                requester.set_destination_dropoff(param.dropoff_place_name)
                                 break
                 else:
                     requester.set_destination_dropoff("")
@@ -322,34 +368,25 @@ class AutoTaskManager(Node):
                 # Handle dropoff request
                 if state.request_dropoff:
                     if requester.get_destination_pickup() == "":
-                        for pickup_name in requester.pickup_stations:
-                            station_context = self._pickup_context_dict.get(pickup_name, None)
+                        for station_context in requester.pickup_stations:
                             if (
-                                station_context is not None
-                                and station_context.get_state().mode == StationState.MODE_FILLED
+                                station_context.get_state().mode == StationState.MODE_FILLED
                                 and station_context.set_occupant(requester.name)
                             ):
-                                self.get_logger().info(
+                                param = DeliveryParams()
+                                param.pickup_items = requester.delivery_item
+                                param.pickup_dispenser = station_context._handler
+                                param.pickup_place_name = station_context.get_state().station_name
+                                param.dropoff_items = requester.delivery_item
+                                param.dropoff_ingestor = requester.dispenser
+                                param.dropoff_place_name = requester.name
+                                self.get_logger().warn(
                                     f"detect dropoff request from machine [{requester.name}] will send task for delivery it"
                                 )
-                                requester.set_destination_pickup(pickup_name)
-
-                                pk_info = [
-                                    pickup_name,
-                                    station_context._handler,
-                                    requester.delivery_item,
-                                ]
-                                do_info = [
-                                    requester.ingestor,
-                                    requester.name,
-                                    requester.delivery_item,
-                                ]
                                 self.publish_delivery_requests(
-                                    requester=requester.name,
-                                    start_time=0,
-                                    pickup=pk_info,
-                                    dropoff=do_info,
+                                    requester=requester.name, start_time=0, params=[param]
                                 )
+                                requester.set_destination_pickup(param.pickup_place_name)
                                 break
                 else:
                     requester.set_destination_pickup("")
@@ -378,35 +415,49 @@ class AutoTaskManager(Node):
                 requester = self._sreq_context_dict.get(pk_name)
                 if pk_state.mode == StationState.MODE_FILLED:
                     if requester.get_destination_dropoff() == "":
-                        for station_name in requester.dropoff_stations:
-                            station_context = self._dropoff_context_dict.get(station_name, None)
-                            if (
-                                station_context is not None
-                                and station_context.get_state().mode == StationState.MODE_EMPTY
-                                and station_context.set_occupant(requester.name)
-                            ):
-                                self.get_logger().info(
-                                    f"detect cart in station [{requester.name}] will send task for delivery it"
+                        deliveryParams = []
+                        for step in requester.delivery_steps:
+                            param = DeliveryParams()
+                            param.pickup_items = step.item
+                            param.pickup_dispenser = step.pickup_station._handler
+                            param.pickup_place_name = step.pickup_station.get_state().station_name
+                            param.dropoff_items = step.item
+                            if len(step.dropoff_stations) == 1:
+                                param.dropoff_ingestor = step.dropoff_stations[0]._handler
+                                param.dropoff_place_name = (
+                                    step.dropoff_stations[0].get_state().station_name
                                 )
-                                requester.set_destination_dropoff(station_name)
+                                deliveryParams.append(param)
+                            else:
+                                found_station_empty = False
+                                for station_context in step.dropoff_stations:
+                                    if (
+                                        station_context.get_state().mode == StationState.MODE_EMPTY
+                                        and station_context.set_occupant(requester.name)
+                                    ):
+                                        param.dropoff_ingestor = station_context._handler
+                                        param.dropoff_place_name = (
+                                            station_context.get_state().station_name
+                                        )
+                                        deliveryParams.append(param)
+                                        found_station_empty = True
+                                        break
+                                if not found_station_empty:
+                                    break
 
-                                pk_info = [
-                                    requester.name,
-                                    pk_context._handler,
-                                    requester.delivery_item,
-                                ]
-                                do_info = [
-                                    station_name,
-                                    station_context._handler,
-                                    requester.delivery_item,
-                                ]
-                                self.publish_delivery_requests(
-                                    requester=requester.name,
-                                    start_time=0,
-                                    pickup=pk_info,
-                                    dropoff=do_info,
-                                )
-                                break
+                        if len(requester.delivery_steps) == len(deliveryParams):
+                            information = ""
+                            for param in deliveryParams:
+                                information += f"pickup: {param.pickup_place_name} -> dropoff: {param.dropoff_place_name} ->"
+                            information = information[:-3]
+                            self.get_logger().warn(
+                                f"detect cart in requester station: [{requester.name}], send task delivery ({information})!"
+                            )
+
+                            requester.set_destination_dropoff(deliveryParams[-1].dropoff_place_name)
+                            self.publish_delivery_requests(
+                                requester=requester.name, start_time=0, params=deliveryParams
+                            )
                 else:
                     requester.set_destination_dropoff("")
 
