@@ -19,7 +19,7 @@ def generate_launch_description():
     # Arguments
     use_sim_time = "false"
     map_name = "tp2-tp3-layout"
-    server_uri = "http://10.7.11.35:8000/_internal"
+    server_uri = "http://192.168.47.128:8000/_internal"
     enable_experimental_lift_watchdog = "true"
     nav_graph_tp2_file_path = PathJoinSubstitution(
         [
@@ -213,24 +213,24 @@ def generate_launch_description():
                 )
             ),
             # Autotask
-            # IncludeLaunchDescription(
-            #     PythonLaunchDescriptionSource(
-            #         PathJoinSubstitution(
-            #             [
-            #                 FindPackageShare("amr_tasks"),
-            #                 "launch",
-            #                 "amr_autotask.launch.py",
-            #             ]
-            #         )
-            #     ),
-            #     launch_arguments={
-            #         "config_file": PathJoinSubstitution(
-            #             [FindPackageShare("amr_tasks"), "config.yaml"]
-            #         ),
-            #         "nav_graph_1_file": nav_graph_tp2_file_path,
-            #         "nav_graph_2_file": nav_graph_tp3_file_path,
-            #     }.items(),
-            # ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution(
+                        [
+                            FindPackageShare("amr_tasks"),
+                            "launch",
+                            "amr_autotask.launch.py",
+                        ]
+                    )
+                ),
+                launch_arguments={
+                    "config_file": PathJoinSubstitution(
+                        [FindPackageShare("amr_tasks"), "config.yaml"]
+                    ),
+                    "nav_graph_1_file": nav_graph_tp2_file_path,
+                    "nav_graph_2_file": nav_graph_tp3_file_path,
+                }.items(),
+            ),
             # Workcell adapter
             IncludeLaunchDescription(
                 XMLLaunchDescriptionSource(
@@ -246,8 +246,8 @@ def generate_launch_description():
                     "config_file": PathJoinSubstitution(
                         [FindPackageShare("amr_workcell_adapter"), "config.yaml"]
                     ),
-                    "nav_graph_1": nav_graph_tp2_file_path,
-                    "nav_graph_2": nav_graph_tp3_file_path,
+                    "nav_graph_1_file": nav_graph_tp2_file_path,
+                    "nav_graph_2_file": nav_graph_tp3_file_path,
                 }.items(),
             ),
             # LDM RMF adapter

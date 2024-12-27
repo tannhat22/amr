@@ -129,7 +129,7 @@ class WorkCellManager(Node):
             FleetMachineState,
             "fleet_machine_state",
             self.fleet_machine_state_cb,
-            100,
+            10,
         )
 
         transient_qos = QoSProfile(

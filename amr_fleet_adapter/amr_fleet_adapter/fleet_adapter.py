@@ -245,7 +245,7 @@ class MissionHandle:
         docking=False,
         localize=False,
         charger=None,
-        undock=None,
+        undock=False,
         destination=None,
         is_last_destination=False,
     ):
@@ -310,7 +310,7 @@ class RobotAdapter:
         self.paused_mission: MissionHandle | None = None
         self.vertexs_config = vertexs_config
         self.charger_server = charger_server
-        self.undock = False
+        self.undock = None
         self.unlift = False
 
         # Threading variables
@@ -447,9 +447,6 @@ class RobotAdapter:
         if not mission.execution:
             return
         mission.execution.finished()
-        self.node.get_logger().warn(
-            f"[{self.name}] da hoan thanh nhiem vu mission.execution.finished()!!!!!!!!!!!"
-        )
         mission.execution = None
 
     def update_mission_status(self, status: RobotUpdateData, mission: MissionHandle):
@@ -465,9 +462,9 @@ class RobotAdapter:
         if status.is_command_completed(self.cmd_id):
             if mission.charger is not None and self.is_charging(status):
                 self.node.get_logger().info(f"Robot [{self.name}] has begun charging...")
-            elif mission.undock is not None:
+            elif mission.undock:
                 self.node.get_logger().info(f"Robot [{self.name}] has undock finished.")
-                dock_mode = search_mode_docking(mission.undock.name)
+                dock_mode = search_mode_docking(self.undock.name)
                 station_process = {
                     "station_type": dock_mode,
                     "mode": StationRequest.MODE_EMPTY,
@@ -479,15 +476,15 @@ class RobotAdapter:
                 self.attempt_cmd_until_success(
                     cmd=self.api.station_request,
                     args=(
-                        mission.undock.name,
+                        self.undock.name,
                         station_process,
                     ),
                 )
-                mission.undock = None
-                self.undock = False
+                mission.undock = False
+                self.undock = None
 
             elif mission.docking:
-                self.undock = True
+                self.undock = mission.destination
                 mission.docking = False
                 self.node.get_logger().info(f"Robot [{self.name}] has docked finished.")
 
@@ -563,7 +560,7 @@ class RobotAdapter:
                 or status.mode == RobotMode.MODE_EMERGENCY
             ):
                 self.unlift = False
-                self.undock = False
+                self.undock = None
                 self.paused = False
 
     def make_callbacks(self):
@@ -601,46 +598,41 @@ class RobotAdapter:
                     f"marking it as finished."
                 )
 
-                if destination.dock is not None or destination.name in self.docks_name:
-                    self.undock = True
+                self.node.get_logger().info(
+                    f"INFORMATION OF DESTINATION: dock-[{destination.dock}], name-[{destination.name}] ///////////////////"
+                )
+
+                if (
+                    destination.dock is not None and destination.name != ""
+                ) or destination.name in self.docks_name:
+                    self.node.get_logger().info(
+                        f"detect [{self.name}] on dock, next action will need undock!"
+                    )
+                    self.undock = destination
 
                 if self.last_known_status.last_request_completed is not None:
                     self.cmd_id = self.last_known_status.last_request_completed
 
                 self.mission = MissionHandle(execution, destination=destination)
-                # self.mission.done = True
                 return
 
             self.cmd_id += 1
             # Check if robot need undock:
-            if self.undock:
-                mission = self.mission
-                if mission is not None:
-                    undockWp = None
-                    if mission.undock is not None:
-                        undockWp = mission.undock
-                    else:
-                        undockWp = mission.destination
+            if self.undock is not None:
+                self.node.get_logger().info(
+                    f"[{self.name}] received navigate command but "
+                    f"robot will undock '{self.undock.name}' first."
+                )
+                self.mission = MissionHandle(execution, undock=True, destination=destination)
+                self.attempt_cmd_until_success(
+                    cmd=self.perform_docking,
+                    args=(
+                        self.undock,
+                        True,
+                    ),
+                )
+                return
 
-                    self.node.get_logger().info(
-                        f"[{self.name}] received navigate command but "
-                        f"robot will undock '{undockWp.name}' first."
-                    )
-                    self.mission = MissionHandle(
-                        execution, undock=undockWp, destination=destination
-                    )
-                    self.attempt_cmd_until_success(
-                        cmd=self.perform_docking,
-                        args=(
-                            undockWp,
-                            True,
-                        ),
-                    )
-                    return
-                else:
-                    self.node.get_logger().warn(
-                        f"[{self.name}] need undock firt but mission information is not found!"
-                    )
             # Check if robot need unlift:
             elif self.unlift:
                 self.mission = MissionHandle(execution, destination=destination)
@@ -767,7 +759,7 @@ class RobotAdapter:
                     self.attempt_cmd_until_success(cmd=self.api.stop, args=(self.name, self.cmd_id))
                     self.mission = None
                     self.paused = False
-                    self.undock = False
+                    self.undock = None
 
     def execute_action(self, category: str, description: dict, execution):
         self.cmd_id += 1

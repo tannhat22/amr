@@ -15,8 +15,8 @@ def generate_launch_description():
         default_value=PathJoinSubstitution([FindPackageShare("amr_tasks"), "config.yaml"]),
         description="Path to the configuration file",
     )
-    nav_graph_1_arg = DeclareLaunchArgument(
-        "nav_graph_1",
+    nav_graph_1_file_arg = DeclareLaunchArgument(
+        "nav_graph_1_file",
         default_value=PathJoinSubstitution(
             [
                 FindPackageShare("amr-rmf"),
@@ -29,8 +29,8 @@ def generate_launch_description():
         description="Path to the nav_graph_1 file",
     )
 
-    nav_graph_2_arg = DeclareLaunchArgument(
-        "nav_graph_2",
+    nav_graph_2_file_arg = DeclareLaunchArgument(
+        "nav_graph_2_file",
         default_value=PathJoinSubstitution(
             [
                 FindPackageShare("amr-rmf"),
@@ -44,14 +44,14 @@ def generate_launch_description():
     )
     # Sử dụng giá trị từ argument
     config_file = LaunchConfiguration("config_file")
-    nav_graph_1_file = LaunchConfiguration("nav_graph_1")
-    nav_graph_2_file = LaunchConfiguration("nav_graph_2")
+    nav_graph_1_file = LaunchConfiguration("nav_graph_1_file")
+    nav_graph_2_file = LaunchConfiguration("nav_graph_2_file")
 
     return LaunchDescription(
         [
             config_file_arg,
-            nav_graph_1_arg,
-            nav_graph_2_arg,
+            nav_graph_1_file_arg,
+            nav_graph_2_file_arg,
             Node(
                 package="amr_tasks",
                 namespace="",
@@ -63,20 +63,20 @@ def generate_launch_description():
                 arguments=[
                     "--config_file",
                     config_file,
-                    "--nav_graph_1",
+                    "--nav_graph_1_file",
                     nav_graph_1_file,
-                    "--nav_graph_2",
+                    "--nav_graph_2_file",
                     nav_graph_2_file,
                 ],
             ),
-            # Node(
-            #     package="amr_tasks",
-            #     namespace="",
-            #     executable="dispatch_delivery_task",
-            #     name="amr_delivery_requester",
-            #     output="screen",
-            #     emulate_tty=True,
-            #     respawn=False,
-            # ),
+            Node(
+                package="amr_tasks",
+                namespace="",
+                executable="dispatch_delivery_task",
+                name="amr_delivery_requester",
+                output="screen",
+                emulate_tty=True,
+                respawn=False,
+            ),
         ]
     )

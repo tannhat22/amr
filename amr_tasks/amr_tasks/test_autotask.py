@@ -51,13 +51,6 @@ def main(argv=sys.argv):
     print("request_mode: {}".format(args.request_mode))
     print("topic_name: {}".format(args.topic_name))
 
-    transient_qos = rclpy.qos.QoSProfile(
-        history=rclpy.qos.HistoryPolicy.KEEP_LAST,
-        depth=1,
-        reliability=rclpy.qos.ReliabilityPolicy.RELIABLE,
-        durability=rclpy.qos.DurabilityPolicy.TRANSIENT_LOCAL,
-    )
-
     rclpy.init()
     node = rclpy.create_node("send_action_execution_notice_node")
     pub = node.create_publisher(

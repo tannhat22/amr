@@ -1,16 +1,17 @@
-import argparse
-import time
 import sys
+import time
+import argparse
 import threading
 import yaml
 import re
 import rclpy
 
 from rclpy.node import Node
+from rclpy.qos import qos_profile_system_default
+
 
 # from rclpy.executors import MultiThreadedExecutor
 # from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
-# from rcl_interfaces.msg import ParameterDescriptor
 from machine_fleet_msgs.msg import (
     DeliveryItem,
     DeliveryParams,
@@ -50,9 +51,9 @@ class StationContext:
             if self._is_occupied and self._occupant_id != occupant_id:
                 return False
 
-            self._is_occupied = True
-            self._occupant_id = occupant_id
-            return True
+        self._is_occupied = True
+        self._occupant_id = occupant_id
+        return True
 
     def get_occupant(self) -> str:
         return self._occupant_id
@@ -161,6 +162,8 @@ class AutoTaskManager(Node):
     def __init__(self, config, nav_graphs):
         super().__init__("autotask_manager")
 
+        cb_group = MutuallyExclusiveCallbackGroup()
+
         self._pickup_context_dict = {}
         self._dropoff_context_dict = {}
 
@@ -268,15 +271,20 @@ class AutoTaskManager(Node):
 
         # Subcribers:
         self.create_subscription(
-            FleetMachineState, "fleet_machine_state", self.fleet_machine_state_cb, 10
+            StationRequest,
+            "station_requests",
+            self.station_request_callback,
+            qos_profile=qos_profile_system_default,
         )
 
         self.create_subscription(
-            StationRequest, "station_requests", self.station_request_callback, 10
+            FleetMachineState, "fleet_machine_state", self.fleet_machine_state_cb, 10
         )
 
         # Timers:
-        self._pub_station_state_timer = self.create_timer(1.0, self._publish_station_states)
+        self.create_timer(1.0, self._publish_station_states)
+
+        self.get_logger().info("Beginning client, shut down with CTRL-C")
 
     def publish_delivery_requests(
         self, requester: str, start_time: int, params: list[DeliveryParams]
@@ -288,7 +296,7 @@ class AutoTaskManager(Node):
         self._delivery_request_pub.publish(msg)
 
     def station_request_callback(self, request: StationRequest):
-        self.get_logger().info(f"RECIVEEEEEEEEEEEEE: {request.station_name}")
+        self.get_logger().warn(f"da nhan duoc station request!")
         stationContext = None
         if request.station_type == StationRequest.TYPE_PICKUP:
             stationContext = self._pickup_context_dict.get(request.station_name, None)
@@ -335,6 +343,7 @@ class AutoTaskManager(Node):
         return
 
     def fleet_machine_state_cb(self, states: FleetMachineState):
+        self.get_logger().info(f"da nhan duoc fleet machine state!")
         state: MachineState
         for state in states.machines:
             if state.machine_name in self._mreq_context_dict:
@@ -398,6 +407,7 @@ class AutoTaskManager(Node):
                 pk_context = self._pickup_context_dict.get(station.station_name, None)
                 if pk_context is not None and not pk_context._is_occupied:
                     pk_context.set_state(station.mode)
+                    continue
 
                 do_context = self._dropoff_context_dict.get(station.station_name, None)
                 if do_context is not None and not do_context._is_occupied:
@@ -490,24 +500,24 @@ def main(argv=sys.argv):
     )
     parser.add_argument(
         "-n1",
-        "--nav_graph_1",
+        "--nav_graph_1_file",
         type=str,
         required=True,
-        help="Path to the nav_graph_1 for this autotask manager",
+        help="Path to the nav_graph_1_file for this autotask manager",
     )
     parser.add_argument(
         "-n2",
-        "--nav_graph_2",
+        "--nav_graph_2_file",
         type=str,
         required=True,
-        help="Path to the nav_graph_2 for this autotask manager",
+        help="Path to the nav_graph_2_file for this autotask manager",
     )
 
     args = parser.parse_args(args_without_ros[1:])
 
     config_path = args.config_file
-    nav_graph_1_path = args.nav_graph_1
-    nav_graph_2_path = args.nav_graph_2
+    nav_graph_1_path = args.nav_graph_1_file
+    nav_graph_2_path = args.nav_graph_2_file
 
     # Parse the yaml in Python to get the autotask_manager info
     with open(config_path, "r") as f:
@@ -522,11 +532,11 @@ def main(argv=sys.argv):
     time.sleep(1.0)
 
     autotask_manager = AutoTaskManager(config_yaml, [nav_graph_1, nav_graph_2])
-    autotask_manager.get_logger().info("Beginning client, shut down with CTRL-C")
     rclpy.spin(autotask_manager)
 
     autotask_manager.destroy_node()
     rclpy.shutdown()
+
     # executor = MultiThreadedExecutor()
     # executor.add_node(node=autotask_manager)
 
@@ -540,4 +550,4 @@ def main(argv=sys.argv):
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)

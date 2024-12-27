@@ -225,14 +225,14 @@ class FleetManager(Node):
             FleetState,
             "fleet_states",
             self.fleet_states_cb,
-            100,
+            10,
         )
 
         self.create_subscription(
             FleetMachineState,
             "fleet_machine_state",
             self.fleet_machine_state_cb,
-            100,
+            10,
         )
 
         transient_qos = QoSProfile(

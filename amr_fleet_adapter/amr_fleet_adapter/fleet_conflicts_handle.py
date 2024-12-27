@@ -106,7 +106,7 @@ class FleetConflictsHandle(Node):
             qos_profile=qos_profile_system_default,
         )
 
-        self.create_subscription(FleetState, "fleet_states", self.fleet_states_cb, 100)
+        self.create_subscription(FleetState, "fleet_states", self.fleet_states_cb, 10)
 
         self.create_timer(update_period, self._conflict_handle_cb)
 
