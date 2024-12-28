@@ -15,15 +15,17 @@
 # limitations under the License.
 
 import sys
+import time
 import argparse
 
 import rclpy
+import rclpy.time
 import rclpy.qos
 from rclpy.qos import qos_profile_system_default
 from rclpy.node import Node
 
 from machine_fleet_msgs.msg import StationRequest
-import rclpy.time
+from rclpy.utilities import get_rmw_implementation_identifier
 
 
 def main(argv=sys.argv):
@@ -58,7 +60,6 @@ def main(argv=sys.argv):
     )
 
     msg = StationRequest()
-    msg.time = node.get_clock().now().to_msg()
     msg.station_name = args.station_name
 
     if args.station_type == "type":
@@ -83,8 +84,13 @@ def main(argv=sys.argv):
         print("unrecognized request_mode, only use empty or filled please")
         return
 
+    # msg.time = node.get_clock().now().to_msg()
+
     rclpy.spin_once(node, timeout_sec=1.0)
-    pub.publish(msg)
+    while rclpy.ok():
+        msg.time = node.get_clock().now().to_msg()
+        pub.publish(msg)
+        time.sleep(1.0)
     rclpy.spin_once(node, timeout_sec=0.5)
     print("all done!")
     rclpy.shutdown()

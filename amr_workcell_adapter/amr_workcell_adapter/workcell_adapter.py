@@ -198,16 +198,6 @@ def main(argv=sys.argv):
     update_thread = threading.Thread(target=update_loop, args=())
     update_thread.start()
 
-    # Connect to the extra ROS2 topics that are relevant for the adapter
-    # ros_connections(node, machines, stations)
-
-    transient_qos = QoSProfile(
-        history=History.KEEP_LAST,
-        depth=1,
-        reliability=Reliability.RELIABLE,
-        durability=Durability.TRANSIENT_LOCAL,
-    )
-
     # Handle dispenser request
     def dispenser_request_cb(msg: DispenserRequest):
         if not msg.target_guid:

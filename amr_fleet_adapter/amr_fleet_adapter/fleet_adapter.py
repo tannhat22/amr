@@ -617,24 +617,8 @@ class RobotAdapter:
                 return
 
             self.cmd_id += 1
-            # Check if robot need undock:
-            if self.undock is not None:
-                self.node.get_logger().info(
-                    f"[{self.name}] received navigate command but "
-                    f"robot will undock '{self.undock.name}' first."
-                )
-                self.mission = MissionHandle(execution, undock=True, destination=destination)
-                self.attempt_cmd_until_success(
-                    cmd=self.perform_docking,
-                    args=(
-                        self.undock,
-                        True,
-                    ),
-                )
-                return
-
             # Check if robot need unlift:
-            elif self.unlift:
+            if self.unlift:
                 self.mission = MissionHandle(execution, destination=destination)
                 self.unlift = False
                 unliftDist = -self.dist(self.last_known_status.position[0:2], destination.xy)
@@ -659,6 +643,21 @@ class RobotAdapter:
                 )
                 self.mission = MissionHandle(execution, docking=True, destination=destination)
                 self.attempt_cmd_until_success(cmd=self.perform_docking, args=(destination,))
+                return
+            # Check if robot need undock:
+            elif self.undock is not None:
+                self.node.get_logger().info(
+                    f"[{self.name}] received navigate command but "
+                    f"robot will undock '{self.undock.name}' first."
+                )
+                self.mission = MissionHandle(execution, undock=True, destination=destination)
+                self.attempt_cmd_until_success(
+                    cmd=self.perform_docking,
+                    args=(
+                        self.undock,
+                        True,
+                    ),
+                )
                 return
 
             # Navigation normal:

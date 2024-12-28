@@ -34,7 +34,7 @@ rmf_fleet:
   finishing_request: "charge" # [park, charge, nothing]
   responsive_wait: True # Should responsive wait be on/off for the whole fleet by default? False if not specified.
   charger_server_running: False  # Server charge is running or not
-  distance_tolerance: 0.2 # Distance_tolerance to the next destination if destination is not last
+  distance_tolerance: 0.3 # Distance_tolerance to the next destination if destination is not last
   robots:
     # Here the user is expected to append the configuration for each robot in the fleet.
     amr004:
@@ -73,7 +73,7 @@ docks:
   clr55--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
-    tag_names: [tag_frame_0, tag_frame_2, tag_frame_3]
+    tag_names: [tag_frame_0, tag_frame_1, tag_frame_2]
 
   clr55--dropoff:
     go_in_dock: [rot:180]
@@ -82,7 +82,7 @@ docks:
   line55--pickup:
     go_in_dock: [rot:-90]
     go_out_dock: [mov:0.85]
-    tag_names: [tag_frame_0, tag_frame_2, tag_frame_3]
+    tag_names: [tag_frame_0, tag_frame_1, tag_frame_2]
 
   line55--dropoff:
     go_in_dock: [rot:90]
@@ -92,7 +92,7 @@ docks:
   clr56--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
-    tag_names: [tag_frame_4]
+    tag_names: [tag_frame_3]
 
   clr56--dropoff:
     go_in_dock: [rot:180]
@@ -100,7 +100,7 @@ docks:
 
   line56--pickup:
     go_out_dock: [mov:1.3, rot:-90]
-    tag_names: [tag_frame_4]
+    tag_names: [tag_frame_3]
     limits:
       rotate_angle: 30
       rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
@@ -115,55 +115,55 @@ docks:
   clr82--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_4]
 
   # LINE 83
   clr83--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_5]
 
   # LINE 84
   clr84--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_6]
 
   # LINE 85
   clr85--pickup:
     go_in_dock: [rot:-180]
     go_out_dock: [mov:0.77, rot:-45, mov:0.3, rot:45]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_7]
 
   # LINE 86
   clr86--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_8]
 
   # LINE 87
   clr87--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_9]
 
   # LINE 88
   clr88--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_10]
 
   # LINE 89
   clr89--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_11]
 
   # LINE 90
   clr90--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_12]
 
   # TTR dropoff tp3:
   clr001--dropoff:
@@ -189,7 +189,7 @@ docks:
   transit82_ttr--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:1.0]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_4]
 
   transit82_str--dropoff:
     response_state: transit82_str--pickup
@@ -200,7 +200,7 @@ docks:
   transit83_ttr--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:1.0]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_5]
 
   transit83_str--dropoff:
     response_state: transit83_str--pickup
@@ -211,7 +211,7 @@ docks:
   transit84_ttr--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:1.0]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_6]
 
   transit84_str--dropoff:
     response_state: transit84_str--pickup
@@ -222,7 +222,7 @@ docks:
   transit85_ttr--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:1.0]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_7]
 
   transit85_str--dropoff:
     response_state: transit85_str--pickup
@@ -233,7 +233,7 @@ docks:
   transit86_ttr--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:1.0]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_8]
 
   transit86_str--dropoff:
     response_state: transit86_str--pickup
@@ -244,7 +244,7 @@ docks:
   transit87_ttr--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:1.0]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_9]
 
   transit87_str--dropoff:
     response_state: transit87_str--pickup
@@ -255,7 +255,7 @@ docks:
   transit88_ttr--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:1.0]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_10]
 
   transit88_str--dropoff:
     response_state: transit88_str--pickup
@@ -266,7 +266,7 @@ docks:
   transit89_ttr--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:1.0]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_11]
 
   transit89_str--dropoff:
     response_state: transit89_str--pickup
@@ -277,7 +277,7 @@ docks:
   transit90_ttr--pickup:
     go_in_dock: [rot:180]
     go_out_dock: [mov:1.0]
-    tag_names: [tag_frame_1]
+    tag_names: [tag_frame_12]
 
   transit90_str--dropoff:
     response_state: transit90_str--pickup

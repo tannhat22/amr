@@ -132,13 +132,6 @@ class WorkCellManager(Node):
             10,
         )
 
-        transient_qos = QoSProfile(
-            history=History.KEEP_LAST,
-            depth=1,
-            reliability=Reliability.RELIABLE,
-            durability=Durability.TRANSIENT_LOCAL,
-        )
-
         self.machine_req_pub = self.create_publisher(
             MachineRequest,
             "machine_requests",

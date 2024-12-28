@@ -162,7 +162,7 @@ class AutoTaskManager(Node):
     def __init__(self, config, nav_graphs):
         super().__init__("autotask_manager")
 
-        cb_group = MutuallyExclusiveCallbackGroup()
+        # cb_group = MutuallyExclusiveCallbackGroup()
 
         self._pickup_context_dict = {}
         self._dropoff_context_dict = {}
@@ -264,25 +264,30 @@ class AutoTaskManager(Node):
 
         # Publishers:
         self._delivery_request_pub = self.create_publisher(
-            DeliveryRequest, "amr_delivery_requests", 10
+            DeliveryRequest, "/amr_delivery_requests", qos_profile=qos_profile_system_default
         )
 
-        self._station_state_pub = self.create_publisher(FleetStationState, "station_states", 10)
+        self.station_state_pub = self.create_publisher(
+            FleetStationState, "/station_states", qos_profile=qos_profile_system_default
+        )
 
         # Subcribers:
         self.create_subscription(
             StationRequest,
-            "station_requests",
+            "/station_requests",
             self.station_request_callback,
             qos_profile=qos_profile_system_default,
         )
 
         self.create_subscription(
-            FleetMachineState, "fleet_machine_state", self.fleet_machine_state_cb, 10
+            FleetMachineState,
+            "/fleet_machine_state",
+            self.fleet_machine_state_cb,
+            qos_profile=qos_profile_system_default,
         )
 
         # Timers:
-        self.create_timer(1.0, self._publish_station_states)
+        self.create_timer(1.0, self.publish_station_states)
 
         self.get_logger().info("Beginning client, shut down with CTRL-C")
 
@@ -343,7 +348,6 @@ class AutoTaskManager(Node):
         return
 
     def fleet_machine_state_cb(self, states: FleetMachineState):
-        self.get_logger().info(f"da nhan duoc fleet machine state!")
         state: MachineState
         for state in states.machines:
             if state.machine_name in self._mreq_context_dict:
@@ -413,7 +417,7 @@ class AutoTaskManager(Node):
                 if do_context is not None and not do_context._is_occupied:
                     do_context.set_state(station.mode)
 
-    def _publish_station_states(self):
+    def publish_station_states(self):
         current_time = self.get_clock().now().to_msg()
         pickup_stations = []
         dropoff_stations = []
@@ -480,7 +484,7 @@ class AutoTaskManager(Node):
         msg.time = current_time
         msg.pickup_stations = pickup_stations
         msg.dropoff_stations = dropoff_stations
-        self._station_state_pub.publish(msg)
+        self.station_state_pub.publish(msg)
 
 
 def main(argv=sys.argv):
