@@ -3,12 +3,22 @@
 
 TaskRequester:
   machines:
-    # machine001:
+    station_clr_tp2:
+        mode_operation: "station"
+        station_names: ["clr001--dropoff", "clr002--dropoff",
+                        "clr003--dropoff", "clr004--dropoff",
+                        "clr005--dropoff"]
+
+    # station_clr_tp2:
+    #     mode_operation: "station"
     #     sku: "RF370CB"
     #     dispenser: "wp1--mpickup"
     #     ingestor: "wp1--dropoff"
     #     pickup_stations: ["pk1","pk2","pk3"]
     #     dropoff_stations: ["do1","do2","do3"]
+    #     station_names: ["clr001--dropoff", "clr002--dropoff",
+    #                     "clr003--dropoff", "clr004--dropoff",
+    #                     "clr005--dropoff"]
   stations:
     # LINE 82
     transit82_str--pickup:

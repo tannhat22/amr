@@ -18,12 +18,12 @@ def generate_launch_description():
                 respawn=True,
                 parameters=[
                     {
-                        "fleet_name": "amr_tayrua",
-                        "machine_names": ["machine001"],
+                        "fleet_name": "station",
+                        "machine_names": ["station_clr_tp2"],
                         "fleet_state_topic": "fleet_machine_state",
                         "machine_request_topic": "adapter_machine_requests",
                         "station_request_topic": "adapter_station_requests",
-                        "dds_domain": 63,
+                        "dds_domain": 53,
                         "dds_machine_state_topic": "machine_state",
                         "dds_machine_request_topic": "machine_request",
                         "dds_station_request_topic": "station_request",

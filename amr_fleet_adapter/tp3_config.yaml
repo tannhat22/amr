@@ -79,6 +79,9 @@ docks:
 
   line82--dropoff:
     go_out_dock: [mov:0.5]
+    limits:
+      rotate_angle: 90
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   transit82_str--pickup:
     go_in_dock: [rot:180]
@@ -117,6 +120,9 @@ docks:
 
   line84--dropoff:
     go_out_dock: [mov:0.5]
+    limits:
+      rotate_angle: 90
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   transit84_str--pickup:
     go_in_dock: [rot:180]
@@ -171,8 +177,8 @@ docks:
 
   # LINE 87
   line87--pickup:
-    go_in_dock: [rot:180]
-    go_out_dock: [mov:0.77, rot:-40, mov:0.6, rot:40]
+    go_in_dock: [rot:-90]
+    go_out_dock: [mov:0.77, rot:-60, mov:-0.35, rot:-30]
     tag_names: [tag_frame_9]
     limits:
       rotate_angle: 45
@@ -226,8 +232,8 @@ docks:
 
   # LINE 90
   line90--pickup:
-    go_in_dock: [rot:90]
-    go_out_dock: [mov:0.77, rot:30, mov:0.85]
+    go_in_dock: [rot:180]
+    go_out_dock: [mov:0.77]
     tag_names: [tag_frame_12]
 
   line90--dropoff:
@@ -315,7 +321,7 @@ vertexs:
   # transit89_str_PKFD: -1.57199
   # transit89_ttr_DOFD: -1.57199
   # LINE 90
-  line90_PKFD: 3.14
+  # line90_PKFD: 3.14
   line90_DOFD: -1.57199
   # transit90_str_PKFD: -1.57199
   # transit90_ttr_DOFD: -1.57199

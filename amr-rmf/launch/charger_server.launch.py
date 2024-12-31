@@ -21,7 +21,7 @@ def generate_launch_description():
                         "fleet_name": "amr_tayrua",
                         "fleet_state_topic": "fleet_charger_state",
                         "charger_request_topic": "charger_request",
-                        "dds_domain": 53,
+                        "dds_domain": 63,
                         "dds_charger_state_topic": "charger_state",
                         "dds_charger_request_topic": "charger_request",
                         "update_state_frequency": 2.0,

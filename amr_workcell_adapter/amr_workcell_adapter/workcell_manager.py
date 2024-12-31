@@ -293,10 +293,10 @@ class WorkCellManager(Node):
                         machine.last_ingestor_completed_request = completed_request
                         machine.last_ingestor_mode_req = None
 
-            else:
-                self.get_logger().warn(
-                    f'Detect machine "{machineMsg.machine_name}" is not in config file, pleascheck!'
-                )
+            # else:
+            #     self.get_logger().warn(
+            #         f'Detect machine "{machineMsg.machine_name}" is not in config file, pleascheck!'
+            #     )
 
     def get_machine_state(self, machine: State, machine_name):
         data = {}
