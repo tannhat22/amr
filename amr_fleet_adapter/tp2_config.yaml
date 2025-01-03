@@ -37,6 +37,8 @@ rmf_fleet:
   distance_tolerance: 0.3 # Distance_tolerance to the next destination if destination is not last
   robots:
     # Here the user is expected to append the configuration for each robot in the fleet.
+    amr003:
+      charger: "charger004--charge"
     amr004:
       charger: "charger001--charge"
     amr005:
@@ -288,6 +290,9 @@ docks:
   charger001--charge:
     go_out_dock: [mov:-0.7]
 
+  charger004--charge:
+    go_out_dock: [mov:-0.7]
+
   # full dock config:
   # dock_name:
   #   machine_name: nqvlm104
@@ -365,3 +370,6 @@ vertexs:
   # transit88_str_DOFD: 1.57199
   # transit89_str_DOFD: 1.57199
   # transit90_str_DOFD: 1.57199
+
+  park_tamthoi: 1.57199
+
