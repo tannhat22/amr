@@ -7,8 +7,8 @@ rmf_fleet:
     linear: [0.5, 0.9] # velocity, acceleration
     angular: [0.5, 1.0] # velocity, acceleration
   profile: # Robot profile is modelled as a circle
-    footprint: 0.5 # radius in m
-    vicinity: 0.6 # radius in m
+    footprint: 0.45 # radius in m
+    vicinity: 0.5 # radius in m
   reversible: False # whether robots in this fleet can reverse
   battery_system:
     voltage: 24.0 # V
@@ -88,7 +88,7 @@ docks:
 
   transit82_ttr--dropoff:
     response_state: transit82_ttr--pickup
-    # go_in_dock: [rot:180]
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 83
@@ -107,7 +107,7 @@ docks:
 
   transit83_ttr--dropoff:
     response_state: transit83_ttr--pickup
-    # go_in_dock: [rot:180]
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 84
@@ -129,7 +129,7 @@ docks:
 
   transit84_ttr--dropoff:
     response_state: transit84_ttr--pickup
-    # go_in_dock: [rot:180]
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 85
@@ -148,7 +148,7 @@ docks:
 
   transit85_ttr--dropoff:
     response_state: transit85_ttr--pickup
-    # go_in_dock: [rot:180]
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 86
@@ -170,7 +170,7 @@ docks:
 
   transit86_ttr--dropoff:
     response_state: transit86_ttr--pickup
-    # go_in_dock: [rot:180]
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 87
@@ -192,7 +192,7 @@ docks:
 
   transit87_ttr--dropoff:
     response_state: transit87_ttr--pickup
-    # go_in_dock: [rot:180]
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 88
@@ -203,7 +203,7 @@ docks:
 
   transit88_ttr--dropoff:
     response_state: transit88_ttr--pickup
-    # go_in_dock: [rot:180]
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 89
@@ -225,7 +225,7 @@ docks:
 
   transit89_ttr--dropoff:
     response_state: transit89_ttr--pickup
-    # go_in_dock: [rot:180]
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # LINE 90
@@ -244,7 +244,7 @@ docks:
 
   transit90_ttr--dropoff:
     response_state: transit90_ttr--pickup
-    # go_in_dock: [rot:180]
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
 
   # Chargers 
@@ -282,32 +282,32 @@ vertexs:
   line82_PKFD: -1.57199
   line82_DOFD: 1.57199
   # transit82_str_PKFD: -1.57199
-  transit82_ttr_DOFD: -1.57199
+  # transit82_ttr_DOFD: -1.57199
   # LINE 83
   line83_PKFD: 1.57199
   line83_DOFD: -1.57199
   # transit83_str_PKFD: -1.57199
-  transit83_ttr_DOFD: -1.57199
+  # transit83_ttr_DOFD: -1.57199
   # LINE 84
   line84_PKFD: -1.57199
   line84_DOFD: 1.57199
   # transit84_str_PKFD: -1.57199
-  transit84_ttr_DOFD: -1.57199
+  # transit84_ttr_DOFD: -1.57199
   # LINE 85
   line85_PKFD: 1.57199
   line85_DOFD: -1.57199
   # transit85_str_PKFD: -1.57199
-  transit85_ttr_DOFD: -1.57199
+  # transit85_ttr_DOFD: -1.57199
   # LINE 86
   line86_PKFD: 1.57199
   line86_DOFD: -1.57199
   # transit86_str_PKFD: -1.57199
-  transit86_ttr_DOFD: -1.57199
+  # transit86_ttr_DOFD: -1.57199
   # LINE 87
   line87_PKFD: 1.57199
   line87_DOFD: -1.57199
   # transit87_str_PKFD: -1.57199
-  transit87_ttr_DOFD: -1.57199
+  # transit87_ttr_DOFD: -1.57199
   # LINE 88
   # transit88_str_PKFD: -1.57199
   # transit88_ttr_DOFD: -1.57199
@@ -315,12 +315,12 @@ vertexs:
   line89_PKFD: -1.57199
   line89_DOFD:  1.57199
   # transit89_str_PKFD: -1.57199
-  transit89_ttr_DOFD: -1.57199
+  # transit89_ttr_DOFD: -1.57199
   # LINE 90
   # line90_PKFD: 3.14
   line90_DOFD: -1.57199
   # transit90_str_PKFD: -1.57199
-  transit90_ttr_DOFD: -1.57199
+  # transit90_ttr_DOFD: -1.57199
 
   rf370cb_waiting_01: 0.0
   rf370cb_waiting_02: 0.0
