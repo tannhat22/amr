@@ -1,83 +1,103 @@
 import matplotlib.pyplot as plt
-import random
+import numpy as np
 
 
-class RobotMonitor:
-    def __init__(self):
-        self.fig, self.axs = plt.subplots(2, 2, figsize=(10, 8))  # Giả sử có 4 tầng, tạo grid 2x2
-        self.robot_positions = {
-            "level_1": [],
-            "level_2": [],
-            "level_3": [],
-            "level_4": [],
-        }
-        self.level_axes = {
-            "level_1": self.axs[0, 0],
-            "level_2": self.axs[0, 1],
-            "level_3": self.axs[1, 0],
-            "level_4": self.axs[1, 1],
-        }
-        for level, ax in self.level_axes.items():
-            ax.set_xlim(-100, 100)
-            ax.set_ylim(-100, 100)
-            ax.set_title(f"Level: {level}")
-            ax.set_xlabel("X")
-            ax.set_ylabel("Y")
-            ax.grid(True)
+def point_to_segment_distance(x, y, x1, y1, x2, y2):
+    px = x2 - x1
+    py = y2 - y1
+    norm = px * px + py * py
 
-    def update_positions(self, robot_states):
-        """
-        Cập nhật vị trí robot dựa trên dữ liệu mới.
-        robot_states: dict chứa thông tin robot {robot_name: (level, (x, y))}
-        """
-        for level in self.robot_positions:
-            self.robot_positions[level] = []  # Reset dữ liệu
+    if norm == 0:  # Nếu đoạn thẳng có độ dài bằng 0
+        return ((x - x1) ** 2 + (y - y1) ** 2) ** 0.5
 
-        # Phân loại robot theo tầng
-        for robot_name, (level, position) in robot_states.items():
-            if level in self.robot_positions:
-                self.robot_positions[level].append((robot_name, position))
+    u = ((x - x1) * px + (y - y1) * py) / norm
+    u = max(0, min(1, u))  # Giới hạn u trong [0, 1]
 
-        # Cập nhật đồ thị
-        for level, robots in self.robot_positions.items():
-            ax = self.level_axes[level]
-            ax.clear()  # Xóa dữ liệu cũ
-            ax.set_xlim(-100, 100)
-            ax.set_ylim(-100, 100)
-            ax.set_title(f"Level: {level}")
-            ax.set_xlabel("X")
-            ax.set_ylabel("Y")
-            ax.grid(True)
-            for robot_name, (x, y) in robots:
-                ax.plot(x, y, "o", label=robot_name)
-            if robots:
-                ax.legend()
+    closest_x = x1 + u * px
+    closest_y = y1 + u * py
 
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
+    return ((x - closest_x) ** 2 + (y - closest_y) ** 2) ** 0.5
 
 
-# Giả lập dữ liệu robot và cập nhật
-monitor = RobotMonitor()
+def get_look_ahead_point(start, destination, look_ahead_distance):
+    # Tính vector hướng
+    dx, dy = destination[0] - start[0], destination[1] - start[1]
+    length = np.sqrt(dx**2 + dy**2)
 
-# Mô phỏng dữ liệu
-import time
+    if length == 0:  # Nếu robot đã ở đích
+        return start
 
-robot_states = {
-    "robot1": ("level_1", (random.randint(-100, 100), random.randint(-100, 100))),
-    "robot2": ("level_2", (random.randint(-100, 100), random.randint(-100, 100))),
-    "robot3": ("level_3", (random.randint(-100, 100), random.randint(-100, 100))),
-    "robot4": ("level_4", (random.randint(-100, 100), random.randint(-100, 100))),
-}
+    # Tính điểm giới hạn khoảng nhìn trước
+    scale = min(look_ahead_distance / length, 1)
+    look_ahead_point = (start[0] + scale * dx, start[1] + scale * dy)
 
-plt.ion()  # Chế độ vẽ tương tác
-while True:
-    # Cập nhật dữ liệu mô phỏng
-    for robot in robot_states:
-        level, (x, y) = robot_states[robot]
-        robot_states[robot] = (
-            level,
-            (random.randint(-100, 100), random.randint(-100, 100)),
+    return look_ahead_point
+
+
+def plot_robots_and_paths(robot_positions, destinations, radii, look_ahead_distance=3.0):
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    # Vẽ robot và đường đi
+    for i, (pos, dest, radius) in enumerate(zip(robot_positions, destinations, radii)):
+        x1, y1 = pos
+        x2, y2 = dest
+
+        # Tính điểm giới hạn khoảng nhìn trước
+        look_ahead_point = get_look_ahead_point(pos, dest, look_ahead_distance)
+
+        # Vẽ robot
+        circle = plt.Circle((x1, y1), radius, color=f"C{i}", alpha=0.3)
+        ax.add_artist(circle)
+        ax.plot(x1, y1, "o", color=f"C{i}", label=f"Robot {i + 1}")
+
+        # Vẽ đường đến điểm giới hạn khoảng nhìn trước
+        ax.plot([x1, x2], [y1, y2], "--", color=f"C{i}")
+        ax.arrow(
+            x1,
+            y1,
+            look_ahead_point[0] - x1,
+            look_ahead_point[1] - y1,
+            head_width=0.5,
+            head_length=0.7,
+            length_includes_head=True,
+            fc="red",
+            ec="red",
+            # label="look_ahead_dist",
         )
-    monitor.update_positions(robot_states)
-    time.sleep(1)
+
+        # Vẽ vị trí đích đến và chú thích tọa độ
+        ax.plot(x2, y2, "x", color=f"C{i}", markersize=10, label=f"Destination {i + 1}")
+        ax.text(x2, y2, f"({x2}, {y2})", fontsize=9, color=f"C{i}", ha="left", va="bottom")
+
+    # Kiểm tra xung đột
+    for i, (pos1, dest1, radius1) in enumerate(zip(robot_positions, destinations, radii)):
+        for j, (pos2, dest2, radius2) in enumerate(zip(robot_positions, destinations, radii)):
+            if i >= j:
+                continue
+
+            # Tính điểm giới hạn khoảng nhìn trước của robot i
+            look_ahead_point = get_look_ahead_point(pos1, dest1, look_ahead_distance)
+
+            # Kiểm tra khoảng cách từ pos2 đến đoạn thẳng giữa pos1 và look_ahead_point
+            dist = point_to_segment_distance(
+                pos2[0], pos2[1], pos1[0], pos1[1], look_ahead_point[0], look_ahead_point[1]
+            )
+
+            # Điều kiện: robot cản trở phải nằm trong vùng va chạm
+            if dist < radius1:
+                print(f"Robot[{i}] pause for detect collision!")
+                ax.plot([pos1[0], pos2[0]], [pos1[1], pos2[1]], "r-", label="Potential Conflict")
+
+    ax.set_xlim(-10, 10)
+    ax.set_ylim(-10, 10)
+    ax.set_aspect("equal", adjustable="box")
+    ax.legend()
+    plt.show()
+
+
+# Dữ liệu đầu vào
+robot_positions = [(0, 0), (-2, -1), (3, 2)]
+destinations = [(5, 5), (5, 3), (6, 2)]
+radii = [0.6, 0.6, 0.6]
+
+plot_robots_and_paths(robot_positions, destinations, radii, look_ahead_distance=3.0)
