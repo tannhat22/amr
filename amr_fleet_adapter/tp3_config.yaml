@@ -90,6 +90,7 @@ docks:
     response_state: transit82_ttr--pickup
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
+    tag_names: [tag_frame_60]
 
   # LINE 83
   line83--pickup:
@@ -109,6 +110,7 @@ docks:
     response_state: transit83_ttr--pickup
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
+    tag_names: [tag_frame_61]
 
   # LINE 84
   line84--pickup:
@@ -131,6 +133,7 @@ docks:
     response_state: transit84_ttr--pickup
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
+    tag_names: [tag_frame_62]
 
   # LINE 85
   line85--pickup:
@@ -150,6 +153,7 @@ docks:
     response_state: transit85_ttr--pickup
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
+    tag_names: [tag_frame_63]
 
   # LINE 86
   line86--pickup:
@@ -172,6 +176,7 @@ docks:
     response_state: transit86_ttr--pickup
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
+    tag_names: [tag_frame_64]
 
   # LINE 87
   line87--pickup:
@@ -194,6 +199,7 @@ docks:
     response_state: transit87_ttr--pickup
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
+    tag_names: [tag_frame_65]
 
   # LINE 88
   transit88_str--pickup:
@@ -205,6 +211,7 @@ docks:
     response_state: transit88_ttr--pickup
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
+    tag_names: [tag_frame_66]
 
   # LINE 89
   line89--pickup:
@@ -227,6 +234,7 @@ docks:
     response_state: transit89_ttr--pickup
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
+    tag_names: [tag_frame_67]
 
   # LINE 90
   line90--pickup:
@@ -246,13 +254,14 @@ docks:
     response_state: transit90_ttr--pickup
     go_in_dock: [rot:180]
     go_out_dock: [mov:0.5]
+    tag_names: [tag_frame_68]
 
   # Chargers 
   charger003--charge:
-    go_out_dock: [mov:-0.7]
+    go_out_dock: [mov:-0.65]
 
   charger004--charge:
-    go_out_dock: [mov:-0.7]
+    go_out_dock: [mov:-0.65]
 
   # full dock config:
   # dock_name:

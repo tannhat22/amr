@@ -2,21 +2,25 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def point_to_segment_distance(x, y, x1, y1, x2, y2):
-    px = x2 - x1
-    py = y2 - y1
+def point_to_segment_path_distance(x, y, pos_x, pos_y, dest_x, dest_y):
+    px = dest_x - pos_x
+    py = dest_y - pos_y
     norm = px * px + py * py
 
     if norm == 0:  # Nếu đoạn thẳng có độ dài bằng 0
-        return ((x - x1) ** 2 + (y - y1) ** 2) ** 0.5
+        return ((x - pos_x) ** 2 + (y - pos_y) ** 2) ** 0.5
 
-    u = ((x - x1) * px + (y - y1) * py) / norm
+    u = ((x - pos_x) * px + (y - pos_y) * py) / norm
     u = max(0, min(1, u))  # Giới hạn u trong [0, 1]
 
-    closest_x = x1 + u * px
-    closest_y = y1 + u * py
+    # Nếu vị trí đến vật cản nằm phía sau vị trí robot hiện tại so với hướng đường đi hiện tại thì bỏ qua vật cản
+    if u == 0:
+        return [(pos_x, pos_y), 100.0]
 
-    return ((x - closest_x) ** 2 + (y - closest_y) ** 2) ** 0.5
+    closest_x = pos_x + u * px
+    closest_y = pos_y + u * py
+
+    return [(closest_x, closest_y), ((x - closest_x) ** 2 + (y - closest_y) ** 2) ** 0.5]
 
 
 def get_look_ahead_point(start, destination, look_ahead_distance):
@@ -47,11 +51,12 @@ def plot_robots_and_paths(robot_positions, destinations, radii, look_ahead_dista
 
         # Vẽ robot
         circle = plt.Circle((x1, y1), radius, color=f"C{i}", alpha=0.3)
+        ax.scatter(x1, y1, label=f"Robot {i + 1}", c=f"C{i}")
         ax.add_artist(circle)
-        ax.plot(x1, y1, "o", color=f"C{i}", label=f"Robot {i + 1}")
 
         # Vẽ đường đến điểm giới hạn khoảng nhìn trước
         ax.plot([x1, x2], [y1, y2], "--", color=f"C{i}")
+
         ax.arrow(
             x1,
             y1,
@@ -72,21 +77,33 @@ def plot_robots_and_paths(robot_positions, destinations, radii, look_ahead_dista
     # Kiểm tra xung đột
     for i, (pos1, dest1, radius1) in enumerate(zip(robot_positions, destinations, radii)):
         for j, (pos2, dest2, radius2) in enumerate(zip(robot_positions, destinations, radii)):
-            if i >= j:
+            if i == j:
                 continue
 
             # Tính điểm giới hạn khoảng nhìn trước của robot i
             look_ahead_point = get_look_ahead_point(pos1, dest1, look_ahead_distance)
 
             # Kiểm tra khoảng cách từ pos2 đến đoạn thẳng giữa pos1 và look_ahead_point
-            dist = point_to_segment_distance(
+            closest_point, dist = point_to_segment_path_distance(
                 pos2[0], pos2[1], pos1[0], pos1[1], look_ahead_point[0], look_ahead_point[1]
             )
 
+            print(f"Distance  from robot{i+1} to robot{j+1}: {dist}")
             # Điều kiện: robot cản trở phải nằm trong vùng va chạm
-            if dist < radius1:
-                print(f"Robot[{i}] pause for detect collision!")
-                ax.plot([pos1[0], pos2[0]], [pos1[1], pos2[1]], "r-", label="Potential Conflict")
+            if dist < radius1 + radius2:
+                print(f"Robot[{i+1}] pause for detect collision!")
+                ax.plot(
+                    closest_point[0],
+                    closest_point[1],
+                    "o",
+                    color=f"red",
+                    label=f"Collision {i + 1}",
+                )
+                # circle = plt.Circle(
+                #     (closest_point[0], closest_point[1]), radius, color=f"C{i}", alpha=0.3
+                # )
+                # ax.add_artist(circle)
+                # ax.plot([pos1[0], pos2[0]], [pos1[1], pos2[1]], "r-", label="Potential Conflict")
 
     ax.set_xlim(-10, 10)
     ax.set_ylim(-10, 10)
@@ -96,7 +113,7 @@ def plot_robots_and_paths(robot_positions, destinations, radii, look_ahead_dista
 
 
 # Dữ liệu đầu vào
-robot_positions = [(0, 0), (-2, -1), (3, 2)]
+robot_positions = [(0, 0), (0, -1), (3, 2)]
 destinations = [(5, 5), (5, 3), (6, 2)]
 radii = [0.6, 0.6, 0.6]
 

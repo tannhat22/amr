@@ -46,10 +46,8 @@ def generate_launch_description():
                 parameters=[
                     {
                         "update_frequency": 10.0,
-                        "width_conflict": 1.0,
-                        "height_conflict": 2.0,
-                        "front_extension": 1.0,
-                        "debug": False,
+                        "look_ahead_distance": 3.0,
+                        "debug": True,
                     }
                 ],
             ),

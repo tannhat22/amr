@@ -979,7 +979,7 @@ def ros_connections(node, robots: dict[str, RobotAdapter], fleet_handle):
             # if robot is None:
             #     return
             robot.finish_action()
-        elif msg.mode.mode == RobotMode.MODE_PAUSED:
+        elif msg.mode.mode == RobotMode.MODE_WAITING:
             robot.pause()
         elif msg.mode.mode == RobotMode.MODE_MOVING:
             robot.resume()

@@ -4,6 +4,7 @@ import yaml
 import math
 
 # import threading
+import numpy as np
 import matplotlib.pyplot as plt
 import rclpy
 from rclpy.node import Node
@@ -19,23 +20,16 @@ class State:
     def __init__(
         self,
         fleet_name: str = "",
+        vicinity: float = 0.0,
         state: RobotState = None,
         last_mode_request: RobotMode = None,
     ):
         self.fleet_name = fleet_name
+        self.vicinity = vicinity
         self.state = state
         self.last_mode_request = last_mode_request
         self.wait_HID = None
         self.wait_LID = []
-
-
-class Rectangle:
-    def __init__(self, front_left, front_right, back_left, back_right):
-        self.front_left = front_left
-        self.front_right = front_right
-        self.back_left = back_left
-        self.back_right = back_right
-        self.corners = [front_left, front_right, back_right, back_left]
 
 
 class PriotityCode(IntEnum):
@@ -58,22 +52,16 @@ class FleetConflictsHandle(Node):
 
         # Params:
         self.declare_parameter("update_frequency", 5.0)
-        self.declare_parameter("width_conflict", 1.0)
-        self.declare_parameter("height_conflict", 2.0)
-        self.declare_parameter("front_extension", 1.0)
+        self.declare_parameter("look_ahead_distance", 3.0)
         self.declare_parameter("debug", True)
 
         self.update_frequency = self.get_parameter("update_frequency").value
-        self.width_conflict = self.get_parameter("width_conflict").value
-        self.height_conflict = self.get_parameter("height_conflict").value
-        self.front_extension = self.get_parameter("front_extension").value
+        self.look_ahead_distance = self.get_parameter("look_ahead_distance").value
         self.debug = self.get_parameter("debug").value
 
         if self.debug:
             self.get_logger().info(f"update_frequency: {self.update_frequency}")
-            self.get_logger().info(f"width_conflict: {self.width_conflict}")
-            self.get_logger().info(f"height_conflict: {self.height_conflict}")
-            self.get_logger().info(f"front_extension: {self.front_extension}")
+            self.get_logger().info(f"look_ahead_distance: {self.look_ahead_distance}")
 
             # Chart
             self.fig, self.axs = plt.subplots(
@@ -89,8 +77,10 @@ class FleetConflictsHandle(Node):
             if config == "":
                 continue
 
+            fleet_name = config["rmf_fleet"]["name"]
+            vicinity = config["rmf_fleet"]["profile"]["vicinity"]
             for robot_name, robot_config in config["rmf_fleet"]["robots"].items():
-                self.robots[robot_name] = State(fleet_name=config["rmf_fleet"]["name"])
+                self.robots[robot_name] = State(fleet_name=fleet_name, vicinity=vicinity)
             self.robots_length = len(self.robots)
         assert self.robots_length > 0
 
@@ -113,66 +103,6 @@ class FleetConflictsHandle(Node):
     def dist(self, A: Location, B: Location):
         """Euclidian distance between A(x,y) and B(x,y)"""
         return math.sqrt((A.x - B.x) ** 2 + (A.y - B.y) ** 2)
-
-    def plot_rectangle(self, ax, corners, label):
-        x_vals = [corner[0] for corner in corners]
-        y_vals = [corner[1] for corner in corners]
-        x_vals.append(x_vals[0])
-        y_vals.append(y_vals[0])
-        ax.plot(x_vals, y_vals)
-
-    def plot_yaw_vector(self, ax, position: Location, length=1):
-        end_x = position.x + length * math.cos(position.yaw)
-        end_y = position.y + length * math.sin(position.yaw)
-        ax.arrow(
-            position.x,
-            position.y,
-            end_x - position.x,
-            end_y - position.y,
-            head_width=0.5,
-            head_length=0.7,
-            fc="red",
-            ec="red",
-            label="Yaw Direction",
-        )
-
-    def update_plot(self, robots_on_level: dict[str, State]):
-        # Tạo hoặc vẽ lại biểu đồ cho vị trí các robot
-        # Lặp qua các robot và vẽ biểu đồ cho chúng
-        for level, robots in robots_on_level.items():
-            ax = self.levels_ax[level]
-            ax.clear()
-            ax.set_title(f"LEVELS: [{level}]")
-            ax.set_xlabel("X")
-            ax.set_ylabel("Y")
-            # ax.set_xlim(-200, 200)
-            # ax.set_ylim(-200, 200)
-            ax.set_aspect("equal", adjustable="box")
-            ax.grid(True)
-
-            for robot in robots:
-                if robot.state is not None:
-                    x = robot.state.location.x
-                    y = robot.state.location.y
-                    name = robot.state.name
-
-                    # Vẽ điểm của robot
-                    ax.scatter(x, y, label=name)
-
-                    # Vẽ hình chữ nhật (hoặc mô hình di chuyển của robot)
-                    rect = self.calculate_rectangle(
-                        robot.state.location,
-                        self.width_conflict,
-                        self.height_conflict,
-                        self.front_extension,
-                    )
-                    self.plot_rectangle(ax, rect.corners, name)
-                    self.plot_yaw_vector(ax, robot.state.location, 1)
-
-            ax.legend()
-
-        self.fig.canvas.draw()  # Cập nhật biểu đồ
-        self.fig.canvas.flush_events()  # Đảm bảo sự kiện được thực thi
 
     def mode_request(self, fleet_name: str, robot_name: str, mode: int):
         msg = ModeRequest()
@@ -261,101 +191,67 @@ class FleetConflictsHandle(Node):
             )
         return result
 
-    # Hàm tính toán tích vô hướng của 2 vector
-    def dot_product(self, v1, v2):
-        return v1[0] * v2[0] + v1[1] * v2[1]
+    def point_to_segment_path_distance(
+        self, position: Location, destination: Location, check_point: Location
+    ):
+        px = destination.x - position.x
+        py = destination.y - position.y
+        norm = px * px + py * py
 
-    # Hàm chiếu các đỉnh của hình chữ nhật lên một trục và trả về interval (min, max)
-    def project_rectangle(self, rect: Rectangle, axis):
-        projections = [self.dot_product(corner, axis) for corner in rect.corners]
-        return (min(projections), max(projections))
+        if norm == 0:
+            return ((check_point.x - position.x) ** 2 + (check_point.y - position.y) ** 2) ** 0.5
 
-    # Hàm kiểm tra sự giao nhau giữa 2 hình chữ nhật với phương pháp SAT
-    def rectangles_intersect(self, rect1: Rectangle, rect2: Rectangle):
-        for rect in [rect1, rect2]:
-            for i in range(4):
-                p1 = rect.corners[i]
-                p2 = rect.corners[(i + 1) % 4]
-                edge = (p2[0] - p1[0], p2[1] - p1[1])
-                axis = self.perpendicular(edge)
+        u = ((check_point.x - position.x) * px + (check_point.y - position.y) * py) / norm
+        u = max(0, min(1, u))
 
-                proj1 = self.project_rectangle(rect1, axis)
-                proj2 = self.project_rectangle(rect2, axis)
-                if proj1[1] < proj2[0] or proj2[1] < proj1[0]:
-                    return False
-        return True
+        # Nếu vị trí đến vật cản nằm phía sau vị trí robot hiện tại so với hướng đường đi hiện tại thì bỏ qua vật cản
+        if u == 0:
+            return 100.0
 
-    def perpendicular(self, v):
-        return (-v[1], v[0])
+        closest_x = position.x + u * px
+        closest_y = position.y + u * py
+
+        return ((check_point.x - closest_x) ** 2 + (check_point.y - closest_y) ** 2) ** 0.5
+
+    def get_look_ahead_point(
+        self, position: Location, destination: Location, look_ahead_distance: float
+    ):
+        # Tính vector hướng
+        dx, dy = destination.x - position.x, destination.y - position.y
+        length = np.sqrt(dx**2 + dy**2)
+
+        if length == 0:  # Nếu robot đã ở đích
+            return position
+
+        # Tính điểm giới hạn khoảng nhìn trước
+        scale = min(look_ahead_distance / length, 1)
+        look_ahead_point = Location()
+        look_ahead_point.x = position.x + scale * dx
+        look_ahead_point.y = position.y + scale * dy
+        return look_ahead_point
 
     def calculate_midpoint(self, point1, point2):
         midpoint_x = (point1[0] + point2[0]) / 2
         midpoint_y = (point1[1] + point2[1]) / 2
         return (midpoint_x, midpoint_y)
 
-    def calculate_rectangle(self, position: Location, width, height, front_extension):
-        cos_yaw = math.cos(position.yaw)
-        sin_yaw = math.sin(position.yaw)
-
-        front_left = (
-            position.x - (width / 2) * sin_yaw + (height / 2) * cos_yaw,
-            position.y + (width / 2) * cos_yaw + (height / 2) * sin_yaw,
-        )
-        front_right = (
-            position.x + (width / 2) * sin_yaw + (height / 2) * cos_yaw,
-            position.y - (width / 2) * cos_yaw + (height / 2) * sin_yaw,
-        )
-        back_left = (
-            position.x - (width / 2) * sin_yaw - (height / 2) * cos_yaw,
-            position.y + (width / 2) * cos_yaw - (height / 2) * sin_yaw,
-        )
-        back_right = (
-            position.x + (width / 2) * sin_yaw - (height / 2) * cos_yaw,
-            position.y - (width / 2) * cos_yaw - (height / 2) * sin_yaw,
-        )
-        midpoint_front = self.calculate_midpoint(front_left, front_right)
-
-        front_left_extension = (
-            midpoint_front[0] - (width / 2) * sin_yaw + front_extension * cos_yaw,
-            midpoint_front[1] + (width / 2) * cos_yaw + front_extension * sin_yaw,
-        )
-        front_right_extension = (
-            midpoint_front[0] + (width / 2) * sin_yaw + front_extension * cos_yaw,
-            midpoint_front[1] - (width / 2) * cos_yaw + front_extension * sin_yaw,
-        )
-        rectangle = Rectangle(front_left_extension, front_right_extension, back_left, back_right)
-        return rectangle
-
-    # Kiểm tra xem robot nào đang có xu hướng đâm vào robot kia
+    # Kiểm tra robot có va chạm với robot khác trên đường di chuyển trong phạm vi look ahead không
     def check_collision_direction(
-        self, robot_name1: str, position1: Location, robot_name2: str, position2: Location
+        self,
+        robot1_state: State,
+        robot1_look_ahead_point: Location,
+        robot2_state: State,
     ):
-        # Tính toán vector hướng di chuyển của robot 1
-        yaw_vector1 = (math.cos(position1.yaw), math.sin(position1.yaw))
-        # Tính toán vector hướng di chuyển của robot 2
-        yaw_vector2 = (math.cos(position2.yaw), math.sin(position2.yaw))
+        pos1 = robot1_state.state.location
+        pos2 = robot2_state.state.location
 
-        # Tính khoảng cách giữa các robot
-        distance_x = position2.x - position1.x
-        distance_y = position2.y - position1.y
+        # Kiểm tra khoảng cách từ pos2 đến đoạn thẳng giữa pos1 và look_ahead_point
+        dist = self.point_to_segment_path_distance(pos1, robot1_look_ahead_point, pos2)
 
-        # Kiểm tra hướng di chuyển của robot 1 có hướng về robot 2 không
-        dot1 = self.dot_product(yaw_vector1, (distance_x, distance_y))
-        dot2 = self.dot_product(yaw_vector2, (-distance_x, -distance_y))
+        if dist < robot1_state.vicinity + robot2_state.vicinity:
+            return True
 
-        # Nếu dot_product là dương, robot có xu hướng di chuyển về phía robot kia
-        if dot1 > 0 and dot2 > 0:
-            self.get_logger().info(
-                f"[{robot_name1}] và [{robot_name2}] đang có xu hướng đâm vào nhau"
-            )
-            return 3
-        elif dot1 > 0:
-            self.get_logger().info(f"[{robot_name1}] có xu hướng đâm vào [{robot_name2}]")
-            return 1
-        elif dot2 > 0:
-            self.get_logger().info(f"[{robot_name2}] có xu hướng đâm vào [{robot_name1}]")
-            return 2
-        return 0
+        return False
 
     def calc_path_distance(self, position: Location, path: list[Location]):
         a = len(path)
@@ -371,178 +267,113 @@ class FleetConflictsHandle(Node):
             return dist
 
     def _conflict_handle_cb(self):
-        robot_on_levels = {}
+        # if self.debug:
+        for level, ax in self.levels_ax.items():
+            ax.clear()
+            ax.set_title(f"LEVELS: [{level}]")
+            ax.set_xlabel("X")
+            ax.set_ylabel("Y")
+            ax.set_xlim(50, 80)
+            ax.set_ylim(-10, -40)
+            ax.set_aspect("equal", adjustable="box")
+            ax.grid(True)
+
+        color_count = 0
         for robot1Name, robot1State in self.robots.items():
+            color_count += 1
             if robot1State.state is None:
                 continue
 
             robot1Level = robot1State.state.location.level_name
-            if self.debug and robot1Level != "":
-                if robot1Level not in robot_on_levels:
-                    robot_on_levels.update({robot1Level: [robot1State]})
-                else:
-                    robot_on_levels[robot1Level].append(robot1State)
 
-            robot1Mode = robot1State.state.mode.mode
-            if (
-                robot1Mode == RobotMode.MODE_IDLE
-                or robot1Mode == RobotMode.MODE_CHARGING
-                or robot1Mode == RobotMode.MODE_EMERGENCY
-                or robot1Mode == RobotMode.MODE_REQUEST_ERROR
-            ):
-                if len(robot1State.state.path) == 0:
-                    if robot1State.wait_HID is not None:
-                        self.robots[robot1State.wait_HID].wait_LID.remove(robot1Name)
-                        robot1State.wait_HID = None
-                        robot1State.last_mode_request = None
-                        self.get_logger().info(
-                            f"Robot [{robot1Name}] is not moving or pause will reset state!"
-                        )
+            ax = self.levels_ax[robot1Level]
+            x = robot1State.state.location.x
+            y = robot1State.state.location.y
+            # Vẽ robot
+            ax.scatter(x, y, label=robot1Name, c=f"C{color_count}")
+            circle = plt.Circle(
+                (x, y),
+                robot1State.vicinity,
+                color=f"C{color_count}",
+                alpha=0.3,
+            )
+            ax.add_artist(circle)
 
-                    if len(robot1State.wait_LID) != 0:
-                        for robot in robot1State.wait_LID:
-                            self.mode_request(
-                                fleet_name=self.robots[robot].fleet_name,
-                                robot_name=robot,
-                                mode=RobotMode.MODE_MOVING,
-                            )
-                            robot1State.wait_LID.remove(robot)
-                            self.robots[robot].wait_HID = None
-                            self.robots[robot].last_mode_request = None
-                            self.get_logger().info(
-                                f"Publish RESUME_ACTION for [{robot}] from conflicts handle!"
-                            )
-                continue
+            if len(robot1State.state.path) > 0:
+                pos1 = robot1State.state.location
+                dest1 = robot1State.state.path[-1]
+                look_ahead_point = self.get_look_ahead_point(pos1, dest1, self.look_ahead_distance)
 
-            for robot2Name, robot2State in self.robots.items():
-                if robot1Name == robot2Name or robot2State.state is None:
-                    continue
+                # Vẽ đoạn thẳng từ vị trí robot hiện tại đến đích của nó:
+                ax.plot([pos1.x, dest1.x], [pos1.y, dest1.y], "--", color=f"C{color_count}")
+                ax.arrow(
+                    pos1.x,
+                    pos1.y,
+                    look_ahead_point.x - pos1.x,
+                    look_ahead_point.y - pos1.y,
+                    head_width=0.5,
+                    head_length=0.7,
+                    length_includes_head=True,
+                    fc="red",
+                    ec="red",
+                )
+                # Vẽ vị trí đích đến và chú thích tên
+                ax.plot(
+                    dest1.x,
+                    dest1.y,
+                    "x",
+                    color=f"C{color_count}",
+                    markersize=10,
+                    label=f"Destination [{robot1Name}]",
+                )
 
-                robot2Mode = robot2State.state.mode.mode
-                # Kiểm tra xem 2 robot này có cùng tầng không:
-                if robot1Level == robot2State.state.location.level_name:
-                    posA = robot1State.state.location
-                    posB = robot2State.state.location
-                    if len(robot1State.state.path) > 0 and len(robot2State.state.path) > 0:
-                        rectA = self.calculate_rectangle(
-                            posA,
-                            self.width_conflict,
-                            self.height_conflict,
-                            self.front_extension,
-                        )
-                        rectB = self.calculate_rectangle(
-                            posB,
-                            self.width_conflict,
-                            self.height_conflict,
-                            self.front_extension,
-                        )
-                        # Kiểm tra 2 robot có xự xâm lấn vùng conflict hay không
-                        if self.rectangles_intersect(rectA, rectB):
-                            # Kiểm tra xem robot1 có dang di chuyển hay không:
-                            if robot1Mode == RobotMode.MODE_MOVING:
-                                if self.debug:
-                                    self.get_logger().warn(
-                                        f"Detect overlap zone conflict of [{robot1Name}]  with [{robot2Name}]!"
-                                    )
+                detect_obtacles = False
+                for robot2Name, robot2State in self.robots.items():
+                    if robot1Name == robot2Name or robot2State.state is None:
+                        continue
 
-                                if robot2Mode == RobotMode.MODE_MOVING:
-                                    checker = self.check_collision_direction(
-                                        robot1Name, posA, robot2Name, posB
-                                    )
-                                    prioHighRobot, prioLowRobot = [robot1State, robot2State]
-                                    if checker == 0:
-                                        continue
-                                    elif checker == 1:
-                                        prioHighRobot = robot2State
-                                        prioLowRobot = robot1State
-                                    elif checker == 2:
-                                        prioHighRobot = robot1State
-                                        prioLowRobot = robot2State
-                                    elif checker == 3:
-                                        # Robot nào có độ ưu tiên thấp hơn sẽ phải chuyển sang chế độ tạm dừng
-                                        prioHID = self.check_priority(robot1State, robot2State)
-                                        if prioHID == robot1Name:
-                                            prioHighRobot = robot1State
-                                            prioLowRobot = robot2State
-                                        else:
-                                            prioHighRobot = robot2State
-                                            prioLowRobot = robot1State
-
-                                    if (
-                                        prioHighRobot.last_mode_request is None
-                                        and prioLowRobot.last_mode_request is None
-                                        and prioLowRobot.last_mode_request != RobotMode.MODE_PAUSED
-                                    ):
-                                        # Yêu cầu robot không được ưu tiên sẽ chuyển sang MODE_PAUSED
-                                        self.mode_request(
-                                            fleet_name=prioLowRobot.fleet_name,
-                                            robot_name=prioLowRobot.state.name,
-                                            mode=RobotMode.MODE_PAUSED,
-                                        )
-                                        prioLowRobot.last_mode_request = RobotMode.MODE_PAUSED
-                                        prioLowRobot.wait_HID = prioHighRobot.state.name
-                                        prioHighRobot.wait_LID.append(prioLowRobot.state.name)
-                                        self.get_logger().warn(
-                                            f"Publish PAUSED_ACTION for [{prioLowRobot.state.name}] (waiting [{prioHighRobot.state.name}])!"
-                                        )
-
-                                # Nếu robot2 dang ở chế độ tạm dừng bởi wait_HID khác thì robot1 cũng
-                                # sẽ chuyển sang chế độ tạm dừng để tránh xung đột với wait_HID của robot2
-                                elif (
-                                    robot2Mode == RobotMode.MODE_PAUSED
-                                    and robot2State.wait_HID is not None
-                                    and robot2State.wait_HID != robot1Name
-                                    and robot1State.last_mode_request != RobotMode.MODE_PAUSED
-                                ):
-                                    self.mode_request(
-                                        fleet_name=robot1State.fleet_name,
-                                        robot_name=robot1Name,
-                                        mode=RobotMode.MODE_PAUSED,
-                                    )
-                                    robot1State.last_mode_request = RobotMode.MODE_PAUSED
-                                    robot1State.wait_HID = robot2Name
-                                    robot2State.wait_LID.append(robot1Name)
-                                    self.get_logger().warn(
-                                        f"Publish PAUSED_ACTION for [{robot1Name}] (waiting [{robot2Name}])!"
-                                    )
-                        # Không có sự xâm lấn, nếu robot1 đang chờ robot2 hãy giải phóng robot1
-                        elif (
-                            robot1Mode == RobotMode.MODE_PAUSED
-                            and robot1State.wait_HID == robot2Name
-                            and robot1State.last_mode_request is not None
+                    # Kiểm tra xem 2 robot này có cùng tầng không:
+                    if robot1Level == robot2State.state.location.level_name:
+                        if self.check_collision_direction(
+                            robot1State, look_ahead_point, robot2State
                         ):
-                            self.mode_request(
-                                fleet_name=robot1State.fleet_name,
-                                robot_name=robot1Name,
-                                mode=RobotMode.MODE_MOVING,
-                            )
-                            robot2State.wait_LID.remove(robot1Name)
-                            robot1State.last_mode_request = None
-                            robot1State.wait_HID = None
-                            self.get_logger().info(
-                                f"Publish RESUME_ACTION for [{robot1Name}] from conflicts handle!"
-                            )
+                            if robot1Name == robot2State.wait_HID:
+                                continue
 
-                # Nếu robot khác tầng với nhau, hãy kiểm tra nếu robot1
-                # đang tạm dừng để chờ robot2 hãy giải phóng robot1
-                elif (
-                    robot1Mode == RobotMode.MODE_PAUSED
-                    and robot1State.wait_HID == robot2Name
-                    and robot1State.last_mode_request is not None
-                ):
+                            detect_obtacles = True
+                            if robot1State.last_mode_request is None:
+                                self.mode_request(
+                                    fleet_name=robot1State.fleet_name,
+                                    robot_name=robot1Name,
+                                    mode=RobotMode.MODE_WAITING,
+                                )
+                                robot1State.last_mode_request = RobotMode.MODE_WAITING
+                                robot1State.wait_HID = robot2Name
+                                self.get_logger().warn(
+                                    f"Robot[{robot1Name}] pause for detect collision!"
+                                )
+                            break
+
+                if robot1State.last_mode_request == RobotMode.MODE_WAITING and not detect_obtacles:
                     self.mode_request(
                         fleet_name=robot1State.fleet_name,
                         robot_name=robot1Name,
                         mode=RobotMode.MODE_MOVING,
                     )
-                    robot2State.wait_LID.remove(robot1Name)
                     robot1State.last_mode_request = None
                     robot1State.wait_HID = None
                     self.get_logger().info(
-                        f"Publish RESUME_ACTION for [{robot1Name}] from conflicts handle!"
+                        f"Robot[{robot1Name}] resume moving because obstacles is clearing!"
                     )
-        if len(robot_on_levels) != 0:
-            self.update_plot(robot_on_levels)
+            else:
+                robot1State.last_mode_request = None
+                robot1State.wait_HID = None
+
+        if self.debug:
+            for level, ax in self.levels_ax.items():
+                ax.legend()
+            self.fig.canvas.draw()  # Cập nhật biểu đồ
+            self.fig.canvas.flush_events()  # Đảm bảo sự kiện được thực thi
 
     def fleet_states_cb(self, msg: FleetState):
         robotsData = msg.robots
