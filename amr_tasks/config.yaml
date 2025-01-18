@@ -26,10 +26,10 @@ TaskRequester:
         sku: "RF370CB_STR"
         pickup_station: transit82_str--pickup
         dropoff_stations: ["line82--dropoff"]
-      step2:
-        sku: "RF370CB_TTR"
-        pickup_station: line82--pickup
-        dropoff_stations: ["transit82_ttr--dropoff"]
+      # step2:
+      #   sku: "RF370CB_TTR"
+      #   pickup_station: line82--pickup
+      #   dropoff_stations: ["transit82_ttr--dropoff"]
 
     transit82_ttr--pickup:
       step1:
@@ -43,10 +43,10 @@ TaskRequester:
         sku: "RF370CB_STR"
         pickup_station: transit83_str--pickup
         dropoff_stations: ["line83--dropoff"]
-      step2:
-        sku: "RF370CB_TTR"
-        pickup_station: line83--pickup
-        dropoff_stations: ["transit83_ttr--dropoff"]
+      # step2:
+      #   sku: "RF370CB_TTR"
+      #   pickup_station: line83--pickup
+      #   dropoff_stations: ["transit83_ttr--dropoff"]
 
     transit83_ttr--pickup:
       step1:
@@ -60,10 +60,10 @@ TaskRequester:
         sku: "RF370CB_STR"
         pickup_station: transit84_str--pickup
         dropoff_stations: ["line84--dropoff"]
-      step2:
-        sku: "RF370CB_TTR"
-        pickup_station: line84--pickup
-        dropoff_stations: ["transit84_ttr--dropoff"]
+      # step2:
+      #   sku: "RF370CB_TTR"
+      #   pickup_station: line84--pickup
+      #   dropoff_stations: ["transit84_ttr--dropoff"]
 
     transit84_ttr--pickup:
       step1:
@@ -77,10 +77,10 @@ TaskRequester:
         sku: "RF370CB_STR"
         pickup_station: transit85_str--pickup
         dropoff_stations: ["line85--dropoff"]
-      step2:
-        sku: "RF370CB_TTR"
-        pickup_station: line85--pickup
-        dropoff_stations: ["transit85_ttr--dropoff"]
+      # step2:
+      #   sku: "RF370CB_TTR"
+      #   pickup_station: line85--pickup
+      #   dropoff_stations: ["transit85_ttr--dropoff"]
 
     transit85_ttr--pickup:
       step1:
@@ -94,10 +94,10 @@ TaskRequester:
         sku: "RF370CB_STR"
         pickup_station: transit86_str--pickup
         dropoff_stations: ["line86--dropoff"]
-      step2:
-        sku: "RF370CB_TTR"
-        pickup_station: line86--pickup
-        dropoff_stations: ["transit86_ttr--dropoff"]
+      # step2:
+      #   sku: "RF370CB_TTR"
+      #   pickup_station: line86--pickup
+      #   dropoff_stations: ["transit86_ttr--dropoff"]
 
     transit86_ttr--pickup:
       step1:
@@ -111,10 +111,10 @@ TaskRequester:
         sku: "RF370CB_STR"
         pickup_station: transit87_str--pickup
         dropoff_stations: ["line87--dropoff"]
-      step2:
-        sku: "RF370CB_TTR"
-        pickup_station: line87--pickup
-        dropoff_stations: ["transit87_ttr--dropoff"]
+      # step2:
+      #   sku: "RF370CB_TTR"
+      #   pickup_station: line87--pickup
+      #   dropoff_stations: ["transit87_ttr--dropoff"]
 
     transit87_ttr--pickup:
       step1:
@@ -128,10 +128,10 @@ TaskRequester:
         sku: "RF370CB_STR"
         pickup_station: transit89_str--pickup
         dropoff_stations: ["line89--dropoff"]
-      step2:
-        sku: "RF370CB_TTR"
-        pickup_station: line89--pickup
-        dropoff_stations: ["transit89_ttr--dropoff"]
+      # step2:
+      #   sku: "RF370CB_TTR"
+      #   pickup_station: line89--pickup
+      #   dropoff_stations: ["transit89_ttr--dropoff"]
 
     transit89_ttr--pickup:
       step1:
@@ -145,10 +145,10 @@ TaskRequester:
         sku: "RF370CB_STR"
         pickup_station: transit90_str--pickup
         dropoff_stations: ["line90--dropoff"]
-      step2:
-        sku: "RF370CB_TTR"
-        pickup_station: line90--pickup
-        dropoff_stations: ["transit90_ttr--dropoff"]
+      # step2:
+      #   sku: "RF370CB_TTR"
+      #   pickup_station: line90--pickup
+      #   dropoff_stations: ["transit90_ttr--dropoff"]
 
     transit90_ttr--pickup:
       step1:

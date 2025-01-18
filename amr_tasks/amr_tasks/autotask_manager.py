@@ -567,11 +567,17 @@ def main(argv=sys.argv):
     with open(config_path, "r") as f:
         config_yaml = yaml.safe_load(f)
 
-    with open(nav_graph_1_path, "r") as f:
-        nav_graph_1 = yaml.safe_load(f)
+    if nav_graph_1_path == "":
+        nav_graph_1 = None
+    else:
+        with open(nav_graph_1_path, "r") as f:
+            nav_graph_1 = yaml.safe_load(f)
 
-    with open(nav_graph_2_path, "r") as f:
-        nav_graph_2 = yaml.safe_load(f)
+    if nav_graph_2_path == "":
+        nav_graph_2 = None
+    else:
+        with open(nav_graph_2_path, "r") as f:
+            nav_graph_2 = yaml.safe_load(f)
 
     time.sleep(1.0)
 

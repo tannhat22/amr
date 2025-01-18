@@ -258,10 +258,10 @@ docks:
 
   # Chargers 
   charger003--charge:
-    go_out_dock: [mov:-0.65]
+    go_out_dock: [mov:-0.58]
 
   charger004--charge:
-    go_out_dock: [mov:-0.65]
+    go_out_dock: [mov:-0.58]
 
   # full dock config:
   # dock_name:

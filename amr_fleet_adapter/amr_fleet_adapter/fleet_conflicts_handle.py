@@ -59,10 +59,9 @@ class FleetConflictsHandle(Node):
         self.look_ahead_distance = self.get_parameter("look_ahead_distance").value
         self.debug = self.get_parameter("debug").value
 
+        self.get_logger().info(f"update_frequency: {self.update_frequency}")
+        self.get_logger().info(f"look_ahead_distance: {self.look_ahead_distance}")
         if self.debug:
-            self.get_logger().info(f"update_frequency: {self.update_frequency}")
-            self.get_logger().info(f"look_ahead_distance: {self.look_ahead_distance}")
-
             # Chart
             self.fig, self.axs = plt.subplots(
                 2, 1, figsize=(8, 6)
@@ -267,16 +266,16 @@ class FleetConflictsHandle(Node):
             return dist
 
     def _conflict_handle_cb(self):
-        # if self.debug:
-        for level, ax in self.levels_ax.items():
-            ax.clear()
-            ax.set_title(f"LEVELS: [{level}]")
-            ax.set_xlabel("X")
-            ax.set_ylabel("Y")
-            ax.set_xlim(50, 80)
-            ax.set_ylim(-10, -40)
-            ax.set_aspect("equal", adjustable="box")
-            ax.grid(True)
+        if self.debug:
+            for level, ax in self.levels_ax.items():
+                ax.clear()
+                ax.set_title(f"LEVELS: [{level}]")
+                ax.set_xlabel("X")
+                ax.set_ylabel("Y")
+                ax.set_xlim(50, 80)
+                ax.set_ylim(-10, -40)
+                ax.set_aspect("equal", adjustable="box")
+                ax.grid(True)
 
         color_count = 0
         for robot1Name, robot1State in self.robots.items():
@@ -286,46 +285,48 @@ class FleetConflictsHandle(Node):
 
             robot1Level = robot1State.state.location.level_name
 
-            ax = self.levels_ax[robot1Level]
-            x = robot1State.state.location.x
-            y = robot1State.state.location.y
             # Vẽ robot
-            ax.scatter(x, y, label=robot1Name, c=f"C{color_count}")
-            circle = plt.Circle(
-                (x, y),
-                robot1State.vicinity,
-                color=f"C{color_count}",
-                alpha=0.3,
-            )
-            ax.add_artist(circle)
+            if self.debug:
+                x = robot1State.state.location.x
+                y = robot1State.state.location.y
+                ax = self.levels_ax[robot1Level]
+                ax.scatter(x, y, label=robot1Name, c=f"C{color_count}")
+                circle = plt.Circle(
+                    (x, y),
+                    robot1State.vicinity,
+                    color=f"C{color_count}",
+                    alpha=0.3,
+                )
+                ax.add_artist(circle)
 
             if len(robot1State.state.path) > 0:
                 pos1 = robot1State.state.location
                 dest1 = robot1State.state.path[-1]
                 look_ahead_point = self.get_look_ahead_point(pos1, dest1, self.look_ahead_distance)
 
-                # Vẽ đoạn thẳng từ vị trí robot hiện tại đến đích của nó:
-                ax.plot([pos1.x, dest1.x], [pos1.y, dest1.y], "--", color=f"C{color_count}")
-                ax.arrow(
-                    pos1.x,
-                    pos1.y,
-                    look_ahead_point.x - pos1.x,
-                    look_ahead_point.y - pos1.y,
-                    head_width=0.5,
-                    head_length=0.7,
-                    length_includes_head=True,
-                    fc="red",
-                    ec="red",
-                )
-                # Vẽ vị trí đích đến và chú thích tên
-                ax.plot(
-                    dest1.x,
-                    dest1.y,
-                    "x",
-                    color=f"C{color_count}",
-                    markersize=10,
-                    label=f"Destination [{robot1Name}]",
-                )
+                if self.debug:
+                    # Vẽ đoạn thẳng từ vị trí robot hiện tại đến đích của nó:
+                    ax.plot([pos1.x, dest1.x], [pos1.y, dest1.y], "--", color=f"C{color_count}")
+                    ax.arrow(
+                        pos1.x,
+                        pos1.y,
+                        look_ahead_point.x - pos1.x,
+                        look_ahead_point.y - pos1.y,
+                        head_width=0.5,
+                        head_length=0.7,
+                        length_includes_head=True,
+                        fc="red",
+                        ec="red",
+                    )
+                    # Vẽ vị trí đích đến và chú thích tên
+                    ax.plot(
+                        dest1.x,
+                        dest1.y,
+                        "x",
+                        color=f"C{color_count}",
+                        markersize=10,
+                        label=f"Destination [{robot1Name}]",
+                    )
 
                 detect_obtacles = False
                 for robot2Name, robot2State in self.robots.items():
@@ -412,13 +413,23 @@ def main(argv=sys.argv):
     print(f"Starting fleet conflicts handle...")
 
     configs = []
-    with open(args.config_file_1, "r") as f:
-        config = yaml.safe_load(f)
-        configs.append(config)
+    # with open(args.config_file_1, "r") as f:
+    #     config = yaml.safe_load(f)
+    #     configs.append(config)
 
-    with open(args.config_file_2, "r") as f:
-        config = yaml.safe_load(f)
-        configs.append(config)
+    # with open(args.config_file_2, "r") as f:
+    #     config = yaml.safe_load(f)
+    #     configs.append(config)
+
+    if args.config_file_1 != "":
+        with open(args.config_file_1, "r") as f:
+            config = yaml.safe_load(f)
+            configs.append(config)
+
+    if args.config_file_2 != "":
+        with open(args.config_file_2, "r") as f:
+            config = yaml.safe_load(f)
+            configs.append(config)
 
     fleet_conflicts_handle = FleetConflictsHandle(configs)
     # executor = MultiThreadedExecutor()

@@ -47,7 +47,7 @@ def generate_launch_description():
                     {
                         "update_frequency": 10.0,
                         "look_ahead_distance": 3.0,
-                        "debug": True,
+                        "debug": False,
                     }
                 ],
             ),
