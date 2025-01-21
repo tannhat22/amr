@@ -327,10 +327,16 @@ class AutoTaskManager(Node):
     def station_request_callback(self, request: StationRequest):
         self.get_logger().warn(f"da nhan duoc station request!")
         stationContext = None
-        machineName = None
         for machine_config in self._mreq_context_dict.values():
             if request.station_name in machine_config.station_names:
-                machineName = machine_config.name
+                msg = StationRequest()
+                msg.time = self.get_clock().now().to_msg()
+                msg.machine_name = machine_config.name
+                msg.station_name = request.station_name
+                msg.station_type = request.station_type
+                msg.mode = request.mode
+                self._adapter_station_request_pub.publish(msg)
+                return
 
         if request.station_type == StationRequest.TYPE_PICKUP:
             stationContext = self._pickup_context_dict.get(request.station_name, None)
@@ -340,15 +346,6 @@ class AutoTaskManager(Node):
             stationContext = self._dropoff_context_dict.get(request.station_name, None)
             if request.mode == StationRequest.MODE_FILLED:
                 stationContext.reset()
-
-        if machineName is not None:
-            msg = StationRequest()
-            msg.time = self.get_clock().now().to_msg()
-            msg.machine_name = machineName
-            msg.station_name = request.station_name
-            msg.station_type = request.station_type
-            msg.mode = request.mode
-            self._adapter_station_request_pub.publish(msg)
 
         if stationContext is None:
             self.get_logger().error(
@@ -449,13 +446,18 @@ class AutoTaskManager(Node):
                 station: StationState
                 for station in state.station_states:
                     pk_context = self._pickup_context_dict.get(station.station_name, None)
-                    if pk_context is not None and not pk_context._is_occupied:
-                        pk_context.set_state(station.mode)
-                        continue
-
                     do_context = self._dropoff_context_dict.get(station.station_name, None)
-                    if do_context is not None and not do_context._is_occupied:
+                    if pk_context is not None:
+                        if station.mode == StationState.MODE_EMPTY:
+                            pk_context.reset()
+                        pk_context.set_state(station.mode)
+                    elif do_context is not None:
+                        if station.mode == StationState.MODE_FILLED:
+                            do_context.reset()
                         do_context.set_state(station.mode)
+                    else:
+                        continue
+                    # if not station_context._is_occupied:
 
     def publish_station_states(self):
         current_time = self.get_clock().now().to_msg()

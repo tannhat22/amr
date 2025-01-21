@@ -19,7 +19,7 @@ def generate_launch_description():
                 parameters=[
                     {
                         "fleet_name": "station",
-                        "machine_names": ["station_clr_tp2"],
+                        "machine_names": ["station_clr_tp2", "station_rf370cb_tp3"],
                         "fleet_state_topic": "fleet_machine_state",
                         "machine_request_topic": "adapter_machine_requests",
                         "station_request_topic": "adapter_station_requests",

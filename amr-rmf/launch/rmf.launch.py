@@ -18,25 +18,16 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     # Arguments
     use_sim_time = "false"
-    map_name = "tp2-tp3-layout"
-    server_uri = "http://10.7.11.28:8000/_internal"
+    map_name = "tp23-layout"
+    server_uri = "http://10.7.11.9:8000/_internal"
     enable_experimental_lift_watchdog = "true"
-    nav_graph_tp2_file_path = PathJoinSubstitution(
+    nav_graph_file_path = PathJoinSubstitution(
         [
             FindPackageShare("amr-rmf"),
             "maps",
             map_name,
             "nav_graphs",
             "0.yaml",
-        ]
-    )
-    nav_graph_tp3_file_path = PathJoinSubstitution(
-        [
-            FindPackageShare("amr-rmf"),
-            "maps",
-            map_name,
-            "nav_graphs",
-            "1.yaml",
         ]
     )
 
@@ -90,53 +81,7 @@ def generate_launch_description():
                 actions=[SetEnvironmentVariable(name="EXPT_LIFT_WATCHDOG_SRV", value="")],
                 scoped=False,
             ),
-            # # AMR_TP2 fleet adapter
-            # IncludeLaunchDescription(
-            #     XMLLaunchDescriptionSource(
-            #         PathJoinSubstitution(
-            #             [
-            #                 FindPackageShare("amr_fleet_adapter"),
-            #                 "launch",
-            #                 "fleet_adapter.launch.xml",
-            #             ]
-            #         )
-            #     ),
-            #     launch_arguments={
-            #         "use_sim_time": use_sim_time,
-            #         "config_file": PathJoinSubstitution(
-            #             [FindPackageShare("amr_fleet_adapter"), "tp2_config.yaml"]
-            #         ),
-            #         "nav_graph_file": nav_graph_tp2_file_path,
-            #         "server_uri": server_uri,
-            #         "experimental_lift_watchdog_service": EnvironmentVariable(
-            #             "EXPT_LIFT_WATCHDOG_SRV"
-            #         ),
-            #     }.items(),
-            # ),
-            # # AMR_TP3 fleet adapter
-            # IncludeLaunchDescription(
-            #     XMLLaunchDescriptionSource(
-            #         PathJoinSubstitution(
-            #             [
-            #                 FindPackageShare("amr_fleet_adapter"),
-            #                 "launch",
-            #                 "fleet_adapter.launch.xml",
-            #             ]
-            #         )
-            #     ),
-            #     launch_arguments={
-            #         "use_sim_time": use_sim_time,
-            #         "config_file": PathJoinSubstitution(
-            #             [FindPackageShare("amr_fleet_adapter"), "tp3_config.yaml"]
-            #         ),
-            #         "nav_graph_file": nav_graph_tp3_file_path,
-            #         "server_uri": server_uri,
-            #         "experimental_lift_watchdog_service": EnvironmentVariable(
-            #             "EXPT_LIFT_WATCHDOG_SRV"
-            #         ),
-            #     }.items(),
-            # )
-            #### AMR_TP2-3 fleet adapter
+            #### AMR_TP23 fleet adapter
             IncludeLaunchDescription(
                 XMLLaunchDescriptionSource(
                     PathJoinSubstitution(
@@ -152,7 +97,7 @@ def generate_launch_description():
                     "config_file": PathJoinSubstitution(
                         [FindPackageShare("amr_fleet_adapter"), "tp23_config.yaml"]
                     ),
-                    "nav_graph_file": nav_graph_tp2_file_path,
+                    "nav_graph_file": nav_graph_file_path,
                     "server_uri": server_uri,
                     "experimental_lift_watchdog_service": EnvironmentVariable(
                         "EXPT_LIFT_WATCHDOG_SRV"
@@ -174,7 +119,7 @@ def generate_launch_description():
                     "config_file": PathJoinSubstitution(
                         [FindPackageShare("amr_workcell_adapter"), "config.yaml"]
                     ),
-                    "nav_graph_1_file": nav_graph_tp2_file_path,
+                    "nav_graph_1_file": nav_graph_file_path,
                     "nav_graph_2_file": "",
                 }.items(),
             ),
@@ -208,30 +153,6 @@ def generate_launch_description():
                     "config_file_2": "",
                 }.items(),
             ),
-            # # AMR_TP2 Fleet server
-            # IncludeLaunchDescription(
-            #     PythonLaunchDescriptionSource(
-            #         PathJoinSubstitution(
-            #             [
-            #                 FindPackageShare("amr-rmf"),
-            #                 "launch",
-            #                 "amr_tp2_fleet_server.launch.py",
-            #             ]
-            #         )
-            #     )
-            # ),
-            # # AMR_TP3 Fleet server
-            # IncludeLaunchDescription(
-            #     PythonLaunchDescriptionSource(
-            #         PathJoinSubstitution(
-            #             [
-            #                 FindPackageShare("amr-rmf"),
-            #                 "launch",
-            #                 "amr_tp3_fleet_server.launch.py",
-            #             ]
-            #         )
-            #     )
-            # ),
             #### Fleet server
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
@@ -277,23 +198,23 @@ def generate_launch_description():
                 )
             ),
             ## Autotask
-            # IncludeLaunchDescription(
-            #     PythonLaunchDescriptionSource(
-            #         PathJoinSubstitution(
-            #             [
-            #                 FindPackageShare("amr_tasks"),
-            #                 "launch",
-            #                 "amr_autotask.launch.py",
-            #             ]
-            #         )
-            #     ),
-            #     launch_arguments={
-            #         "config_file": PathJoinSubstitution(
-            #             [FindPackageShare("amr_tasks"), "config.yaml"]
-            #         ),
-            #         "nav_graph_1_file": nav_graph_tp2_file_path,
-            #         "nav_graph_2_file": nav_graph_tp3_file_path,
-            #     }.items(),
-            # ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution(
+                        [
+                            FindPackageShare("amr_tasks"),
+                            "launch",
+                            "amr_autotask.launch.py",
+                        ]
+                    )
+                ),
+                launch_arguments={
+                    "config_file": PathJoinSubstitution(
+                        [FindPackageShare("amr_tasks"), "config.yaml"]
+                    ),
+                    "nav_graph_1_file": nav_graph_file_path,
+                    "nav_graph_2_file": "",
+                }.items(),
+            ),
         ]
     )

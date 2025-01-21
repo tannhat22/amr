@@ -465,21 +465,22 @@ class RobotAdapter:
             elif mission.undock:
                 self.node.get_logger().info(f"Robot [{self.name}] has undock finished.")
                 dock_mode = search_mode_docking(self.undock.name)
-                station_process = {
-                    "station_type": dock_mode,
-                    "mode": StationRequest.MODE_EMPTY,
-                }
+                if dock_mode == "pickup" or dock_mode == "dropoff":
+                    station_process = {
+                        "station_type": dock_mode,
+                        "mode": StationRequest.MODE_EMPTY,
+                    }
 
-                if dock_mode == "dropoff":
-                    station_process.update({"mode": StationRequest.MODE_FILLED})
+                    if dock_mode == "dropoff":
+                        station_process.update({"mode": StationRequest.MODE_FILLED})
 
-                self.attempt_cmd_until_success(
-                    cmd=self.api.station_request,
-                    args=(
-                        self.undock.name,
-                        station_process,
-                    ),
-                )
+                    self.attempt_cmd_until_success(
+                        cmd=self.api.station_request,
+                        args=(
+                            self.undock.name,
+                            station_process,
+                        ),
+                    )
                 mission.undock = False
                 self.undock = None
 
@@ -589,7 +590,7 @@ class RobotAdapter:
             if (
                 self.last_known_status is not None
                 and self.last_known_status.destination_arrival is None
-                and self.dist(self.last_known_status.position[0:2], destination.xy) <= 0.25
+                and self.dist(self.last_known_status.position[0:2], destination.xy) <= 0.15
             ):
 
                 self.node.get_logger().info(
@@ -598,15 +599,11 @@ class RobotAdapter:
                     f"marking it as finished."
                 )
 
-                self.node.get_logger().info(
-                    f"INFORMATION OF DESTINATION: dock-[{destination.dock}], name-[{destination.name}] ///////////////////"
-                )
-
                 if (
                     destination.dock is not None and destination.name != ""
                 ) or destination.name in self.docks_name:
                     self.node.get_logger().info(
-                        f"detect [{self.name}] on dock, next action will need undock!"
+                        f"[{self.name}] detect on dock, next action will need undock!"
                     )
                     self.undock = destination
 
@@ -614,6 +611,9 @@ class RobotAdapter:
                     self.cmd_id = self.last_known_status.last_request_completed
 
                 self.mission = MissionHandle(execution, destination=destination)
+                self.mission.done = True
+                self.mission.execution.finished()
+                self.mission.execution = None
                 return
 
             self.cmd_id += 1
@@ -865,6 +865,7 @@ class RobotAdapter:
                 # )
                 return True
             case RobotAPIResult.RETRY:
+                self.node.get_logger().error(f"Robot [{self.name}] was perform_docking error!")
                 return False
             case RobotAPIResult.IMPOSSIBLE:
                 # If the fleet manager does not know this dock name, then treat
@@ -883,7 +884,7 @@ class RobotAdapter:
         def loop():
             while not cmd(*args):
                 self.node.get_logger().warn(
-                    f"Failed to contact fleet manager for robot {self.name}"
+                    f"Failed to contact fleet manager for robot {self.name}, {args}"
                 )
                 if self.cancel_cmd_event.wait(1.0):
                     break

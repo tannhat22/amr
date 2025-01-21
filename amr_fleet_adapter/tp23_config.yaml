@@ -144,8 +144,8 @@ docks:
     tag_names: [tag_frame_5]
   
   line83--pickup:
-    go_in_dock: [rot:180]
-    go_out_dock: [mov:0.77, rot:55, mov:0.6, rot:-55]
+    go_in_dock: [rot:-90]
+    go_out_dock: [mov:0.77, rot:-60, mov:-0.65, rot:-30, mov:0.563]
     tag_names: [tag_frame_5]
 
   line83--dropoff:
@@ -236,7 +236,7 @@ docks:
   ### LINE 90
   clr90--pickup:
     go_in_dock: [rot:105]
-    go_out_dock: [mov:0.90]
+    go_out_dock: [mov:0.90, rot:90]
     tag_names: [tag_frame_12]
   
   line90--pickup:
@@ -271,10 +271,10 @@ docks:
     go_out_dock: [mov:-0.7]
 
   charger003--charge:
-    go_out_dock: [mov:-0.58]
+    go_out_dock: [mov:-1.1]
 
   charger004--charge:
-    go_out_dock: [mov:-0.58]
+    go_out_dock: [mov:-1.1]
 
   # full dock config:
   # dock_name:
@@ -300,14 +300,16 @@ docks:
 #       120 = 2.0944, 135 = 2.3562, 150 = 2.618, 180 = 3.1416
 vertexs:
   ###### TP2 ######
-  park_tp2_001: 3.14
-  waiting_for_lift_tp2: 1.57199
   lift001-L1: [1.57199, True]
+  waiting_for_lift_tp2: 1.57199
+  park_tp2_001: 3.14
+
   # LINE 55:
   # clr55_PKFD: 3.14
   # clr55_DOFD: 3.14
   line55_PKFD: 1.57199
   line55_DOFD: -1.5708
+
   # LINE 56:
   # clr56_PKFD: 3.14
   # clr56_DOFD: 3.14
@@ -315,17 +317,8 @@ vertexs:
   line56_DOFD: 1.57199
   line56_lane_custom2: -1.57199
   line56_lane_custom3: 3.14
-  # STR:
-  # clr82_PKFD:  1.57199
-  # clr83_PKFD:  1.57199
-  # clr84_PKFD:  1.57199
-  # clr85_PKFD:  1.57199
-  # clr86_PKFD:  3.14
-  # clr87_PKFD:  3.14
-  # clr88_PKFD:  3.14
-  # clr89_PKFD:  3.14
-  # clr90_PKFD:  3.14
-  # TTR:
+
+  ### CLEANINGROOM TTR COMMON DROPOFF:
   clr001_DOFD: 3.14
   clr002_DOFD: 3.14
   clr003_DOFD: 3.14
@@ -371,6 +364,4 @@ vertexs:
   line90_DOFD: -1.57199
   clr90_PKFD: 1.309
 
-  park_line90_tp3: 0.0
-  park_tamthoi: 1.57199
-  rf370cb_waiting_02: 0.0
+  park_tp3_001: 1.57199
