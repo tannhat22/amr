@@ -159,7 +159,7 @@ docks:
   
   line84--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.77, rot:-45, mov:-0.4, rot:-45]
+    go_out_dock: [mov:0.77, rot:-60, mov:-0.4, rot:-30, mov:0.5]
     tag_names: [tag_frame_6]
 
   line84--dropoff:
@@ -299,10 +299,15 @@ docks:
 # Note: 0 = 0.0, 30 = 0.5236, 45 = 0.7854, 60 = 1.0472, 90 = 1.5708
 #       120 = 2.0944, 135 = 2.3562, 150 = 2.618, 180 = 3.1416
 vertexs:
-  ###### TP2 ######
+  ### TP2
   lift001-L1: [1.57199, True]
-  waiting_for_lift_tp2: 1.57199
-  park_tp2_001: 3.14
+  waiting_for_lift_201: 1.57199
+  lift_parking_201: 3.14
+  waiting_for_traffic_202: 3.14
+
+  ### TP3
+  lift_parking_301: 1.5708
+  parking_301: 1.5708
 
   # LINE 55:
   # clr55_PKFD: 3.14
@@ -363,5 +368,3 @@ vertexs:
   # line90_PKFD: 3.14
   line90_DOFD: -1.57199
   clr90_PKFD: 1.309
-
-  park_tp3_001: 1.57199

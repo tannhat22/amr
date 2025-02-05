@@ -938,6 +938,11 @@ def ros_connections(node, robots: dict[str, RobotAdapter], fleet_handle):
         durability=Durability.TRANSIENT_LOCAL,
     )
 
+    request_qos = QoSProfile(
+        depth=10,
+        reliability=Reliability.RELIABLE,
+        durability=Durability.TRANSIENT_LOCAL,
+    )
     closed_lanes_pub = node.create_publisher(ClosedLanes, "closed_lanes", qos_profile=transient_qos)
 
     closed_lanes = set()
@@ -996,7 +1001,7 @@ def ros_connections(node, robots: dict[str, RobotAdapter], fleet_handle):
         ModeRequest,
         "action_execution_notice",
         mode_request_cb,
-        qos_profile=qos_profile_system_default,
+        qos_profile=request_qos,
     )
 
 

@@ -1,25 +1,11 @@
-# amr_tp2:
-#   "00:00": { amr003: park_tamthoi, amr004: charger001--charge, amr005: park_tp2_001 }
-#   "06:00": { amr003: charger004--charge, amr004: park_tp2_001, amr005: charger001--charge }
-#   "12:00": { amr003: charger004--charge, amr004: charger001--charge, amr005: park_tp2_001 }
-#   "18:00": { amr003: park_tamthoi, amr004: park_tp2_001, amr005: charger001--charge }
-
-# amr_tp3:
-#   "00:00": { amr001: charger003--charge, amr002: charger004--charge}
-#   "06:00": { amr001: charger003--charge, amr002: park_tamthoi}
-#   "12:00": { amr001: park_tamthoi, amr002: charger003--charge}
-#   "18:00": { amr001: charger004--charge, amr002: charger003--charge}
-
-# parking: ["park_tp2_001", "park_tamthoi"]
-
 amr_tp2:
-  "00:00": { amr001: charger003--charge, amr002: charger004--charge, amr003: park_tp3_001,    amr004: charger001--charge, amr005: park_tp2_001 }
-  "03:00": { amr001: park_tp3_001,    amr002: charger003--charge, amr003: charger004--charge, amr004: park_tp2_001,       amr005: charger001--charge }
-  "06:00": { amr001: charger004--charge, amr002: park_tp3_001,    amr003: charger003--charge, amr004: charger001--charge, amr005: park_tp2_001 }
-  "09:00": { amr001: charger003--charge, amr002: charger004--charge, amr003: park_tp3_001,    amr004: park_tp2_001,       amr005: charger001--charge }
-  "12:00": { amr001: park_tp3_001,    amr002: charger003--charge, amr003: charger004--charge, amr004: charger001--charge, amr005: park_tp2_001 }
-  "15:00": { amr001: charger004--charge, amr002: park_tp3_001,    amr003: charger003--charge, amr004: park_tp2_001,       amr005: charger001--charge }
-  "18:00": { amr001: charger004--charge, amr002: charger003--charge, amr003: park_tp3_001,    amr004: charger001--charge, amr005: park_tp2_001 }
-  "21:00": { amr001: park_tp3_001,    amr002: charger003--charge, amr003: charger004--charge, amr004: park_tp2_001,       amr005: charger001--charge }
+  "00:00": { amr001: charger003--charge, amr002: charger004--charge, amr003: lift_parking_301,   amr004: charger001--charge, amr005: lift_parking_201 }
+  "03:00": { amr001: lift_parking_301,   amr002: charger004--charge, amr003: charger003--charge, amr004: lift_parking_201,   amr005: charger001--charge }
+  "06:00": { amr001: charger004--charge, amr002: lift_parking_301,   amr003: charger003--charge, amr004: charger001--charge, amr005: lift_parking_201 }
+  "09:00": { amr001: charger004--charge, amr002: charger003--charge, amr003: lift_parking_301,   amr004: lift_parking_201,   amr005: charger001--charge }
+  "12:00": { amr001: lift_parking_301,   amr002: charger003--charge, amr003: charger004--charge, amr004: charger001--charge, amr005: lift_parking_201 }
+  "15:00": { amr001: charger003--charge, amr002: lift_parking_301,   amr003: charger004--charge, amr004: lift_parking_201,   amr005: charger001--charge }
+  "18:00": { amr001: charger003--charge, amr002: charger004--charge, amr003: lift_parking_301,   amr004: charger001--charge, amr005: lift_parking_201 }
+  "21:00": { amr001: lift_parking_301,   amr002: charger004--charge, amr003: charger003--charge, amr004: lift_parking_201,   amr005: charger001--charge }
 
-parking: ["park_tp2_001", "park_tp3_001"]
+parking: ["lift_parking_201", "lift_parking_301"]

@@ -12,7 +12,9 @@ from rclpy.node import Node
 # from rclpy.executors import MultiThreadedExecutor
 # from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 from enum import IntEnum
-from rclpy.qos import qos_profile_system_default
+from rclpy.qos import QoSDurabilityPolicy as Durability
+from rclpy.qos import QoSProfile
+from rclpy.qos import QoSReliabilityPolicy as Reliability
 from rmf_fleet_msgs.msg import FleetState, RobotMode, RobotState, ModeRequest, Location
 
 
@@ -89,10 +91,16 @@ class FleetConflictsHandle(Node):
         # Threading variables
         # self._lock = threading.Lock()
 
+        request_qos = QoSProfile(
+            depth=10,
+            reliability=Reliability.RELIABLE,
+            durability=Durability.TRANSIENT_LOCAL,
+        )
+
         self.mode_request_pub = self.create_publisher(
             ModeRequest,
             "action_execution_notice",
-            qos_profile=qos_profile_system_default,
+            qos_profile=request_qos,
         )
 
         self.create_subscription(FleetState, "fleet_states", self.fleet_states_cb, 10)
@@ -338,7 +346,10 @@ class FleetConflictsHandle(Node):
                         if self.check_collision_direction(
                             robot1State, look_ahead_point, robot2State
                         ):
-                            if robot1Name == robot2State.wait_HID:
+                            if (
+                                robot1Name == robot2State.wait_HID
+                                and robot1State.state.avoid_obstacles
+                            ):
                                 continue
 
                             detect_obtacles = True
