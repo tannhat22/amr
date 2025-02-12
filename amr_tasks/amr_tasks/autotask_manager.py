@@ -5,6 +5,7 @@ import threading
 import yaml
 import re
 import rclpy
+import json
 
 from rclpy.node import Node
 from rclpy.qos import qos_profile_system_default
@@ -12,6 +13,7 @@ from rclpy.qos import qos_profile_system_default
 
 # from rclpy.executors import MultiThreadedExecutor
 # from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from std_msgs.msg import String
 from machine_fleet_msgs.msg import (
     DeliveryItem,
     DeliveryParams,
@@ -310,6 +312,13 @@ class AutoTaskManager(Node):
             qos_profile=qos_profile_system_default,
         )
 
+        self.create_subscription(
+            String,
+            "/task_state_update",
+            self.task_state_update_cb,
+            qos_profile=qos_profile_system_default,
+        )
+
         # Timers:
         self.create_timer(1.0, self.publish_station_states)
 
@@ -324,8 +333,28 @@ class AutoTaskManager(Node):
         msg.delivery_params = params
         self._delivery_request_pub.publish(msg)
 
+    def task_state_update_cb(self, msg: String):
+        taskState = json.loads(msg.data)
+        requester = taskState["data"]["booking"]["requester"]
+        status = taskState["data"]["status"]
+        if requester in self._sreq_context_dict and status in [
+            "killed",
+            "canceled",
+            "error",
+            "failed",
+        ]:
+            requesterContext = self._sreq_context_dict.get(requester)
+            for step in requesterContext.delivery_steps:
+                if len(step.dropoff_stations) > 1:
+                    for do_station in step.dropoff_stations:
+                        if do_station.get_occupant() == requester:
+                            self.get_logger().warn(
+                                f"Detect autotask from [{requester}] was {status}, reset common dropoff station [{do_station.get_state().station_name}]!"
+                            )
+                            do_station.reset()
+                            break
+
     def station_request_callback(self, request: StationRequest):
-        self.get_logger().warn(f"da nhan duoc station request!")
         stationContext = None
         for machine_config in self._mreq_context_dict.values():
             if request.station_name in machine_config.station_names:

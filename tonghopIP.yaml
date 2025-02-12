@@ -1,10 +1,16 @@
-server: 10.7.11.9
 laptop: 10.7.11.28
-amr001: 10.7.11.
-amr002: 10.7.11.
-amr003: 10.7.11.
-amr004: 10.7.11.
-amr005: 10.7.11.
+server: 10.7.11.9
+amr001: 10.7.11.19
+amr002: 10.7.11.20
+amr003: 10.7.11.21
+amr004: 10.7.11.22
+amr005: 10.7.11.23
+thangmay: 10.7.11.16
 raspberry001 - RF370CB: 10.7.11.18
 raspberry002 - tivi-tp3: ip động
-raspberry003 - Phòng tẩy rửa: 10.7.11.
+raspberry003 - Phòng tẩy rửa: 10.7.11.17
+
+Linhkien1:
+server: 10.7.11.13
+amr: 10.7.11.11
+raspberry: 10.7.11.14
