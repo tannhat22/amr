@@ -18,9 +18,11 @@ from machine_fleet_msgs.msg import (
     DeliveryItem,
     DeliveryParams,
     DeliveryRequest,
+    DeviceMode,
     FleetMachineState,
     FleetStationState,
     MachineState,
+    MachineRequest,
     StationState,
     StationRequest,
 )
@@ -296,6 +298,11 @@ class AutoTaskManager(Node):
         self.station_state_pub = self.create_publisher(
             FleetStationState, "/station_states", qos_profile=qos_profile_system_default
         )
+        self.machine_req_pub = self.create_publisher(
+            MachineRequest,
+            "adapter_machine_requests",
+            qos_profile=qos_profile_system_default,
+        )
 
         # Subcribers:
         self.create_subscription(
@@ -337,22 +344,49 @@ class AutoTaskManager(Node):
         taskState = json.loads(msg.data)
         requester = taskState["data"]["booking"]["requester"]
         status = taskState["data"]["status"]
-        if requester in self._sreq_context_dict and status in [
-            "killed",
-            "canceled",
-            "error",
-            "failed",
-        ]:
-            requesterContext = self._sreq_context_dict.get(requester)
-            for step in requesterContext.delivery_steps:
-                if len(step.dropoff_stations) > 1:
-                    for do_station in step.dropoff_stations:
-                        if do_station.get_occupant() == requester:
-                            self.get_logger().warn(
-                                f"Detect autotask from [{requester}] was {status}, reset common dropoff station [{do_station.get_state().station_name}]!"
-                            )
-                            do_station.reset()
-                            break
+        if status in ["killed", "canceled", "error", "failed"]:
+            if requester in self._sreq_context_dict:
+                requesterContext = self._sreq_context_dict.get(requester)
+                for step in requesterContext.delivery_steps:
+                    if len(step.dropoff_stations) > 1:
+                        for do_station in step.dropoff_stations:
+                            if do_station.get_occupant() == requester:
+                                self.get_logger().warn(
+                                    f"Detect autotask from [{requester}] was {status}, reset common dropoff station [{do_station.get_state().station_name}]!"
+                                )
+                                do_station.reset()
+                                break
+
+            elif requester in self._mreq_context_dict:
+                requesterContext = self._mreq_context_dict.get(requester)
+                machineReq = MachineRequest()
+                machineReq.machine_name = requester
+                machineReq.time = self.get_clock().now().to_msg()
+                if status == "canceled":
+                    machineReq.request_mode.mode = DeviceMode.MODE_CANCEL
+                else:
+                    machineReq.request_mode.mode = DeviceMode.MODE_ROBOT_ERROR
+
+                for pk_station in requesterContext.pickup_stations:
+                    if pk_station.get_occupant() == requester:
+                        self.get_logger().warn(
+                            f"Detect autotask from [{requester}] was {status}, reset common pickup station [{pk_station.get_state().station_name}]!"
+                        )
+                        pk_station.reset()
+                        machineReq.request_type = MachineRequest.REQUEST_INGESTOR
+                        self.machine_req_pub.publish(machineReq)
+                        break
+                for do_station in requesterContext.dropoff_stations:
+                    if do_station.get_occupant() == requester:
+                        self.get_logger().warn(
+                            f"Detect autotask from [{requester}] was {status}, reset common dropoff station [{do_station.get_state().station_name}]!"
+                        )
+                        do_station.reset()
+                        machineReq.request_type = MachineRequest.REQUEST_DISPENSER
+                        self.machine_req_pub.publish(machineReq)
+                        break
+            else:
+                return
 
     def station_request_callback(self, request: StationRequest):
         stationContext = None
@@ -425,15 +459,16 @@ class AutoTaskManager(Node):
                                 ):
                                     param = DeliveryParams()
                                     param.pickup_items = requester.delivery_item
-                                    param.pickup_dispenser = requester.dispenser
-                                    param.pickup_place_name = requester.name
+                                    param.pickup_dispenser = requester.name
+                                    param.pickup_place_name = requester.dispenser
                                     param.dropoff_items = requester.delivery_item
                                     param.dropoff_ingestor = station_context._handler
                                     param.dropoff_place_name = (
                                         station_context.get_state().station_name
                                     )
                                     self.get_logger().warn(
-                                        f"detect pickup request from machine [{requester.name}] will send task for delivery it"
+                                        f"detect pickup request from machine [{requester.name}], send task delivery "
+                                        f"(pickup: {param.pickup_place_name} -> dropoff: {param.dropoff_place_name})!"
                                     )
                                     self.publish_delivery_requests(
                                         requester=requester.name, start_time=0, params=[param]
@@ -458,10 +493,11 @@ class AutoTaskManager(Node):
                                         station_context.get_state().station_name
                                     )
                                     param.dropoff_items = requester.delivery_item
-                                    param.dropoff_ingestor = requester.dispenser
-                                    param.dropoff_place_name = requester.name
+                                    param.dropoff_ingestor = requester.name
+                                    param.dropoff_place_name = requester.ingestor
                                     self.get_logger().warn(
-                                        f"detect dropoff request from machine [{requester.name}] will send task for delivery it"
+                                        f"detect dropoff request from machine [{requester.name}], send task delivery "
+                                        f"(pickup: {param.pickup_place_name} -> dropoff: {param.dropoff_place_name})!"
                                     )
                                     self.publish_delivery_requests(
                                         requester=requester.name, start_time=0, params=[param]
@@ -486,7 +522,6 @@ class AutoTaskManager(Node):
                         do_context.set_state(station.mode)
                     else:
                         continue
-                    # if not station_context._is_occupied:
 
     def publish_station_states(self):
         current_time = self.get_clock().now().to_msg()

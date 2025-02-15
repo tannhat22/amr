@@ -403,29 +403,6 @@ class RobotAdapter:
                         self.on_kill,
                     )
 
-                    if mission.docking:
-                        dock_mode = search_mode_docking(mission.destination.name)
-                        if dock_mode == "mpickup" or dock_mode == "mdropoff":
-                            machine_process = {
-                                "request_type": "dispenser",
-                                "mode": DeviceMode.MODE_ROBOT_ERROR,
-                            }
-
-                            if dock_mode == "mdropoff":
-                                machine_process.update({"request_type": "ingestor"})
-
-                            self.node.get_logger().info(
-                                f"Robot [{self.name}] request ROBOT_ERROR for machine at dock [{mission.destination.name}]"
-                            )
-
-                            self.attempt_cmd_until_success(
-                                cmd=self.api.machine_request,
-                                args=(
-                                    mission.destination.name,
-                                    machine_process,
-                                ),
-                            )
-
                     mission = None
 
             if self.teleoperation is not None:
@@ -482,6 +459,27 @@ class RobotAdapter:
                             station_process,
                         ),
                     )
+                elif dock_mode == "mpickup" or dock_mode == "mdropoff":
+                    machine_process = {
+                        "request_type": "dispenser",
+                        "mode": DeviceMode.MODE_IDLE,
+                    }
+
+                    if dock_mode == "mdropoff":
+                        machine_process.update({"request_type": "ingestor"})
+
+                    self.node.get_logger().info(
+                        f"Robot [{self.name}] response IDLE for machine at dock [{self.undock.name}]."
+                    )
+
+                    self.attempt_cmd_until_success(
+                        cmd=self.api.machine_request,
+                        args=(
+                            self.undock.name,
+                            machine_process,
+                        ),
+                    )
+
                 mission.undock = False
                 self.undock = None
 
@@ -502,7 +500,7 @@ class RobotAdapter:
                             machine_process.update({"request_type": "ingestor"})
 
                         self.node.get_logger().info(
-                            f"Robot [{self.name}] respone ROBOT_DOCKED_IN for machine at dock [{mission.destination.name}]"
+                            f"Robot [{self.name}] response ROBOT_DOCKED_IN for machine at dock [{mission.destination.name}]."
                         )
 
                         self.attempt_cmd_until_success(
