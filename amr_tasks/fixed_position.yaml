@@ -1,0 +1,76 @@
+station001_DOFD:
+  level: L1
+  position(m): [25.494, -31.447, -0.045]
+  position(pixels): [829.9, 1023.6]
+station001--dropoff:
+  level: L1
+  position(m): [24.653, -31.418, -0.023]
+  position(pixels): [802.5, 1022.7]
+station002_DOFD:
+  level: L1
+  position(m): [25.46, -30.962, -0.076]
+  position(pixels): [828.8, 1007.9]
+station002--dropoff:
+  level: L1
+  position(m): [24.692, -30.976, -0.043]
+  position(pixels): [803.8, 1008.3]
+station001_PKFD:
+  level: L1
+  position(m): [22.076, -30.296, 3.14]
+  position(pixels): [718.6, 986.2]
+station001--pickup:
+  level: L1
+  position(m): [22.574, -30.308, 3.112]
+  position(pixels): [734.8, 986.6]
+station002_PKFD:
+  level: L1
+  position(m): [21.982, -30.684, 3.108]
+  position(pixels): [715.5, 998.8]
+station002--pickup:
+  level: L1
+  position(m): [22.504, -30.71, 3.084]
+  position(pixels): [732.5, 999.7]
+station003_PKFD:
+  level: L1
+  position(m): [21.983, -30.926, 3.064]
+  position(pixels): [715.6, 1006.7]
+sstation003--pickup:
+  level: L1
+  position(m): [22.477, -30.977, 3.062]
+  position(pixels): [731.7, 1008.4]
+station004_PKFD:
+  level: L1
+  position(m): [22.073, -31.272, 3.091]
+  position(pixels): [718.5, 1018.0]
+station004--pickup:
+  level: L1
+  position(m): [22.578, -31.289, 3.106]
+  position(pixels): [735.0, 1018.5]
+m104_DOFD:
+  level: L1
+  position(m): [23.485, -28.334, -0.041]
+  position(pixels): [764.5, 922.3]
+m104--dropoff:
+  level: L1
+  position(m): [23.414, -27.472, -1.619]
+  position(pixels): [762.2, 894.3]
+m104_PKFD:
+  level: L1
+  position(m): [24.414, -28.432, 1.584]
+  position(pixels): [794.7, 925.5]
+m104--pickup:
+  level: L1
+  position(m): [24.458, -27.458, -1.542]
+  position(pixels): [796.2, 893.8]
+charger001_CFD:
+  level: L1
+  position(m): [25.31, -27.831, 1.528]
+  position(pixels): [823.9, 906.0]
+charger001--charge:
+  level: L1
+  position(m): [25.277, -27.359, 1.477]
+  position(pixels): [822.8, 890.6]
+park001:
+  level: L1
+  position(m): [24.356, -29.72, 1.595]
+  position(pixels): [792.8, 967.5]

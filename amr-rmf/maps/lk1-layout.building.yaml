@@ -1,0 +1,105 @@
+coordinate_system: reference_image
+crowd_sim:
+  agent_groups:
+    - {agents_name: [], agents_number: 0, group_id: 0, profile_selector: external_agent, state_selector: external_static, x: 0, y: 0}
+  agent_profiles:
+    - {ORCA_tau: 1, ORCA_tauObst: 0.40000000000000002, class: 1, max_accel: 0, max_angle_vel: 0, max_neighbors: 10, max_speed: 0, name: external_agent, neighbor_dist: 5, obstacle_set: 1, pref_speed: 0, r: 0.25}
+  enable: 0
+  goal_sets: []
+  model_types: []
+  obstacle_set: {class: 1, file_name: L1_navmesh.nav, type: nav_mesh}
+  states:
+    - {final: 1, goal_set: -1, name: external_static, navmesh_file_name: ""}
+  transitions: []
+  update_time_step: 0.10000000000000001
+graphs:
+  {}
+levels:
+  L1:
+    drawing:
+      filename: lk1-layout/lk1_layout.png
+    elevation: 0
+    floors:
+      - parameters: {ceiling_scale: [3, 1], ceiling_texture: [1, blue_linoleum], indoor: [2, 0], texture_name: [1, blue_linoleum], texture_rotation: [3, 0], texture_scale: [3, 1]}
+        vertices: [4, 5, 6, 7]
+    lanes:
+      - [8, 9, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [16, 15, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [17, 14, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [18, 13, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [19, 12, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [20, 10, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [21, 11, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [22, 24, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [23, 25, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0]}]
+      - [27, 19, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [27, 18, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [27, 17, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [27, 16, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [28, 21, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [28, 20, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [27, 24, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [29, 30, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [27, 31, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [26, 28, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [32, 9, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [32, 29, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [26, 32, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [24, 26, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [25, 26, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [27, 26, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [25, 28, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+    layers:
+      scan_with_virtualwall:
+        color: [1, 0, 0, 0.5]
+        filename: lk1-layout/map_lk1_virtualwall.png
+        transform:
+          scale: 0.050000000000000003
+          translation_x: 9.5199999999999996
+          translation_y: 2.6299999999999999
+          yaw: 0
+        visible: true
+    measurements:
+      - [0, 1, {distance: [3, 21.800000000000001]}]
+      - [2, 3, {distance: [3, 44.799999999999997]}]
+    vertices:
+      - [186.09299999999999, 729.04300000000001, 0, ""]
+      - [186.09299999999999, 1438.414, 0, ""]
+      - [330.61200000000002, 1516.578, 0, ""]
+      - [1789.028, 1516.578, 0, ""]
+      - [327.20699999999999, 247.69300000000001, 0, ""]
+      - [327.20699999999999, 1441.153, 0, ""]
+      - [2032.1869999999999, 1441.153, 0, ""]
+      - [2032.1869999999999, 247.69300000000001, 0, ""]
+      - [824, 891, 0, charger001--charge, {dock_name: [1, charger001--charge], is_charger: [4, true], is_parking_spot: [4, true]}]
+      - [824, 906, 0, ""]
+      - [802, 1008, 0, station002--dropoff, {dock_name: [1, station002--dropoff], dropoff_ingestor: [1, station002]}]
+      - [802, 1022, 0, station001--dropoff, {dock_name: [1, station001--dropoff], dropoff_ingestor: [1, station001]}]
+      - [735, 1020, 0, station004--pickup, {dock_name: [1, station004--pickup], pickup_dispenser: [1, station004]}]
+      - [735, 1007, 0, station003--pickup, {dock_name: [1, station003--pickup], pickup_dispenser: [1, station003]}]
+      - [735, 993, 0, station002--pickup, {dock_name: [1, station002--pickup], pickup_dispenser: [1, station002]}]
+      - [735, 979.5, 0, station001--pickup, {dock_name: [1, station001--pickup], pickup_dispenser: [1, station001]}]
+      - [719, 979.5, 0, station001_PKFD]
+      - [719, 993, 0, station002_PKFD]
+      - [719, 1007, 0, station003_PKFD]
+      - [719, 1020, 0, station004_PKFD]
+      - [830, 1008, 0, station002_DOFD]
+      - [830, 1022, 0, station001_DOFD]
+      - [765.5, 894, 0, m104--dropoff, {dock_name: [1, m104--dropoff], dropoff_ingestor: [1, m104]}]
+      - [795, 894, 0, m104--pickup, {dock_name: [1, m104--pickup], pickup_dispenser: [1, m104]}]
+      - [765.5, 934, 0, m104_DOFD]
+      - [795, 934, 0, m104_PKFD]
+      - [795, 970, 0, park001]
+      - [720, 955, 0, ""]
+      - [824, 980, 0, ""]
+      - [854.21600000000001, 945, 0, ""]
+      - [854.21600000000001, 785.44200000000001, 0, ""]
+      - [705.58000000000004, 918.68200000000002, 0, ""]
+      - [823.78399999999999, 945, 0, ""]
+    walls:
+      - [4, 5, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [5, 6, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [6, 7, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+      - [7, 4, {alpha: [3, 1], texture_height: [3, 2.5], texture_name: [1, default], texture_scale: [3, 1], texture_width: [3, 1]}]
+lifts: {}
+name: lk1-layout

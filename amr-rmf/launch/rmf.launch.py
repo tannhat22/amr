@@ -18,9 +18,9 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     # Arguments
     use_sim_time = "false"
-    map_name = "tp23-layout"
-    server_uri = "http://10.7.11.9:8000/_internal"
-    enable_experimental_lift_watchdog = "true"
+    map_name = "lk1-layout"
+    server_uri = "http://10.7.11.35:8000/_internal"
+    enable_experimental_lift_watchdog = "false"
     nav_graph_file_path = PathJoinSubstitution(
         [
             FindPackageShare("amr-rmf"),
@@ -52,9 +52,9 @@ def generate_launch_description():
                             f"{map_name}.building.yaml",
                         ]
                     ),
-                    "config_dynamic_charge_file": PathJoinSubstitution(
-                        [FindPackageShare("amr_fleet_adapter"), "charge_schedule.yaml"]
-                    ),
+                    # "config_dynamic_charge_file": PathJoinSubstitution(
+                    #     [FindPackageShare("amr_fleet_adapter"), "charge_schedule.yaml"]
+                    # ),
                     "server_uri": server_uri,
                 }.items(),
             ),
@@ -95,7 +95,7 @@ def generate_launch_description():
                 launch_arguments={
                     "use_sim_time": use_sim_time,
                     "config_file": PathJoinSubstitution(
-                        [FindPackageShare("amr_fleet_adapter"), "tp23_config.yaml"]
+                        [FindPackageShare("amr_fleet_adapter"), "lk1_config.yaml"]
                     ),
                     "nav_graph_file": nav_graph_file_path,
                     "server_uri": server_uri,
@@ -123,18 +123,6 @@ def generate_launch_description():
                     "nav_graph_2_file": "",
                 }.items(),
             ),
-            # LDM RMF adapter
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    PathJoinSubstitution(
-                        [
-                            FindPackageShare("ldm_rmf_adapter"),
-                            "launch",
-                            "ldm_rmf.launch.py",
-                        ]
-                    )
-                )
-            ),
             # Fleet conflicts handle
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
@@ -148,7 +136,7 @@ def generate_launch_description():
                 ),
                 launch_arguments={
                     "config_file_1": PathJoinSubstitution(
-                        [FindPackageShare("amr_fleet_adapter"), "tp23_config.yaml"]
+                        [FindPackageShare("amr_fleet_adapter"), "lk1_config.yaml"]
                     ),
                     "config_file_2": "",
                 }.items(),
@@ -165,18 +153,6 @@ def generate_launch_description():
                     )
                 )
             ),
-            # Charger server
-            # IncludeLaunchDescription(
-            #     PythonLaunchDescriptionSource(
-            #         PathJoinSubstitution(
-            #             [
-            #                 FindPackageShare("amr-rmf"),
-            #                 "launch",
-            #                 "charger_server.launch.py",
-            #             ]
-            #         )
-            #     )
-            # ),
             # Machine server
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
@@ -189,14 +165,18 @@ def generate_launch_description():
                     )
                 )
             ),
-            # LDM server
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    PathJoinSubstitution(
-                        [FindPackageShare("amr-rmf"), "launch", "ldm_server.launch.py"]
-                    )
-                )
-            ),
+            # Machine client
+            # IncludeLaunchDescription(
+            #     PythonLaunchDescriptionSource(
+            #         PathJoinSubstitution(
+            #             [
+            #                 FindPackageShare("amr-rmf"),
+            #                 "launch",
+            #                 "machine_client.launch.py",
+            #             ]
+            #         )
+            #     )
+            # ),
             ## Autotask
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(

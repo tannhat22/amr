@@ -27,6 +27,7 @@ setup(
             "autotask_manager=amr_tasks.autotask_manager:main",
             "dispatch_delivery_task=amr_tasks.dispatch_delivery:main",
             "test_autotask=amr_tasks.test_autotask:main",
+            "get_fixed_position=amr_tasks.get_fixed_position:main",
         ],
     },
 )

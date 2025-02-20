@@ -4,8 +4,8 @@
 TaskRequester:
   machines:
     # Examples:
-    # station_clr_tp2:
-    #     mode_operation: "combine"
+    # machine_name:
+    #     mode_operation: "combine"  # (station, combine)
     #     sku: "RF370CB"
     #     dispenser: "wp1--mpickup"
     #     ingestor: "wp1--dropoff"
@@ -15,72 +15,26 @@ TaskRequester:
     #                     "clr003--dropoff", "clr004--dropoff",
     #                     "clr005--dropoff"]
     
-    station_clr_tp2:
-        mode_operation: "station"
-        station_names: ["clr001--dropoff", "clr002--dropoff",
-                        "clr003--dropoff", "clr004--dropoff",
-                        "clr005--dropoff"]
-
-    station_rf370cb_tp3:
-        mode_operation: "station"
-        station_names: ["line82--pickup", "line83--pickup",
-                        "line84--pickup", "line85--pickup",
-                        "line86--pickup", "line87--pickup",
-                        "line89--pickup", "line90--pickup"]
+    # nqvl_m104:
+    #     mode_operation: "combine"  # (station, combine)
+    #     sku: "E29"
+    #     dispenser: "m104--mpickup"
+    #     ingestor: "m104--dropoff"
+    #     pickup_stations: ["station001--pickup", "station002--pickup",
+    #                       "station003--pickup", "station004--pickup"]
+    #     dropoff_stations: ["station001--dropoff", "station002--dropoff"]
+    #     station_names: ["station001--pickup", "station002--pickup",
+    #                     "station003--pickup", "station004--pickup",
+    #                     "station001--dropoff", "station002--dropoff"]
 
   stations:
-    # LINE 82
-    line82--pickup:
-      step1:
-        sku: "RF370CB_TTR"
-        pickup_station: line82--pickup
-        dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
-
-    # LINE 83
-    line83--pickup:
-      step1:
-        sku: "RF370CB_TTR"
-        pickup_station: line83--pickup
-        dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
-
-    # LINE 84
-    line84--pickup:
-      step1:
-        sku: "RF370CB_TTR"
-        pickup_station: line84--pickup
-        dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
-
-    # LINE 85
-    line85--pickup:
-      step1:
-        sku: "RF370CB_TTR"
-        pickup_station: line85--pickup
-        dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
-
-    # LINE 86
-    line86--pickup:
-      step1:
-        sku: "RF370CB_TTR"
-        pickup_station: line86--pickup
-        dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
-
-    # LINE 87
-    line87--pickup:
-      step1:
-        sku: "RF370CB_TTR"
-        pickup_station: line87--pickup
-        dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
-
-    # LINE 89
-    line89--pickup:
-      step1:
-        sku: "RF370CB_TTR"
-        pickup_station: line89--pickup
-        dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
-
-    # LINE 90
-    line90--pickup:
-      step1:
-        sku: "RF370CB_TTR"
-        pickup_station: line90--pickup
-        dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
+    # Examples:
+    # line82--pickup:
+    #   step1:
+    #     sku: "RF370CB_TTR"
+    #     pickup_station: clr82--pickup
+    #     dropoff_stations: ["line82--dropoff"]
+    #   step2:
+    #     sku: "RF370CB_TTR"
+    #     pickup_station: line82--pickup
+    #     dropoff_stations: ["clr001--dropoff", "clr002--dropoff"]
