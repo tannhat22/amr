@@ -585,36 +585,55 @@ class RobotAdapter:
             )
 
             # If the nav command coming in is to bring the robot to same waypoint
-            # with waypoint robot is at on, we ignore this nav command
+            # with waypoint robot is at on, we ignore this nav command, but if to
+            # many cmd for this point we check and go back to fix this
             if (
                 self.last_known_status is not None
                 and self.last_known_status.destination_arrival is None
                 and self.dist(self.last_known_status.position[0:2], destination.xy) <= 0.15
-                and self.repeat_wp_count <= 5
             ):
-                self.node.get_logger().info(
+                self.node.get_logger().warn(
                     f"[{self.name}] Received navigation command to waypoint but "
-                    f"robot is already at the same waypoint, ignoring command and "
-                    f"marking it as finished (count: {self.repeat_wp_count})."
+                    f"robot is already at the same waypoint!"
                 )
-
-                if (
-                    destination.dock is not None and destination.name != ""
-                ) or destination.name in self.docks_name:
-                    self.node.get_logger().info(
-                        f"[{self.name}] detect on dock, next action will need undock!"
+                if self.repeat_wp_count <= 5:
+                    self.node.get_logger().warn(
+                        f"[{self.name}] ignoring command and marking it as finished (count: {self.repeat_wp_count})!"
                     )
-                    self.undock = destination
 
-                if self.last_known_status.last_request_completed is not None:
-                    self.cmd_id = self.last_known_status.last_request_completed
+                    if (
+                        destination.dock is not None and destination.name != ""
+                    ) or destination.name in self.docks_name:
+                        self.node.get_logger().info(
+                            f"[{self.name}] detect on dock, next action will need undock!"
+                        )
+                        self.undock = destination
 
-                self.mission = MissionHandle(execution, destination=destination)
-                self.mission.done = True
-                self.mission.execution.finished()
-                self.mission.execution = None
-                self.repeat_wp_count += 1
-                return
+                    if self.last_known_status.last_request_completed is not None:
+                        self.cmd_id = self.last_known_status.last_request_completed
+
+                    self.mission = MissionHandle(execution, destination=destination)
+                    self.mission.done = True
+                    self.mission.execution.finished()
+                    self.mission.execution = None
+                    self.repeat_wp_count += 1
+                    return
+                else:
+                    self.cmd_id += 1
+                    self.repeat_wp_count = 0
+                    self.node.get_logger().warn(
+                        f"[{self.name}] will go back 0.1(m) because too far path!"
+                    )
+                    self.mission = MissionHandle(execution, destination=destination)
+                    self.attempt_cmd_until_success(
+                        cmd=self.perform_docking,
+                        args=(
+                            destination,
+                            True,
+                            -0.1,
+                        ),
+                    )
+                    return
 
             self.cmd_id += 1
             self.repeat_wp_count = 0
