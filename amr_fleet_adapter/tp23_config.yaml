@@ -5,7 +5,7 @@ rmf_fleet:
   name: "amr_tp2"
   limits:
     linear: [0.5, 0.9] # velocity, acceleration
-    angular: [0.5, 1.0] # velocity, acceleration
+    angular: [0.8, 1.6] # velocity, acceleration
   profile: # Robot profile is modelled as a circle
     footprint: 0.45 # radius in m
     vicinity: 0.5 # radius in m
@@ -32,7 +32,8 @@ rmf_fleet:
     delivery: True
     clean: False
   finishing_request: "charge" # [park, charge, nothing]
-  responsive_wait: False # Should responsive wait be on/off for the whole fleet by default? False if not specified.
+  responsive_wait: True # Should responsive wait be on/off for the whole fleet by default? False if not specified.
+  # max_merge_waypoint_distance: 0.3
   charger_server_running: False  # Server charge is running or not
   distance_tolerance: 0.3 # Distance_tolerance to the next destination if destination is not last
   robots:
@@ -134,7 +135,7 @@ docks:
   line82--dropoff:
     go_out_dock: [mov:0.7]
     limits:
-      rotate_angle: 90
+      rotate_angle: 45
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   ### LINE 83
@@ -152,7 +153,7 @@ docks:
     go_in_dock: [mov:-0.5]
     go_out_dock: [mov:0.7]
     limits:
-      rotate_angle: 90
+      rotate_angle: 45
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   ### LINE 84
@@ -169,7 +170,7 @@ docks:
   line84--dropoff:
     go_out_dock: [mov:0.7]
     limits:
-      rotate_angle: 90
+      rotate_angle: 45
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   ### LINE 85
@@ -188,7 +189,7 @@ docks:
     go_in_dock: [mov:-0.5]
     go_out_dock: [mov:0.7]
     limits:
-      rotate_angle: 90
+      rotate_angle: 45
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   ### LINE 86
@@ -227,7 +228,7 @@ docks:
 
   ### LINE 89
   clr89--pickup:
-    go_in_dock: [rot:90]
+    go_in_dock: [rot:75]
     go_out_dock: [mov:0.90]
     tag_names: [tag_frame_11]
   
@@ -239,13 +240,12 @@ docks:
   line89--dropoff:
     go_out_dock: [mov:0.7]
     limits:
-      rotate_angle: 90
+      rotate_angle: 45
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   ### LINE 90
   clr90--pickup:
-    go_in_dock: [rot:105]
-    go_out_dock: [mov:0.90, rot:90]
+    go_out_dock: [mov:0.90]
     tag_names: [tag_frame_12]
   
   line90--pickup:
@@ -257,7 +257,7 @@ docks:
     go_in_dock: [mov:-0.5]
     go_out_dock: [mov:0.7]
     limits:
-      rotate_angle: 90
+      rotate_angle: 45
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   ### CLEANINGROOM TTR COMMON DROPOFF:
@@ -281,7 +281,7 @@ docks:
 
   ### CHARGERS
   charger001--charge:
-    go_out_dock: [mov:-0.7]
+    go_out_dock: [mov:-0.9]
 
   charger003--charge:
     go_out_dock: [mov:-1.1]
@@ -376,9 +376,9 @@ vertexs:
   ### LINE 89
   line89_PKFD: -1.57199
   line89_DOFD:  1.57199
-  clr89_PKFD: 1.57199
+  clr89_PKFD: 1.8326
 
   ### LINE 90
   # line90_PKFD: 3.14
   line90_DOFD: -1.57199
-  clr90_PKFD: 1.309
+  clr90_PKFD: 3.14
