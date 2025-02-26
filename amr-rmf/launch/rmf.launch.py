@@ -166,17 +166,17 @@ def generate_launch_description():
                 )
             ),
             # Machine client
-            # IncludeLaunchDescription(
-            #     PythonLaunchDescriptionSource(
-            #         PathJoinSubstitution(
-            #             [
-            #                 FindPackageShare("amr-rmf"),
-            #                 "launch",
-            #                 "machine_client.launch.py",
-            #             ]
-            #         )
-            #     )
-            # ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution(
+                        [
+                            FindPackageShare("amr-rmf"),
+                            "launch",
+                            "machine_client.launch.py",
+                        ]
+                    )
+                )
+            ),
             ## Autotask
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(

@@ -367,24 +367,35 @@ class AutoTaskManager(Node):
                 else:
                     machineReq.request_mode.mode = DeviceMode.MODE_ROBOT_ERROR
 
+                self.get_logger().warn(f"Detect autotask from [{requester}] was {status}!")
+
                 for pk_station in requesterContext.pickup_stations:
                     if pk_station.get_occupant() == requester:
                         self.get_logger().warn(
-                            f"Detect autotask from [{requester}] was {status}, reset common pickup station [{pk_station.get_state().station_name}]!"
+                            f"Reset common pickup station [{pk_station.get_state().station_name}]!"
                         )
                         pk_station.reset()
-                        machineReq.request_type = MachineRequest.REQUEST_INGESTOR
-                        self.machine_req_pub.publish(machineReq)
                         break
                 for do_station in requesterContext.dropoff_stations:
                     if do_station.get_occupant() == requester:
                         self.get_logger().warn(
-                            f"Detect autotask from [{requester}] was {status}, reset common dropoff station [{do_station.get_state().station_name}]!"
+                            f"Reset common dropoff station [{do_station.get_state().station_name}]!"
                         )
                         do_station.reset()
-                        machineReq.request_type = MachineRequest.REQUEST_DISPENSER
-                        self.machine_req_pub.publish(machineReq)
                         break
+
+                if requesterContext.get_destination_pickup() != "":
+                    machineReq.request_type = MachineRequest.REQUEST_INGESTOR
+                elif requesterContext.get_destination_dropoff() != "":
+                    machineReq.request_type = MachineRequest.REQUEST_DISPENSER
+                else:
+                    return
+
+                self.get_logger().warn(
+                    f"Response [{status}] to [{requesterContext.name}] (request_type: {machineReq.request_type})!"
+                )
+                self.machine_req_pub.publish(machineReq)
+
             else:
                 return
 

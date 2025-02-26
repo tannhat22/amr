@@ -312,7 +312,7 @@ class RobotAdapter:
         self.charger_server = charger_server
         self.undock = None
         self.unlift = False
-        self.repeat_wp_count = 0
+        # self.repeat_wp_count = 0
 
         # Threading variables
         self._lock = threading.Lock()
@@ -590,12 +590,12 @@ class RobotAdapter:
                 self.last_known_status is not None
                 and self.last_known_status.destination_arrival is None
                 and self.dist(self.last_known_status.position[0:2], destination.xy) <= 0.15
-                and self.repeat_wp_count <= 5
+                # and self.repeat_wp_count <= 5
             ):
                 self.node.get_logger().info(
                     f"[{self.name}] Received navigation command to waypoint but "
                     f"robot is already at the same waypoint, ignoring command and "
-                    f"marking it as finished (count: {self.repeat_wp_count})."
+                    f"marking it as finished."
                 )
 
                 if (
@@ -613,11 +613,11 @@ class RobotAdapter:
                 self.mission.done = True
                 self.mission.execution.finished()
                 self.mission.execution = None
-                self.repeat_wp_count += 1
+                # self.repeat_wp_count += 1
                 return
 
             self.cmd_id += 1
-            self.repeat_wp_count = 0
+            # self.repeat_wp_count = 0
             # Check if robot need unlift:
             if self.unlift:
                 self.mission = MissionHandle(execution, destination=destination)
@@ -813,13 +813,9 @@ class RobotAdapter:
                 f"Robot [{self.name}] request DOCK_IN machine at dock [{destination.name}]"
             )
 
-            self.attempt_cmd_until_success(
-                cmd=self.api.machine_request,
-                args=(
-                    destination.name,
-                    machine_process,
-                ),
-            )
+            while not self.api.machine_request(destination.name, machine_process):
+                if self.cancel_cmd_event.wait(0.5):
+                    return False
 
             while rclpy.ok():
                 machineData = self.api.get_machine_data(destination.name)
@@ -840,7 +836,7 @@ class RobotAdapter:
                     break
 
                 if self.cancel_cmd_event.wait(0.5):
-                    break
+                    return False
 
         location = {
             "x": destination.position[0],

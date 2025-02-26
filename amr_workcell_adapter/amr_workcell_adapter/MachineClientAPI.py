@@ -120,6 +120,8 @@ class MachineUpdateData:
     def __init__(self, data):
         self.machine_name = data["machine_name"]
         self.mode = data["mode"]
+        self.dispenser_mode = data["dispenser_mode"]
+        self.ingestor_mode = data["ingestor_mode"]
         self.last_dispenser_completed_request = data["last_dispenser_completed_request"]
         self.last_ingestor_completed_request = data["last_ingestor_completed_request"]
 

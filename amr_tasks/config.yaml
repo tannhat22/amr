@@ -15,17 +15,17 @@ TaskRequester:
     #                     "clr003--dropoff", "clr004--dropoff",
     #                     "clr005--dropoff"]
     
-    # nqvl_m104:
-    #     mode_operation: "combine"  # (station, combine)
-    #     sku: "E29"
-    #     dispenser: "m104--mpickup"
-    #     ingestor: "m104--dropoff"
-    #     pickup_stations: ["station001--pickup", "station002--pickup",
-    #                       "station003--pickup", "station004--pickup"]
-    #     dropoff_stations: ["station001--dropoff", "station002--dropoff"]
-    #     station_names: ["station001--pickup", "station002--pickup",
-    #                     "station003--pickup", "station004--pickup",
-    #                     "station001--dropoff", "station002--dropoff"]
+    nqvlm104:
+        mode_operation: "combine"  # (station, combine)
+        sku: "E29"
+        dispenser: "m104--mpickup"
+        ingestor: "m104--mdropoff"
+        pickup_stations: ["station001--pickup", "station002--pickup",
+                          "station003--pickup", "station004--pickup"]
+        dropoff_stations: ["station001--dropoff", "station002--dropoff"]
+        station_names: ["station001--pickup", "station002--pickup",
+                        "station003--pickup", "station004--pickup",
+                        "station001--dropoff", "station002--dropoff"]
 
   stations:
     # Examples:

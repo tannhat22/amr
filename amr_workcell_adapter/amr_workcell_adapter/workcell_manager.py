@@ -282,7 +282,7 @@ class WorkCellManager(Node):
 
                 # Check ingestor request is completed
                 if machine.last_ingestor_mode_req is not None:
-                    if machine.last_ingestor_mode_req == machine.state.dispenser_mode.mode:
+                    if machine.last_ingestor_mode_req == machine.state.ingestor_mode.mode:
                         completed_request = int(machineMsg.ingestor_request_id)
                         if machine.last_ingestor_completed_request != completed_request:
                             if self.debug:
@@ -304,6 +304,8 @@ class WorkCellManager(Node):
         data["last_dispenser_completed_request"] = machine.last_dispenser_completed_request
         data["last_ingestor_completed_request"] = machine.last_ingestor_completed_request
         data["mode"] = machine.state.machine_mode
+        data["dispenser_mode"] = machine.state.dispenser_mode.mode
+        data["ingestor_mode"] = machine.state.ingestor_mode.mode
         return data
 
 
