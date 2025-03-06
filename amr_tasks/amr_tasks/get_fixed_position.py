@@ -19,7 +19,7 @@ class FixedPosition(Node):
 
         self.debug = self.get_parameter("debug").value
 
-        self.meters_on_pixels = {"L1": 0.03072}
+        self.meters_on_pixels = {"L1": 0.04108, "L2": 0.04109}
         self.transform_levels = {
             "L1->L2": [0.99947, 1.16, 2.74, 0.00113],
             "L2->L1": [1.00053, -1.16, -2.74, -0.00113],
@@ -135,7 +135,7 @@ def main(args=None):
     rclpy.init(args=args)
 
     file_name = "/home/tannhat/rmf_ws/src/amr/amr_tasks/fixed_position.yaml"
-    fixed_position = FixedPosition(file_name, "amr_tp23", "amr001")
+    fixed_position = FixedPosition(file_name, "amr_tp2", "amr001")
     fixed_position.save_waypoints()
 
     # Destroy the node explicitly

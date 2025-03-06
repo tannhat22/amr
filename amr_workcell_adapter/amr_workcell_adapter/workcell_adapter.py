@@ -365,7 +365,10 @@ class DispenserAdapter:
         msgResult.source_guid = self.name
         msgResult.status = DispenserResult.SUCCESS
 
-        if self.is_machine and not status.is_command_dispenser_completed(self.cmd_id):
+        if self.is_machine and (
+            not status.is_command_dispenser_completed(self.cmd_id)
+            or status.dispenser_mode != DeviceMode.MODE_ACCEPT_DOCKOUT
+        ):
             return
 
         self.result_pub.publish(msgResult)
@@ -387,20 +390,26 @@ class DispenserAdapter:
             self.node.get_logger().info(
                 f"Dispenser request_guid: [{request_guid}] command [{self.name}] to process, cmd_id {self.cmd_id}."
             )
-            msgResult = DispenserResult()
-            msgResult.time = self.node.get_clock().now().to_msg()
-            msgResult.request_guid = request_guid
-            msgResult.source_guid = self.name
-            msgResult.status = DispenserResult.ACKNOWLEDGED
-            self.result_pub.publish(msgResult)
-            self.request_guid = request_guid
+            # msgResult = DispenserResult()
+            # msgResult.time = self.node.get_clock().now().to_msg()
+            # msgResult.request_guid = request_guid
+            # msgResult.source_guid = self.name
+            # msgResult.status = DispenserResult.ACKNOWLEDGED
+            # self.result_pub.publish(msgResult)
+            # self.request_guid = request_guid
 
             if self.is_machine:
-                self.cmd_id += 1
-                self.attempt_cmd_until_success(
-                    cmd=self.perform_operate,
-                    args=(DeviceMode.MODE_ACCEPT_DOCKOUT,),
-                )
+                machineData: MachineUpdateData
+                machineData = self.api.get_data(self.name)
+                if machineData.dispenser_mode == DeviceMode.MODE_ROBOT_DOCKED_IN:
+                    self.cmd_id += 1
+                    self.attempt_cmd_until_success(
+                        cmd=self.perform_operate,
+                        args=(DeviceMode.MODE_ACCEPT_DOCKOUT,),
+                    )
+                    self.request_guid = request_guid
+            else:
+                self.request_guid = request_guid
 
     def machineRequest(self, mode: int):
         with self._lock:
@@ -544,7 +553,10 @@ class IngestorAdapter:
         msgResult.source_guid = self.name
         msgResult.status = IngestorResult.SUCCESS
 
-        if self.is_machine and not status.is_command_ingestor_completed(self.cmd_id):
+        if self.is_machine and (
+            not status.is_command_ingestor_completed(self.cmd_id)
+            or status.ingestor_mode != DeviceMode.MODE_ACCEPT_DOCKOUT
+        ):
             return
 
         self.result_pub.publish(msgResult)
@@ -566,20 +578,26 @@ class IngestorAdapter:
             self.node.get_logger().info(
                 f"Ingestor request_guid: [{request_guid}] command [{self.name}] to process, cmd_id {self.cmd_id}."
             )
-            msgResult = IngestorResult()
-            msgResult.time = self.node.get_clock().now().to_msg()
-            msgResult.request_guid = request_guid
-            msgResult.source_guid = self.name
-            msgResult.status = IngestorResult.ACKNOWLEDGED
-            self.result_pub.publish(msgResult)
-            self.request_guid = request_guid
+            # msgResult = IngestorResult()
+            # msgResult.time = self.node.get_clock().now().to_msg()
+            # msgResult.request_guid = request_guid
+            # msgResult.source_guid = self.name
+            # msgResult.status = IngestorResult.ACKNOWLEDGED
+            # self.result_pub.publish(msgResult)
+            # self.request_guid = request_guid
 
             if self.is_machine:
-                self.cmd_id += 1
-                self.attempt_cmd_until_success(
-                    cmd=self.perform_operate,
-                    args=(DeviceMode.MODE_ACCEPT_DOCKOUT,),
-                )
+                machineData: MachineUpdateData
+                machineData = self.api.get_data(self.name)
+                if machineData.ingestor_mode == DeviceMode.MODE_ROBOT_DOCKED_IN:
+                    self.cmd_id += 1
+                    self.attempt_cmd_until_success(
+                        cmd=self.perform_operate,
+                        args=(DeviceMode.MODE_ACCEPT_DOCKOUT,),
+                    )
+                    self.request_guid = request_guid
+            else:
+                self.request_guid = request_guid
 
     def machineRequest(self, mode: int):
         with self._lock:

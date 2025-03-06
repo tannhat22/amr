@@ -119,10 +119,11 @@ levels:
       - [35, 96, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
       - [57, 35, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
       - [35, 34, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
-      - [34, 56, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
+      - [34, 56, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, zone_clr56], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
       - [96, 103, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, zone_clr56], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
       - [103, 90, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
       - [58, 103, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
+      - [60, 61, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.69999999999999996]}]
     layers:
       tp2_scan:
         color: [1, 0, 0, 0.5]
@@ -134,7 +135,7 @@ levels:
           yaw: 0
         visible: false
       tp2_scan_virtualwall:
-        color: [0, 1, 0, 0.5]
+        color: [0.878, 0.106, 0.14099999999999999, 0.5]
         filename: tp2-layout/map_tp2_virtualwall.png
         transform:
           scale: 0.050200000000000002
@@ -380,7 +381,7 @@ levels:
       - [22, 21, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.80000000000000004]}]
       - [19, 93, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.80000000000000004]}]
       - [93, 17, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.80000000000000004]}]
-      - [15, 94, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.80000000000000004]}]
+      - [15, 94, {bidirectional: [4, true], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.80000000000000004]}]
       - [93, 15, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
       - [20, 19, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.59999999999999998]}]
       - [21, 19, {bidirectional: [4, false], demo_mock_floor_name: [1, ""], demo_mock_lift_name: [1, ""], graph_idx: [2, 0], mutex: [1, ""], orientation: [1, ""], speed_limit: [3, 0.80000000000000004]}]
@@ -429,8 +430,8 @@ levels:
       - [890, 397, 0, "", {mutex: [1, ""]}]
       - [1493, 740, 0, ""]
       - [1493, 1102, 0, ""]
-      - [1665, 1102, 0, ""]
-      - [1716, 1102, 0, ""]
+      - [1665, 1103, 0, ""]
+      - [1716, 1103, 0, ""]
       - [1984.5, 1098, 0, ""]
       - [2042, 1073, 0, line83--dropoff, {dock_name: [1, line83--dropoff], dropoff_ingestor: [1, line83]}]
       - [2042, 1110, 0, line83_DOFD]
@@ -456,8 +457,8 @@ levels:
       - [2274, 890, 0, line85_PKFD]
       - [2122, 897, 0, line83--pickup, {dock_name: [1, line83--pickup], pickup_dispenser: [1, line83]}]
       - [2137, 897, 0, line83_PKFD]
-      - [2401.5, 911, 0, line86--pickup, {dock_name: [1, line86--pickup], pickup_dispenser: [1, line86]}]
-      - [2401, 925, 0, line86_PKFD]
+      - [2400, 877, 0, line86--pickup, {dock_name: [1, line86--pickup], pickup_dispenser: [1, line86]}]
+      - [2414, 877, 0, line86_PKFD]
       - [2442, 1306, 0, line89--pickup, {dock_name: [1, line89--pickup], pickup_dispenser: [1, line89]}]
       - [2429, 1306, 0, line89_PKFD]
       - [2558.5, 888, 0, line87_PKFD]

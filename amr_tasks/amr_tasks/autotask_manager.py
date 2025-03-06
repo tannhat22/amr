@@ -6,14 +6,20 @@ import yaml
 import re
 import rclpy
 import json
+import uuid
 
 from rclpy.node import Node
+from rclpy.qos import QoSProfile
 from rclpy.qos import qos_profile_system_default
+from rclpy.qos import QoSDurabilityPolicy as Durability
+from rclpy.qos import QoSHistoryPolicy as History
+from rclpy.qos import QoSReliabilityPolicy as Reliability
 
 
 # from rclpy.executors import MultiThreadedExecutor
 # from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from std_msgs.msg import String
+from rmf_task_msgs.msg import ApiRequest
 from machine_fleet_msgs.msg import (
     DeliveryItem,
     DeliveryParams,
@@ -286,9 +292,16 @@ class AutoTaskManager(Node):
                     }
                 )
 
+        transient_qos = QoSProfile(
+            history=History.KEEP_LAST,
+            depth=1,
+            reliability=Reliability.RELIABLE,
+            durability=Durability.TRANSIENT_LOCAL,
+        )
+
         # Publishers:
-        self._delivery_request_pub = self.create_publisher(
-            DeliveryRequest, "/amr_delivery_requests", qos_profile=qos_profile_system_default
+        self.task_api_req_pub = self.create_publisher(
+            ApiRequest, "task_api_requests", transient_qos
         )
 
         self._adapter_station_request_pub = self.create_publisher(
@@ -331,14 +344,113 @@ class AutoTaskManager(Node):
 
         self.get_logger().info("Beginning client, shut down with CTRL-C")
 
-    def publish_delivery_requests(
-        self, requester: str, start_time: int, params: list[DeliveryParams]
+    # pickup_descriptions
+    def __create_pickup_desc(self, pickup: DeliveryParams):
+        place = pickup.pickup_place_name
+        handler = pickup.pickup_dispenser
+        payload = [{"sku": pickup.pickup_items.sku, "quantity": pickup.pickup_items.quantity}]
+
+        return {
+            "place": place,
+            "handler": handler,
+            "payload": payload,
+        }
+
+    # dropoff_descriptions
+    def __create_dropoff_desc(self, dropoff: DeliveryParams):
+        place = dropoff.dropoff_place_name
+        handler = dropoff.dropoff_ingestor
+        payload = [{"sku": dropoff.dropoff_items.sku, "quantity": dropoff.dropoff_items.quantity}]
+
+        return {
+            "place": place,
+            "handler": handler,
+            "payload": payload,
+        }
+
+    def dispatch_delivery(
+        self,
+        fleet: str = None,
+        robot: str = None,
+        start_time_task: int = 0,
+        requester: str = "amr_task",
+        delivery_params: list[DeliveryParams] = [],
     ):
-        msg = DeliveryRequest()
-        msg.requester = requester
-        msg.start_time = start_time
-        msg.delivery_params = params
-        self._delivery_request_pub.publish(msg)
+        assert len(delivery_params) > 0, "delivery_params invalid, please check!"
+
+        # Construct task
+        msg = ApiRequest()
+        msg.request_id = "delivery_" + str(uuid.uuid4())
+        payload = {}
+        if fleet and robot:
+            self.get_logger().info("Using 'robot_task_request'")
+            payload["type"] = "robot_task_request"
+            payload["fleet"] = fleet
+            payload["robot"] = robot
+        else:
+            self.get_logger().info("Using 'dispatch_task_request'")
+            payload["type"] = "dispatch_task_request"
+        request = {}
+
+        # Set task request request time, start time and requester
+        now = self.get_clock().now().to_msg()
+        now.sec = now.sec + start_time_task
+        start_time = now.sec * 1000 + round(now.nanosec / 10**6)
+        request["unix_millis_request_time"] = start_time
+        request["unix_millis_earliest_start_time"] = start_time
+        request["requester"] = requester
+
+        if fleet:
+            request["fleet_name"] = fleet
+
+        # Use standard delivery task type
+        if len(delivery_params) == 1:
+            request["category"] = "delivery"
+            description = {
+                "pickup": self.__create_pickup_desc(delivery_params[0]),
+                "dropoff": self.__create_dropoff_desc(delivery_params[0]),
+            }
+        else:
+            # Define multi_delivery with request category compose
+            request["category"] = "compose"
+
+            # Define task request description with phases
+            description = {}  # task_description_Compose.json
+            description["category"] = "multi_delivery"
+            description["phases"] = []
+            activities = []
+            for i in range(0, len(delivery_params)):
+                # Add each pickup
+                activities.append(
+                    {
+                        "category": "pickup",
+                        "description": self.__create_pickup_desc(delivery_params[i]),
+                    }
+                )
+                # Add each dropoff
+                activities.append(
+                    {
+                        "category": "dropoff",
+                        "description": self.__create_dropoff_desc(delivery_params[i]),
+                    }
+                )
+
+            # Add activities to phases
+            description["phases"].append(
+                {
+                    "activity": {
+                        "category": "sequence",
+                        "description": {"activities": activities},
+                    }
+                }
+            )
+
+        request["description"] = description
+        payload["request"] = request
+        msg.json_msg = json.dumps(payload)
+
+        # print(f"Json msg payload: \n{json.dumps(payload, indent=2)}")
+        self.task_api_req_pub.publish(msg)
 
     def task_state_update_cb(self, msg: String):
         taskState = json.loads(msg.data)
@@ -367,24 +479,35 @@ class AutoTaskManager(Node):
                 else:
                     machineReq.request_mode.mode = DeviceMode.MODE_ROBOT_ERROR
 
+                self.get_logger().warn(f"Detect autotask from [{requester}] was {status}!")
+
                 for pk_station in requesterContext.pickup_stations:
                     if pk_station.get_occupant() == requester:
                         self.get_logger().warn(
-                            f"Detect autotask from [{requester}] was {status}, reset common pickup station [{pk_station.get_state().station_name}]!"
+                            f"Reset common pickup station [{pk_station.get_state().station_name}]!"
                         )
                         pk_station.reset()
-                        machineReq.request_type = MachineRequest.REQUEST_INGESTOR
-                        self.machine_req_pub.publish(machineReq)
                         break
                 for do_station in requesterContext.dropoff_stations:
                     if do_station.get_occupant() == requester:
                         self.get_logger().warn(
-                            f"Detect autotask from [{requester}] was {status}, reset common dropoff station [{do_station.get_state().station_name}]!"
+                            f"Reset common dropoff station [{do_station.get_state().station_name}]!"
                         )
                         do_station.reset()
-                        machineReq.request_type = MachineRequest.REQUEST_DISPENSER
-                        self.machine_req_pub.publish(machineReq)
                         break
+
+                if requesterContext.get_destination_pickup() != "":
+                    machineReq.request_type = MachineRequest.REQUEST_INGESTOR
+                elif requesterContext.get_destination_dropoff() != "":
+                    machineReq.request_type = MachineRequest.REQUEST_DISPENSER
+                else:
+                    return
+
+                self.get_logger().warn(
+                    f"Response [{status}] to [{requesterContext.name}] (request_type: {machineReq.request_type})!"
+                )
+                self.machine_req_pub.publish(machineReq)
+
             else:
                 return
 
@@ -470,8 +593,10 @@ class AutoTaskManager(Node):
                                         f"detect pickup request from machine [{requester.name}], send task delivery "
                                         f"(pickup: {param.pickup_place_name} -> dropoff: {param.dropoff_place_name})!"
                                     )
-                                    self.publish_delivery_requests(
-                                        requester=requester.name, start_time=0, params=[param]
+                                    self.dispatch_delivery(
+                                        start_time_task=0,
+                                        requester=requester.name,
+                                        delivery_params=[param],
                                     )
                                     requester.set_destination_dropoff(param.dropoff_place_name)
                                     break
@@ -499,8 +624,11 @@ class AutoTaskManager(Node):
                                         f"detect dropoff request from machine [{requester.name}], send task delivery "
                                         f"(pickup: {param.pickup_place_name} -> dropoff: {param.dropoff_place_name})!"
                                     )
-                                    self.publish_delivery_requests(
-                                        requester=requester.name, start_time=0, params=[param]
+
+                                    self.dispatch_delivery(
+                                        start_time_task=0,
+                                        requester=requester.name,
+                                        delivery_params=[param],
                                     )
                                     requester.set_destination_pickup(param.pickup_place_name)
                                     break
@@ -576,8 +704,11 @@ class AutoTaskManager(Node):
                             )
 
                             requester.set_destination_dropoff(deliveryParams[-1].dropoff_place_name)
-                            self.publish_delivery_requests(
-                                requester=requester.name, start_time=0, params=deliveryParams
+
+                            self.dispatch_delivery(
+                                start_time_task=0,
+                                requester=requester.name,
+                                delivery_params=deliveryParams,
                             )
                 else:
                     requester.set_destination_dropoff("")

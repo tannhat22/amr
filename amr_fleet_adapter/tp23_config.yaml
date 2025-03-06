@@ -199,8 +199,8 @@ docks:
     tag_names: [tag_frame_8]
   
   line86--pickup:
-    go_in_dock: [rot:180]
-    go_out_dock: [mov:0.77]
+    go_in_dock: [rot:-90]
+    go_out_dock: [mov:0.76, rot:-60, mov:-0.35, rot:-30, mov:0.4]
     tag_names: [tag_frame_8]
 
   line86--dropoff:
@@ -234,7 +234,7 @@ docks:
   
   line89--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.77, rot:-60, mov:-0.4, rot:-30, mov:0.5]
+    go_out_dock: [mov:0.77, rot:-60, mov:-0.35, rot:-30, mov:0.4]
     tag_names: [tag_frame_11]
 
   line89--dropoff:

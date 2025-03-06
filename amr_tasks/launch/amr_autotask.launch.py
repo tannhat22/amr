@@ -69,14 +69,14 @@ def generate_launch_description():
                     nav_graph_2_file,
                 ],
             ),
-            Node(
-                package="amr_tasks",
-                namespace="",
-                executable="dispatch_delivery_task",
-                name="amr_delivery_requester",
-                output="screen",
-                emulate_tty=True,
-                respawn=False,
-            ),
+            # Node(
+            #     package="amr_tasks",
+            #     namespace="",
+            #     executable="dispatch_delivery_task",
+            #     name="amr_delivery_requester",
+            #     output="screen",
+            #     emulate_tty=True,
+            #     respawn=False,
+            # ),
         ]
     )

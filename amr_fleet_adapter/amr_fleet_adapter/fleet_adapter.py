@@ -306,6 +306,7 @@ class RobotAdapter:
         self.distance_tolerance = distance_tolerance
 
         self.disconnect = False
+        self.is_decommission = False
         self.paused = False
         self.paused_mission: MissionHandle | None = None
         self.vertexs_config = vertexs_config
@@ -378,6 +379,17 @@ class RobotAdapter:
                     f"Mission is None / Robot is localizing, ignore status " f"update"
                 )
 
+            # Decommission the robot if it is in an error or emergency state
+            # Recommision will be handle by hand
+            if data.mode == RobotMode.MODE_EMERGENCY or data.mode == RobotMode.MODE_REQUEST_ERROR:
+                if not self.is_decommission:
+                    self.attempt_cmd_until_success(cmd=self.api.decommission, args=(self.name,))
+                    self.is_decommission = True
+                    time.sleep(1.0)  # Wait for the robot to decommission
+                    return
+            else:
+                self.is_decommission = False
+
             # Update RMF to mark the ActionExecution as finished
             if mission is not None:
                 if mission.done:
@@ -386,16 +398,10 @@ class RobotAdapter:
                     data.mode == RobotMode.MODE_EMERGENCY
                     or data.mode == RobotMode.MODE_REQUEST_ERROR
                 ):
-                    # if data.mode == RobotMode.MODE_REQUEST_ERROR:
-                    #     self.node.get_logger().error(
-                    #         f"Robot {self.name} has ERROR when process last requested "
-                    #         f"with task_id: {self.update_handle.more().current_task_id()}."
-                    #     )
-                    # elif data.mode == RobotMode.MODE_EMERGENCY:
-                    #     self.node.get_logger().error(
-                    #         f"Robot {self.name} has EMERGENCY_STOP when process last requested "
-                    #         f"with task_id: {self.update_handle.more().current_task_id()}."
-                    #     )
+                    self.node.get_logger().error(
+                        f"Robot {self.name} has state {data.mode} when process last requested "
+                        f"with task_id: {self.update_handle.more().current_task_id()}."
+                    )
 
                     self.update_handle.more().kill_task(
                         self.update_handle.more().current_task_id(),
@@ -832,13 +838,9 @@ class RobotAdapter:
                 f"Robot [{self.name}] request DOCK_IN machine at dock [{destination.name}]"
             )
 
-            self.attempt_cmd_until_success(
-                cmd=self.api.machine_request,
-                args=(
-                    destination.name,
-                    machine_process,
-                ),
-            )
+            while not self.api.machine_request(destination.name, machine_process):
+                if self.cancel_cmd_event.wait(0.5):
+                    return False
 
             while rclpy.ok():
                 machineData = self.api.get_machine_data(destination.name)
@@ -859,7 +861,7 @@ class RobotAdapter:
                     break
 
                 if self.cancel_cmd_event.wait(0.5):
-                    break
+                    return False
 
         location = {
             "x": destination.position[0],

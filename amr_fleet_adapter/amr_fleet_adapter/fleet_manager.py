@@ -22,6 +22,7 @@ import sys
 import threading
 import time
 import re
+import uuid
 from typing import Optional
 
 from fastapi import FastAPI
@@ -39,6 +40,7 @@ import rmf_adapter as adpt
 import rmf_adapter.geometry as geometry
 import rmf_adapter.vehicletraits as traits
 from charger_fleet_msgs.msg import ChargerRequest, ChargerMode
+from rmf_task_msgs.msg import ApiRequest
 from rmf_fleet_msgs.msg import (
     FleetState,
     RobotState,
@@ -237,7 +239,7 @@ class FleetManager(Node):
 
         transient_qos = QoSProfile(
             history=History.KEEP_LAST,
-            depth=1,
+            depth=10,
             reliability=Reliability.RELIABLE,
             durability=Durability.TRANSIENT_LOCAL,
         )
@@ -247,6 +249,10 @@ class FleetManager(Node):
             "dock_summary",
             self.dock_summary_cb,
             qos_profile=transient_qos,
+        )
+
+        self.task_api_req_pub = self.create_publisher(
+            ApiRequest, "task_api_requests", transient_qos
         )
 
         self.path_pub = self.create_publisher(
@@ -452,6 +458,66 @@ class FleetManager(Node):
                 print(f"Sending stop request for {robot_name}: {cmd_id}")
             robot.last_request = cancel_request
             robot.destination = None
+
+            response["success"] = True
+            return response
+
+        @app.get("/open-rmf/rmf_vdm_fm/decommission_robot/", response_model=Response)
+        async def decommission(robot_name: str):
+            response = {"success": False, "msg": ""}
+            if robot_name not in self.robots:
+                return response
+
+            commission = {}
+            commission["dispatch_tasks"] = False
+            commission["direct_tasks"] = False
+            commission["idle_behavior"] = False
+
+            msg = ApiRequest()
+            msg.request_id = str(uuid.uuid4())
+            payload = {}
+            payload["type"] = "robot_commission_request"
+            payload["fleet"] = self.fleet_name
+            payload["robot"] = robot_name
+            payload["commission"] = commission
+            payload["pending_dispatch_tasks_policy"] = "reassign"
+            payload["pending_direct_tasks_policy"] = "cancel"
+
+            msg.json_msg = json.dumps(payload)
+            self.task_api_req_pub.publish(msg)
+
+            if self.debug:
+                print(f"Sending decommission request for {robot_name}")
+
+            response["success"] = True
+            return response
+
+        @app.get("/open-rmf/rmf_vdm_fm/recommission_robot/", response_model=Response)
+        async def recommission(robot_name: str):
+            response = {"success": False, "msg": ""}
+            if robot_name not in self.robots:
+                return response
+
+            commission = {}
+            commission["dispatch_tasks"] = True
+            commission["direct_tasks"] = True
+            commission["idle_behavior"] = True
+
+            msg = ApiRequest()
+            msg.request_id = str(uuid.uuid4())
+            payload = {}
+            payload["type"] = "robot_commission_request"
+            payload["fleet"] = self.fleet_name
+            payload["robot"] = robot_name
+            payload["commission"] = commission
+            payload["pending_dispatch_tasks_policy"] = "complete"
+            payload["pending_direct_tasks_policy"] = "complete"
+
+            msg.json_msg = json.dumps(payload)
+            self.task_api_req_pub.publish(msg)
+
+            if self.debug:
+                print(f"Sending recommission request for {robot_name}")
 
             response["success"] = True
             return response

@@ -253,6 +253,44 @@ class RobotAPI:
             print(f"Other error for {robot_name} in stop: {err}")
         return False
 
+    def decommission(self, robot_name: str):
+        """
+        Command decommission robot.
+
+        Return True if robot has successfully decommission. Else False
+        """
+        url = self.prefix + f"/open-rmf/rmf_vdm_fm/decommission_robot?robot_name={robot_name}"
+        try:
+            response = requests.get(url, self.timeout)
+            response.raise_for_status()
+            if self.debug:
+                print(f"Response: {response.json()}")
+            return response.json()["success"]
+        except HTTPError as http_err:
+            print(f"HTTP error for decommission {robot_name}: {http_err}")
+        except Exception as err:
+            print(f"Other error for decommission {robot_name}: {err}")
+        return False
+
+    def recommission(self, robot_name: str):
+        """
+        Command recommission robot.
+
+        Return True if robot has successfully recommission. Else False
+        """
+        url = self.prefix + f"/open-rmf/rmf_vdm_fm/recommission_robot?robot_name={robot_name}"
+        try:
+            response = requests.get(url, self.timeout)
+            response.raise_for_status()
+            if self.debug:
+                print(f"Response: {response.json()}")
+            return response.json()["success"]
+        except HTTPError as http_err:
+            print(f"HTTP error for recommission {robot_name}: {http_err}")
+        except Exception as err:
+            print(f"Other error for recommission {robot_name}: {err}")
+        return False
+
     def toggle_teleop(self, robot_name: str, toggle: bool):
         """
         Request to toggle the robot's mode_teleop parameter.
