@@ -308,6 +308,7 @@ class RobotAdapter:
         self.disconnect = False
         self.is_decommission = False
         self.paused = False
+        self.waiting_robot = False
         self.paused_mission: MissionHandle | None = None
         self.vertexs_config = vertexs_config
         self.charger_server = charger_server
@@ -385,7 +386,7 @@ class RobotAdapter:
                 if not self.is_decommission:
                     self.attempt_cmd_until_success(cmd=self.api.decommission, args=(self.name,))
                     self.is_decommission = True
-                    time.sleep(1.0)  # Wait for the robot to decommission
+                    # time.sleep(1.0)  # Wait for the robot to decommission
                     return
             else:
                 self.is_decommission = False
@@ -548,12 +549,12 @@ class RobotAdapter:
                     self.unlift = True
 
             mission.done = True
-        # Will finished goal early if goal don't have name
+            # self.paused = False
+            # self.waiting_robot = False
+        # Will finished goal early if it's not last destination of the path!
         elif mission.navigate and not mission.is_last_destination:
-            dist2GoalNoname = self.dist(
-                self.last_known_status.position[0:2], mission.destination.xy
-            )
-            if dist2GoalNoname <= self.distance_tolerance:
+            dist2Goal = self.dist(self.last_known_status.position[0:2], mission.destination.xy)
+            if dist2Goal <= self.distance_tolerance:
                 mission.navigate = False
                 mission.done = True
                 self.node.get_logger().info(
@@ -568,6 +569,7 @@ class RobotAdapter:
                 self.unlift = False
                 self.undock = None
                 self.paused = False
+                self.waiting_robot = False
 
     def make_callbacks(self):
         callbacks = rmf_easy.RobotCallbacks(
@@ -764,13 +766,31 @@ class RobotAdapter:
                     f"{self.name}: receive paused action but robot don't have mission!"
                 )
 
+    def wait(self):
+        with self._lock:
+            """Set wait flag and hold on to any requested navigate"""
+            mission = self.mission
+            if mission is not None and mission.execution is not None:
+                if not self.waiting_robot:
+                    self.waiting_robot = True
+                    self.cmd_id += 1
+                    self.node.get_logger().info(f"[WAIT] {self.name}: current mission saved!")
+                    self.attempt_cmd_until_success(cmd=self.api.wait, args=(self.name, self.cmd_id))
+                else:
+                    self.node.get_logger().info(f"[WAIT] {self.name}: robot was waiting!")
+            else:
+                self.node.get_logger().info(
+                    f"{self.name}: receive wait action but robot don't have mission!"
+                )
+
     def resume(self):
         with self._lock:
             """Unset pause flag and substitute paused mission if no paths exist."""
-            if self.paused:
+            if self.paused or self.waiting_robot:
                 self.cmd_id += 1
                 self.attempt_cmd_until_success(cmd=self.api.resume, args=(self.name, self.cmd_id))
                 self.paused = False
+                self.waiting_robot = False
                 # self.mission = self.paused_mission
                 self.node.get_logger().info(f"[RESUME] {self.name}: saved mission restored!")
 
@@ -783,8 +803,9 @@ class RobotAdapter:
                     self.node.get_logger().info(f"[{self.name}] Stop requested from RMF!")
                     self.attempt_cmd_until_success(cmd=self.api.stop, args=(self.name, self.cmd_id))
                     self.mission = None
-                    self.paused = False
                     self.undock = None
+                    self.paused = False
+                    self.waiting_robot = False
 
     def execute_action(self, category: str, description: dict, execution):
         self.cmd_id += 1
@@ -1003,12 +1024,11 @@ def ros_connections(node, robots: dict[str, RobotAdapter], fleet_handle):
             return
 
         if msg.mode.mode == RobotMode.MODE_IDLE:
-            # robot = robots.get(msg.robot_name)
-            # if robot is None:
-            #     return
             robot.finish_action()
-        elif msg.mode.mode == RobotMode.MODE_WAITING:
+        elif msg.mode.mode == RobotMode.MODE_PAUSED:
             robot.pause()
+        elif msg.mode.mode == RobotMode.MODE_WAITING:
+            robot.wait()
         elif msg.mode.mode == RobotMode.MODE_MOVING:
             robot.resume()
 
