@@ -549,6 +549,7 @@ class RobotAdapter:
                     self.unlift = True
 
             mission.done = True
+            self.unlift = False
             # self.paused = False
             # self.waiting_robot = False
         # Will finished goal early if it's not last destination of the path!
@@ -648,7 +649,7 @@ class RobotAdapter:
             # Check if robot need unlift:
             if self.unlift:
                 self.mission = MissionHandle(execution, destination=destination)
-                self.unlift = False
+                # self.unlift = False
                 unliftDist = -self.dist(self.last_known_status.position[0:2], destination.xy)
                 self.node.get_logger().info(
                     f"[{self.name}] Received navigation command but "

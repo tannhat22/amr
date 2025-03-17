@@ -129,7 +129,7 @@ docks:
   
   line82--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.77, rot:-90]
+    go_out_dock: [mov:0.75, rot:-90]
     tag_names: [tag_frame_4]
 
   line82--dropoff:
@@ -146,7 +146,7 @@ docks:
   
   line83--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.77, rot:-60, mov:-0.65, rot:-30, mov:0.563]
+    go_out_dock: [mov:0.75, rot:-60, mov:-0.65, rot:-30, mov:0.563]
     tag_names: [tag_frame_5]
 
   line83--dropoff:
@@ -164,7 +164,7 @@ docks:
   
   line84--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.77, rot:-60, mov:-0.4, rot:-30, mov:0.5]
+    go_out_dock: [mov:0.75, rot:-60, mov:-0.4, rot:-30, mov:0.5]
     tag_names: [tag_frame_6]
 
   line84--dropoff:
@@ -182,7 +182,7 @@ docks:
   
   line85--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.77, rot:-60, mov:-0.65, rot:-30, mov:0.563]
+    go_out_dock: [mov:0.75, rot:-60, mov:-0.65, rot:-30, mov:0.563]
     tag_names: [tag_frame_7]
 
   line85--dropoff:
@@ -200,7 +200,7 @@ docks:
   
   line86--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.76, rot:-60, mov:-0.35, rot:-30, mov:0.4]
+    go_out_dock: [mov:0.75, rot:-60, mov:-0.35, rot:-30, mov:0.4]
     tag_names: [tag_frame_8]
 
   line86--dropoff:
@@ -214,7 +214,7 @@ docks:
   
   line87--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.77, rot:-60, mov:-0.35, rot:-30, mov:0.4]
+    go_out_dock: [mov:0.75, rot:-60, mov:-0.35, rot:-30, mov:0.4]
     tag_names: [tag_frame_9]
 
   line87--dropoff:
@@ -234,7 +234,7 @@ docks:
   
   line89--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.77, rot:-60, mov:-0.35, rot:-30, mov:0.4]
+    go_out_dock: [mov:0.75, rot:-60, mov:-0.35, rot:-30, mov:0.4]
     tag_names: [tag_frame_11]
 
   line89--dropoff:
@@ -250,7 +250,7 @@ docks:
   
   line90--pickup:
     go_in_dock: [rot:180]
-    go_out_dock: [mov:0.77]
+    go_out_dock: [mov:0.75]
     tag_names: [tag_frame_12]
 
   line90--dropoff:
