@@ -19,7 +19,7 @@ def generate_launch_description():
     # Arguments
     use_sim_time = "false"
     map_name = "lk1-layout"
-    server_uri = "http://10.7.11.35:8000/_internal"
+    server_uri = "http://10.7.11.13:8000/_internal"
     enable_experimental_lift_watchdog = "false"
     nav_graph_file_path = PathJoinSubstitution(
         [
