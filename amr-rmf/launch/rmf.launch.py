@@ -18,6 +18,7 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     # Arguments
     use_sim_time = "false"
+    use_reservation_node = "true"
     map_name = "tp23-layout"
     server_uri = "http://10.7.11.9:8000/_internal"
     enable_experimental_lift_watchdog = "true"
@@ -56,6 +57,7 @@ def generate_launch_description():
                         [FindPackageShare("amr_fleet_adapter"), "charge_schedule.yaml"]
                     ),
                     "server_uri": server_uri,
+                    "use_reservation_node": use_reservation_node,
                 }.items(),
             ),
             # Experimental lift watchdog group (enabled)

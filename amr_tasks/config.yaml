@@ -35,6 +35,11 @@ TaskRequester:
         sku: "RF370CB_TTR"
         pickup_station: line82--pickup
         dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
+      step2:
+        sku: "RF370CB_STR"
+        pickup_station: clr82--pickup
+        dropoff_stations: ["line82--dropoff"]
+
 
     # LINE 83
     line83--pickup:
@@ -42,6 +47,10 @@ TaskRequester:
         sku: "RF370CB_TTR"
         pickup_station: line83--pickup
         dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
+      step2:
+        sku: "RF370CB_STR"
+        pickup_station: clr83--pickup
+        dropoff_stations: ["line83--dropoff"]
 
     # LINE 84
     line84--pickup:
@@ -49,6 +58,10 @@ TaskRequester:
         sku: "RF370CB_TTR"
         pickup_station: line84--pickup
         dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
+      step2:
+        sku: "RF370CB_STR"
+        pickup_station: clr84--pickup
+        dropoff_stations: ["line84--dropoff"]
 
     # LINE 85
     line85--pickup:
@@ -56,6 +69,10 @@ TaskRequester:
         sku: "RF370CB_TTR"
         pickup_station: line85--pickup
         dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
+      step2:
+        sku: "RF370CB_STR"
+        pickup_station: clr85--pickup
+        dropoff_stations: ["line85--dropoff"]
 
     # LINE 86
     line86--pickup:
@@ -63,6 +80,10 @@ TaskRequester:
         sku: "RF370CB_TTR"
         pickup_station: line86--pickup
         dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
+      step2:
+        sku: "RF370CB_STR"
+        pickup_station: clr86--pickup
+        dropoff_stations: ["line86--dropoff"]
 
     # LINE 87
     line87--pickup:
@@ -70,6 +91,10 @@ TaskRequester:
         sku: "RF370CB_TTR"
         pickup_station: line87--pickup
         dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
+      step2:
+        sku: "RF370CB_STR"
+        pickup_station: clr87--pickup
+        dropoff_stations: ["line87--dropoff"]
 
     # LINE 89
     line89--pickup:
@@ -77,6 +102,10 @@ TaskRequester:
         sku: "RF370CB_TTR"
         pickup_station: line89--pickup
         dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
+      step2:
+        sku: "RF370CB_STR"
+        pickup_station: clr89--pickup
+        dropoff_stations: ["line89--dropoff"]
 
     # LINE 90
     line90--pickup:
@@ -84,3 +113,7 @@ TaskRequester:
         sku: "RF370CB_TTR"
         pickup_station: line90--pickup
         dropoff_stations: ["clr001--dropoff", "clr002--dropoff", "clr003--dropoff", "clr004--dropoff", "clr005--dropoff"]
+      step2:
+        sku: "RF370CB_STR"
+        pickup_station: clr90--pickup
+        dropoff_stations: ["line90--dropoff"]

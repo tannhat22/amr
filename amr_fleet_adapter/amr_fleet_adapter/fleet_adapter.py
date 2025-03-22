@@ -14,6 +14,7 @@
 
 import argparse
 import asyncio
+import faulthandler
 import math
 import sys
 import threading
@@ -62,6 +63,7 @@ class DestinationCopy:
 # Main
 # ------------------------------------------------------------------------------
 def main(argv=sys.argv):
+    faulthandler.enable()
     # Init rclpy and adapter
     rclpy.init(args=argv)
     rmf_adapter.init_rclcpp()
@@ -118,7 +120,7 @@ def main(argv=sys.argv):
         node.set_parameters([param])
         adapter.node.use_sim_time()
 
-    adapter.start()
+    # adapter.start()
     time.sleep(1.0)
 
     node.declare_parameter("server_uri", "")
@@ -173,35 +175,50 @@ def main(argv=sys.argv):
             robot_updaters.append(robot.update_loop(update_period))
         await asyncio.gather(*robot_updaters)
 
-    def update_loop():
-        event_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(event_loop)
-        event_loop.run_until_complete(state_updates())
-
-    update_thread = threading.Thread(target=update_loop, args=())
-    update_thread.start()
-
-    def reassign_task_interval():
-        reassign_task_interval = config_yaml["rmf_fleet"].get(
-            "reassign_task_interval", 60
-        )  # seconds
+    async def reassign_task_loop():
+        reassign_task_interval = config_yaml["rmf_fleet"].get("reassign_task_interval", 60)
         last_task_replan = node.get_clock().now()
-        event_reassign_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(event_reassign_loop)
+
         while rclpy.ok():
             now = node.get_clock().now()
-
             interval_sec = (now.nanoseconds - last_task_replan.nanoseconds) / 1e9
             if interval_sec > reassign_task_interval:
                 fleet_handle.more().reassign_dispatched_tasks()
                 last_task_replan = now
 
-            next_wakeup = now + Duration(nanoseconds=update_period * 1e9)
-            while node.get_clock().now() < next_wakeup:
-                time.sleep(0.001)
+            await asyncio.sleep(1.0)
 
-    reassign_thread = threading.Thread(target=reassign_task_interval, args=())
-    reassign_thread.start()
+    async def main_loop():
+        await asyncio.gather(state_updates(), reassign_task_loop())
+
+    def update_loop():
+        event_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(event_loop)
+        event_loop.run_until_complete(main_loop())
+
+    update_thread = threading.Thread(target=update_loop, args=())
+    update_thread.start()
+
+    # async def reassign_task_interval():
+    #     reassign_task_interval = config_yaml["rmf_fleet"].get(
+    #         "reassign_task_interval", 60
+    #     )  # seconds
+    #     last_task_replan = node.get_clock().now()
+    #     event_reassign_loop = asyncio.new_event_loop()
+    #     asyncio.set_event_loop(event_reassign_loop)
+    #     while rclpy.ok():
+    #         now = node.get_clock().now()
+
+    #         interval_sec = (now.nanoseconds - last_task_replan.nanoseconds) / 1e9
+    #         if interval_sec > reassign_task_interval:
+    #             node.get_logger().warn("DA GAN LAI NHIEM VU!!")
+    #             fleet_handle.more().reassign_dispatched_tasks()
+    #             last_task_replan = now
+
+    #         await asyncio.sleep(0.1)
+
+    # reassign_thread = threading.Thread(target=reassign_task_interval, args=())
+    # reassign_thread.start()
 
     # Connect to the extra ROS2 topics that are relevant for the adapter
     ros_connections(node, robots, fleet_handle)
@@ -209,6 +226,8 @@ def main(argv=sys.argv):
     # Create executor for the command handle node
     rclpy_executor = rclpy.executors.SingleThreadedExecutor()
     rclpy_executor.add_node(node)
+
+    adapter.start()
 
     # Start the fleet adapter
     rclpy_executor.spin()
@@ -334,6 +353,7 @@ class RobotAdapter:
 
     async def update_loop(self, period):
         while rclpy.ok():
+            # self.node.get_logger().warn(f"UPDATE LOOL RUN at robot [{self.name}]!")
             now = self.node.get_clock().now()
             next_wakeup = now + Duration(nanoseconds=period * 1e9)
             data = self.api.get_data(self.name)
@@ -361,8 +381,7 @@ class RobotAdapter:
                 else:
                     await self.update(state, data)
             while self.node.get_clock().now() < next_wakeup:
-                # time.sleep(0.01)
-                await asyncio.sleep(0.01)
+                await asyncio.sleep(0.001)
 
     @parallel
     def update(self, state, data):
@@ -549,7 +568,7 @@ class RobotAdapter:
                     self.unlift = True
 
             mission.done = True
-            self.unlift = False
+            # self.unlift = False
             # self.paused = False
             # self.waiting_robot = False
         # Will finished goal early if it's not last destination of the path!
@@ -649,7 +668,7 @@ class RobotAdapter:
             # Check if robot need unlift:
             if self.unlift:
                 self.mission = MissionHandle(execution, destination=destination)
-                # self.unlift = False
+                self.unlift = False
                 unliftDist = -self.dist(self.last_known_status.position[0:2], destination.xy)
                 self.node.get_logger().info(
                     f"[{self.name}] Received navigation command but "

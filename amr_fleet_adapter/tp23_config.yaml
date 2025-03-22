@@ -25,29 +25,31 @@ rmf_fleet:
   recharge_threshold: 0.20 # Battery level below which robots in this fleet will not operate
   recharge_soc: 0.8 # Battery level to which robots in this fleet should be charged up to during recharging tasks
   max_delay: 15.0 # allowed seconds of delay of the current itinerary before it gets interrupted and replanned
-  publish_fleet_state: 5.0 # Publish frequency for fleet state, ensure that it is same as robot_state_update_frequency
+  publish_fleet_state: 10.0 # Publish frequency for fleet state, ensure that it is same as robot_state_update_frequency
   account_for_battery_drain: True
   task_capabilities: # Specify the types of RMF Tasks that robots in this fleet are capable of performing
     loop: True
     delivery: True
     clean: False
-  finishing_request: "charge" # [park, charge, nothing]
-  responsive_wait: True # Should responsive wait be on/off for the whole fleet by default? False if not specified.
+  finishing_request: "nothing" # [park, charge, nothing]
+  responsive_wait: False # Should responsive wait be on/off for the whole fleet by default? False if not specified.
+  use_parking_reservations: True
+  reassign_task_interval: 60 # seconds, specify how often a task reassignment should be triggered in the fleet
   # max_merge_waypoint_distance: 0.3
   charger_server_running: False  # Server charge is running or not
   distance_tolerance: 0.3 # Distance_tolerance to the next destination if destination is not last
   robots:
     # Here the user is expected to append the configuration for each robot in the fleet.
     amr001:
-      charger: "charger003--charge"
+      # charger: "charger003--charge"
     amr002:
-      charger: "charger004--charge"
+      # charger: "charger004--charge"
     amr003:
-      charger: "charger004--charge"
+      # charger: "charger004--charge"
     amr004:
       charger: "charger001--charge"
     amr005:
-      charger: "charger001--charge"
+      # charger: "charger001--charge"
 
 fleet_manager:
   ip: "127.0.0.1"
@@ -146,7 +148,7 @@ docks:
   
   line83--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.75, rot:-60, mov:-0.65, rot:-30, mov:0.563]
+    go_out_dock: [mov:0.75, rot:-60, mov:-0.65, rot:-30, mov:0.56]
     tag_names: [tag_frame_5]
 
   line83--dropoff:
@@ -176,13 +178,12 @@ docks:
   ### LINE 85
   clr85--pickup:
     go_in_dock: [rot:-180]
-    # go_out_dock: [mov:0.77, rot:-45, mov:0.3, rot:45]
     go_out_dock: [mov:0.77]
     tag_names: [tag_frame_7]
   
   line85--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.75, rot:-60, mov:-0.65, rot:-30, mov:0.563]
+    go_out_dock: [mov:0.75, rot:-60, mov:-0.65, rot:-30, mov:0.56]
     tag_names: [tag_frame_7]
 
   line85--dropoff:
@@ -250,7 +251,7 @@ docks:
   
   line90--pickup:
     go_in_dock: [rot:180]
-    go_out_dock: [mov:0.75]
+    go_out_dock: [mov:0.80]
     tag_names: [tag_frame_12]
 
   line90--dropoff:
@@ -259,6 +260,21 @@ docks:
     limits:
       rotate_angle: 45
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  ### DOI MA HANG
+  doimahang01--dropoff:
+    go_in_dock: [rot:-90, mov:-0.40]
+    go_out_dock: [mov:0.9, rot:-90]
+    limits:
+      rotate_angle: 30
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  doimahang02--dropoff:
+    go_in_dock: [rot:-90, mov:-0.43]
+    go_out_dock: [mov:0.9, rot:-90]
+    limits:
+      rotate_angle: 30
+      rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
   ### CLEANINGROOM TTR COMMON DROPOFF:
   clr001--dropoff:
@@ -322,6 +338,7 @@ vertexs:
   ### TP3
   lift_parking_301: 1.5708
   parking_301: 1.5708
+  parking_302: 3.14
 
   # LINE 55:
   # clr55_PKFD: 3.14
@@ -382,3 +399,7 @@ vertexs:
   # line90_PKFD: 3.14
   line90_DOFD: -1.57199
   clr90_PKFD: 3.14
+
+  ### DOI MA HANG
+  doimahang01_DOFD: -1.57199
+  doimahang02_DOFD: -1.57199
