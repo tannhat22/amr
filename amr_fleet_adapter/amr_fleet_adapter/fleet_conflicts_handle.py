@@ -426,13 +426,6 @@ def main(argv=sys.argv):
     print(f"Starting fleet conflicts handle...")
 
     configs = []
-    # with open(args.config_file_1, "r") as f:
-    #     config = yaml.safe_load(f)
-    #     configs.append(config)
-
-    # with open(args.config_file_2, "r") as f:
-    #     config = yaml.safe_load(f)
-    #     configs.append(config)
 
     if args.config_file_1 != "":
         with open(args.config_file_1, "r") as f:

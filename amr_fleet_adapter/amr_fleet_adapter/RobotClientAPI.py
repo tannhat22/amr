@@ -182,7 +182,7 @@ class RobotAPI:
             f"&cmd_id={cmd_id}"
         )
         try:
-            response = requests.get(url, self.timeout)
+            response = requests.get(url, timeout=self.timeout)
             response.raise_for_status()
             if self.debug:
                 print(f"Response: {response.json()}")
@@ -201,7 +201,7 @@ class RobotAPI:
             f"&cmd_id={cmd_id}"
         )
         try:
-            response = requests.get(url, self.timeout)
+            response = requests.get(url, timeout=self.timeout)
             response.raise_for_status()
             if self.debug:
                 print(f"Response: {response.json()}")
@@ -220,7 +220,7 @@ class RobotAPI:
             f"&cmd_id={cmd_id}"
         )
         try:
-            response = requests.get(url, self.timeout)
+            response = requests.get(url, timeout=self.timeout)
             response.raise_for_status()
             if self.debug:
                 print(f"Response: {response.json()}")
@@ -242,7 +242,7 @@ class RobotAPI:
             f"&cmd_id={cmd_id}"
         )
         try:
-            response = requests.get(url, self.timeout)
+            response = requests.get(url, timeout=self.timeout)
             response.raise_for_status()
             if self.debug:
                 print(f"Response: {response.json()}")
@@ -261,7 +261,7 @@ class RobotAPI:
         """
         url = self.prefix + f"/open-rmf/rmf_vdm_fm/decommission_robot?robot_name={robot_name}"
         try:
-            response = requests.get(url, self.timeout)
+            response = requests.get(url, timeout=self.timeout)
             response.raise_for_status()
             if self.debug:
                 print(f"Response: {response.json()}")
@@ -280,7 +280,7 @@ class RobotAPI:
         """
         url = self.prefix + f"/open-rmf/rmf_vdm_fm/recommission_robot?robot_name={robot_name}"
         try:
-            response = requests.get(url, self.timeout)
+            response = requests.get(url, timeout=self.timeout)
             response.raise_for_status()
             if self.debug:
                 print(f"Response: {response.json()}")

@@ -41,15 +41,9 @@ rmf_fleet:
   robots:
     # Here the user is expected to append the configuration for each robot in the fleet.
     amr001:
-      # charger: "charger003--charge"
     amr002:
-      # charger: "charger004--charge"
     amr003:
-      # charger: "charger004--charge"
-    amr004:
-      charger: "charger001--charge"
     amr005:
-      # charger: "charger001--charge"
 
 fleet_manager:
   ip: "127.0.0.1"
@@ -76,50 +70,6 @@ docks:
   #                              |    |
   #                              |    |
   #    Clockwise (-)(LEFT) <---- `````` ----> Counter clockwise (+)(RIGHT)
-
-  # /******************** TP2 *********************/
-  # LINE 55
-  clr55--pickup:
-    go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.90]
-    tag_names: [tag_frame_0, tag_frame_1, tag_frame_2]
-
-  clr55--dropoff:
-    go_in_dock: [rot:180]
-    go_out_dock: [mov:0.65]
-
-  line55--pickup:
-    go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.85]
-    tag_names: [tag_frame_0, tag_frame_1, tag_frame_2]
-
-  line55--dropoff:
-    go_in_dock: [rot:90]
-    go_out_dock: [mov:0.65]
-
-  # LINE 56
-  clr56--pickup:
-    go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.90]
-    tag_names: [tag_frame_3]
-
-  clr56--dropoff:
-    go_in_dock: [rot:180]
-    go_out_dock: [mov:0.65]
-
-  line56--pickup:
-    # go_in_dock: [rot:180]
-    go_out_dock: [mov:1.22, rot:-90]
-    tag_names: [tag_frame_3]
-    limits:
-      rotate_angle: 30
-      rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
-
-  line56--dropoff:
-    go_out_dock: [mov:0.4, rot:-90]
-    limits:
-      rotate_angle: 45
-      rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
   ###### TP3 ######
 
@@ -278,10 +228,7 @@ docks:
 
   ### CLEANINGROOM TTR COMMON DROPOFF:
   clr001--dropoff:
-    go_out_dock: [mov:0.65, rot:90, mov:-0.4, rot:-180]
-    limits:
-      rotate_angle: 45
-      rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+    go_out_dock: [mov:0.65]
 
   clr002--dropoff:
     go_out_dock: [mov:0.65]
@@ -293,12 +240,12 @@ docks:
     go_out_dock: [mov:0.65]
 
   clr005--dropoff:
-    go_out_dock: [mov:0.65]
+    go_out_dock: [mov:0.65, rot:90, mov:-0.4, rot:-180]
+    limits:
+      rotate_angle: 45
+      rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
   ### CHARGERS
-  charger001--charge:
-    go_out_dock: [mov:-0.9]
-
   charger003--charge:
     go_out_dock: [mov:-1.1]
 
@@ -338,18 +285,6 @@ vertexs:
   lift_parking_301: 1.5708
   parking_301: 1.5708
   parking_302: 3.14
-
-  # LINE 55:
-  clr55_PKFD: 1.57199
-  # clr55_DOFD: 3.14
-  line55_PKFD: 1.57199
-  line55_DOFD: -1.5708
-
-  # LINE 56:
-  clr56_PKFD: 1.57199
-  # clr56_DOFD: 3.14
-  # line56_PKFD: 3.14
-  line56_DOFD: 1.57199
 
   ### CLEANINGROOM TTR COMMON DROPOFF:
   clr001_DOFD: 3.14

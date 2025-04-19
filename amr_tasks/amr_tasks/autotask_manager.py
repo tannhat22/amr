@@ -540,30 +540,6 @@ class AutoTaskManager(Node):
             return
 
         stationContext.set_state(mode=request.mode)
-
-        # Đoạn code tạm thời chờ bắt sensor trạm dùng chung:
-        # stationCLR = [
-        #     "clr001--dropoff",
-        #     "clr002--dropoff",
-        #     "clr003--dropoff",
-        #     "clr004--dropoff",
-        #     "clr005--dropoff",
-        # ]
-        # fullCLR = True
-        # for station in stationCLR:
-        #     stationCLRContext = self._dropoff_context_dict.get(station)
-        #     if stationCLRContext.get_state().mode == StationRequest.MODE_EMPTY:
-        #         fullCLR = False
-        #         break
-
-        # if fullCLR:
-        #     self.get_logger().warn("all station TTR at CLR is full filled, will reset to empty!")
-        #     for station in stationCLR:
-        #         stationCLRContext = self._dropoff_context_dict.get(station)
-        #         stationCLRContext.reset()
-        #         stationCLRContext.set_state(mode=StationRequest.MODE_EMPTY)
-
-        # /////////////////////////////////////////////////////////////////
         return
 
     def fleet_machine_state_cb(self, states: FleetMachineState):

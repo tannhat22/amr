@@ -186,7 +186,7 @@ def main(argv=sys.argv):
                 fleet_handle.more().reassign_dispatched_tasks()
                 last_task_replan = now
 
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.5)
 
     async def main_loop():
         await asyncio.gather(state_updates(), reassign_task_loop())
@@ -198,27 +198,6 @@ def main(argv=sys.argv):
 
     update_thread = threading.Thread(target=update_loop, args=())
     update_thread.start()
-
-    # async def reassign_task_interval():
-    #     reassign_task_interval = config_yaml["rmf_fleet"].get(
-    #         "reassign_task_interval", 60
-    #     )  # seconds
-    #     last_task_replan = node.get_clock().now()
-    #     event_reassign_loop = asyncio.new_event_loop()
-    #     asyncio.set_event_loop(event_reassign_loop)
-    #     while rclpy.ok():
-    #         now = node.get_clock().now()
-
-    #         interval_sec = (now.nanoseconds - last_task_replan.nanoseconds) / 1e9
-    #         if interval_sec > reassign_task_interval:
-    #             node.get_logger().warn("DA GAN LAI NHIEM VU!!")
-    #             fleet_handle.more().reassign_dispatched_tasks()
-    #             last_task_replan = now
-
-    #         await asyncio.sleep(0.1)
-
-    # reassign_thread = threading.Thread(target=reassign_task_interval, args=())
-    # reassign_thread.start()
 
     # Connect to the extra ROS2 topics that are relevant for the adapter
     ros_connections(node, robots, fleet_handle)
@@ -353,7 +332,6 @@ class RobotAdapter:
 
     async def update_loop(self, period):
         while rclpy.ok():
-            # self.node.get_logger().warn(f"UPDATE LOOL RUN at robot [{self.name}]!")
             now = self.node.get_clock().now()
             next_wakeup = now + Duration(nanoseconds=period * 1e9)
             data = self.api.get_data(self.name)
@@ -469,14 +447,11 @@ class RobotAdapter:
             elif mission.undock:
                 self.node.get_logger().info(f"Robot [{self.name}] has undock finished.")
                 dock_mode = search_mode_docking(self.undock.name)
-                if dock_mode == "pickup" or dock_mode == "dropoff":
+                if dock_mode == "pickup":
                     station_process = {
                         "station_type": dock_mode,
                         "mode": StationRequest.MODE_EMPTY,
                     }
-
-                    if dock_mode == "dropoff":
-                        station_process.update({"mode": StationRequest.MODE_FILLED})
 
                     self.attempt_cmd_until_success(
                         cmd=self.api.station_request,
@@ -516,7 +491,20 @@ class RobotAdapter:
 
                 if mission.destination.name:
                     dock_mode = search_mode_docking(mission.destination.name)
-                    if dock_mode == "mpickup" or dock_mode == "mdropoff":
+                    if dock_mode == "dropoff":
+                        station_process = {
+                            "station_type": dock_mode,
+                            "mode": StationRequest.MODE_FILLED,
+                        }
+
+                        self.attempt_cmd_until_success(
+                            cmd=self.api.station_request,
+                            args=(
+                                mission.destination.name,
+                                station_process,
+                            ),
+                        )
+                    elif dock_mode == "mpickup" or dock_mode == "mdropoff":
                         machine_process = {
                             "request_type": "dispenser",
                             "mode": DeviceMode.MODE_ROBOT_DOCKED_IN,
@@ -618,7 +606,7 @@ class RobotAdapter:
             if (
                 self.last_known_status is not None
                 and self.last_known_status.destination_arrival is None
-                and self.dist(self.last_known_status.position[0:2], destination.xy) <= 0.15
+                and self.dist(self.last_known_status.position[0:2], destination.xy) <= 0.2
             ):
                 self.node.get_logger().warn(
                     f"[{self.name}] Received navigation command to waypoint but "
@@ -816,11 +804,25 @@ class RobotAdapter:
 
     def stop(self, activity):
         with self._lock:
-            self.cmd_id += 1
             mission = self.mission
             if mission is not None:
+                if mission.docking or mission.undock or mission.localize:
+                    msgInfo = "perform_docking"
+                    if mission.undock:
+                        msgInfo = "undock"
+                    elif mission.localize:
+                        msgInfo = "localize"
+
+                    self.node.get_logger().info(
+                        f"Robot [{self.name}] is {msgInfo} mission, ignoring stop issued by RMF"
+                    )
+                    return
+
                 if mission.execution is not None and activity.is_same(mission.execution.identifier):
-                    self.node.get_logger().info(f"[{self.name}] Stop requested from RMF!")
+                    self.cmd_id += 1
+                    self.node.get_logger().info(
+                        f"[{self.name}] Stop requested from RMF (cmd_id: {self.cmd_id})!"
+                    )
                     self.attempt_cmd_until_success(cmd=self.api.stop, args=(self.name, self.cmd_id))
                     self.mission = None
                     self.undock = None
