@@ -1019,6 +1019,7 @@ class FleetManager(Node):
             position = [robot.state.location.x, robot.state.location.y]
         angle = robot.state.location.yaw
         data["robot_name"] = robot_name
+        data["time"] = robot.state.location.t.sec
         data["map_name"] = robot.state.location.level_name
         data["position"] = {"x": position[0], "y": position[1], "yaw": angle}
         data["battery"] = robot.state.battery_percent

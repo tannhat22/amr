@@ -51,14 +51,6 @@ class VertexInfo:
         self.in_lift = in_lift
 
 
-class DestinationCopy:
-    def __init__(self, name, map, position, speed_limit) -> None:
-        self.name = name
-        self.map = map
-        self.position = position
-        self.speed_limit = speed_limit
-
-
 # ------------------------------------------------------------------------------
 # Main
 # ------------------------------------------------------------------------------
@@ -120,7 +112,7 @@ def main(argv=sys.argv):
         node.set_parameters([param])
         adapter.node.use_sim_time()
 
-    # adapter.start()
+    adapter.start()
     time.sleep(1.0)
 
     node.declare_parameter("server_uri", "")
@@ -206,8 +198,6 @@ def main(argv=sys.argv):
     rclpy_executor = rclpy.executors.SingleThreadedExecutor()
     rclpy_executor.add_node(node)
 
-    adapter.start()
-
     # Start the fleet adapter
     rclpy_executor.spin()
 
@@ -292,6 +282,7 @@ class RobotAdapter:
         self.name = name
         self.execution = None
         self.mission: MissionHandle | None = None
+        self.state: RobotUpdateData | None = None
         self.teleoperation = None
         self.cmd_id = 0
         self.update_handle = None
@@ -310,12 +301,12 @@ class RobotAdapter:
         self.paused_mission: MissionHandle | None = None
         self.vertexs_config = vertexs_config
         self.charger_server = charger_server
-        self.undock = None
-        self.unlift = False
+        self.need_undock = None
+        self.need_unlift = False
         self.repeat_wp_count = 0
 
         # Threading variables
-        self._lock = threading.Lock()
+        # self._lock = threading.Lock()
         self.issue_cmd_thread = None
         self.cancel_cmd_event = threading.Event()
 
@@ -330,6 +321,12 @@ class RobotAdapter:
             return self.mission.activity
         return None
 
+    def robot_is_connecting(
+        self, robot_time: int, now_time: int, timeout_sec: float = 60.0
+    ) -> bool:
+        delta = now_time - robot_time
+        return delta <= timeout_sec
+
     async def update_loop(self, period):
         while rclpy.ok():
             now = self.node.get_clock().now()
@@ -341,13 +338,25 @@ class RobotAdapter:
                     self.node.get_logger().warn(
                         f"Unable to retrieve state from robot [{self.name}]!"
                     )
+            elif not self.robot_is_connecting(data.time, now.seconds_nanoseconds()[0], 60.0):
+                if not self.disconnect:
+                    self.disconnect = True
+                    self.node.get_logger().warn(
+                        f"Robot [{self.name}] was disconnected, please check!"
+                    )
+
+                    if self.update_handle is not None:
+                        self.update_handle.more().override_status("offline")
             else:
                 if self.disconnect:
+                    self.disconnect = False
                     self.node.get_logger().info(
                         f"Robot [{self.name}] connectivity resumed, received "
                         f"status from robot successfully."
                     )
-                    self.disconnect = False
+
+                    if self.update_handle is not None:
+                        self.update_handle.more().override_status(None)
 
                 state = rmf_easy.RobotState(data.map, data.position, data.battery_soc)
 
@@ -363,60 +372,55 @@ class RobotAdapter:
 
     @parallel
     def update(self, state, data):
-        with self._lock:
-            # Update the stored mission status from AMR
-            mission = self.mission
-            self.update_mission_status(data, mission)
+        # with self._lock:
+        # Update the stored mission status from AMR
+        mission = self.mission
+        self.update_mission_status(data, mission)
 
-            # Update RMF with the latest RobotState
-            if mission is None or (mission.localize and mission.done) or not mission.localize:
-                self.update_handle.update(state, self.activity)
-                self.last_known_status = data
-            else:
-                self.node.get_logger().info(
-                    f"Mission is None / Robot is localizing, ignore status " f"update"
+        # Update RMF with the latest RobotState
+        if mission is None or (mission.localize and mission.done) or not mission.localize:
+            self.update_handle.update(state, self.activity)
+            self.last_known_status = data
+        else:
+            self.node.get_logger().info(
+                f"Mission is None / Robot is localizing, ignore status " f"update"
+            )
+
+        # Decommission the robot if it is in an error or emergency state
+        # Recommision will be handle by hand
+        if data.mode == RobotMode.MODE_EMERGENCY or data.mode == RobotMode.MODE_REQUEST_ERROR:
+            if not self.is_decommission:
+                self.attempt_cmd_until_success(cmd=self.api.decommission, args=(self.name,))
+                self.is_decommission = True
+                return
+        else:
+            self.is_decommission = False
+
+        # Update RMF to mark the ActionExecution as finished
+        if mission is not None:
+            if mission.done:
+                self.update_rmf_finished(mission)
+            elif self.is_decommission:
+                self.node.get_logger().error(
+                    f"Robot {self.name} has state {data.mode} when process last requested "
+                    f"with task_id: {self.update_handle.more().current_task_id()}."
                 )
 
-            # Decommission the robot if it is in an error or emergency state
-            # Recommision will be handle by hand
-            if data.mode == RobotMode.MODE_EMERGENCY or data.mode == RobotMode.MODE_REQUEST_ERROR:
-                if not self.is_decommission:
-                    self.attempt_cmd_until_success(cmd=self.api.decommission, args=(self.name,))
-                    self.is_decommission = True
-                    # time.sleep(1.0)  # Wait for the robot to decommission
-                    return
-            else:
-                self.is_decommission = False
+                self.update_handle.more().kill_task(
+                    self.update_handle.more().current_task_id(),
+                    ["kill_task"],
+                    self.on_killed_task,
+                )
+                self.mission = None
 
-            # Update RMF to mark the ActionExecution as finished
-            if mission is not None:
-                if mission.done:
-                    self.update_rmf_finished(mission)
-                elif (
-                    data.mode == RobotMode.MODE_EMERGENCY
-                    or data.mode == RobotMode.MODE_REQUEST_ERROR
-                ):
-                    self.node.get_logger().error(
-                        f"Robot {self.name} has state {data.mode} when process last requested "
-                        f"with task_id: {self.update_handle.more().current_task_id()}."
-                    )
+        if self.teleoperation is not None:
+            self.teleoperation.update(data)
 
-                    self.update_handle.more().kill_task(
-                        self.update_handle.more().current_task_id(),
-                        ["kill_task"],
-                        self.on_kill,
-                    )
+        # Update robot state:
+        self.state = data
 
-                    mission = None
-
-            if self.teleoperation is not None:
-                self.teleoperation.update(data)
-
-    def on_kill(self, killed):
+    def on_killed_task(self, killed):
         return
-        self.node.get_logger().info(f"Robot {self.name}: on_kill result {killed} ")
-        if not killed:
-            self.node.get_logger().error(f"Robot {self.name}: on_kill with error")
 
     def is_charging(self, status: RobotUpdateData):
         # Note: Not the best way to verify that robot is charging but there's
@@ -446,7 +450,7 @@ class RobotAdapter:
                 self.node.get_logger().info(f"Robot [{self.name}] has begun charging...")
             elif mission.undock:
                 self.node.get_logger().info(f"Robot [{self.name}] has undock finished.")
-                dock_mode = search_mode_docking(self.undock.name)
+                dock_mode = search_mode_docking(self.need_undock.name)
                 if dock_mode == "pickup":
                     station_process = {
                         "station_type": dock_mode,
@@ -456,7 +460,7 @@ class RobotAdapter:
                     self.attempt_cmd_until_success(
                         cmd=self.api.station_request,
                         args=(
-                            self.undock.name,
+                            self.need_undock.name,
                             station_process,
                         ),
                     )
@@ -470,22 +474,22 @@ class RobotAdapter:
                         machine_process.update({"request_type": "ingestor"})
 
                     self.node.get_logger().info(
-                        f"Robot [{self.name}] response IDLE for machine at dock [{self.undock.name}]."
+                        f"Robot [{self.name}] response IDLE for machine at dock [{self.need_undock.name}]."
                     )
 
                     self.attempt_cmd_until_success(
                         cmd=self.api.machine_request,
                         args=(
-                            self.undock.name,
+                            self.need_undock.name,
                             machine_process,
                         ),
                     )
 
                 mission.undock = False
-                self.undock = None
+                self.need_undock = None
 
             elif mission.docking:
-                self.undock = mission.destination
+                self.need_undock = mission.destination
                 mission.docking = False
                 self.node.get_logger().info(f"Robot [{self.name}] has docked finished.")
 
@@ -553,10 +557,9 @@ class RobotAdapter:
                 mission.navigate = False
                 self.node.get_logger().info(f"Robot [{self.name}] has navigated finished!")
                 if mission.destination.inside_lift:
-                    self.unlift = True
+                    self.need_unlift = True
 
             mission.done = True
-            # self.unlift = False
             # self.paused = False
             # self.waiting_robot = False
         # Will finished goal early if it's not last destination of the path!
@@ -574,8 +577,8 @@ class RobotAdapter:
                 status.mode == RobotMode.MODE_REQUEST_ERROR
                 or status.mode == RobotMode.MODE_EMERGENCY
             ):
-                self.unlift = False
-                self.undock = None
+                self.need_unlift = False
+                self.need_undock = None
                 self.paused = False
                 self.waiting_robot = False
 
@@ -593,219 +596,224 @@ class RobotAdapter:
         return callbacks
 
     def navigate(self, destination, last_destination, execution):
-        with self._lock:
-            # self.execution = execution
-            self.node.get_logger().info(
-                f"Commanding [{self.name}] to navigate to {destination.position} "
-                f"on map [{destination.map}]: cmd_id {self.cmd_id}"
+        # with self._lock:
+        # self.execution = execution
+        self.node.get_logger().info(
+            f"Commanding [{self.name}] to navigate to {destination.position} "
+            f"on map [{destination.map}]: cmd_id {self.cmd_id}"
+        )
+
+        # If the nav command coming in is to bring the robot to same waypoint
+        # with waypoint robot is at on, we ignore this nav command, but if to
+        # many cmd for this point we check and go back to fix this
+        if (
+            self.last_known_status is not None
+            and self.last_known_status.destination_arrival is None
+            and self.dist(self.last_known_status.position[0:2], destination.xy) <= 0.2
+        ):
+            self.node.get_logger().warn(
+                f"[{self.name}] Received navigation command to waypoint but "
+                f"robot is already at the same waypoint!"
             )
-
-            # If the nav command coming in is to bring the robot to same waypoint
-            # with waypoint robot is at on, we ignore this nav command, but if to
-            # many cmd for this point we check and go back to fix this
-            if (
-                self.last_known_status is not None
-                and self.last_known_status.destination_arrival is None
-                and self.dist(self.last_known_status.position[0:2], destination.xy) <= 0.2
-            ):
+            if self.repeat_wp_count <= 5:
                 self.node.get_logger().warn(
-                    f"[{self.name}] Received navigation command to waypoint but "
-                    f"robot is already at the same waypoint!"
+                    f"[{self.name}] ignoring command and marking it as finished (count: {self.repeat_wp_count})!"
                 )
-                if self.repeat_wp_count <= 5:
-                    self.node.get_logger().warn(
-                        f"[{self.name}] ignoring command and marking it as finished (count: {self.repeat_wp_count})!"
+
+                if (
+                    destination.dock is not None and destination.name != ""
+                ) or destination.name in self.docks_name:
+                    self.node.get_logger().info(
+                        f"[{self.name}] detect on dock, next action will need undock!"
                     )
+                    self.need_undock = destination
 
-                    if (
-                        destination.dock is not None and destination.name != ""
-                    ) or destination.name in self.docks_name:
-                        self.node.get_logger().info(
-                            f"[{self.name}] detect on dock, next action will need undock!"
-                        )
-                        self.undock = destination
+                if self.last_known_status.last_request_completed is not None:
+                    self.cmd_id = self.last_known_status.last_request_completed
 
-                    if self.last_known_status.last_request_completed is not None:
-                        self.cmd_id = self.last_known_status.last_request_completed
-
-                    self.mission = MissionHandle(execution, destination=destination)
-                    self.mission.done = True
-                    self.mission.execution.finished()
-                    self.mission.execution = None
-                    self.repeat_wp_count += 1
-                    return
-                else:
-                    self.cmd_id += 1
-                    self.repeat_wp_count = 0
-                    self.node.get_logger().warn(
-                        f"[{self.name}] will go back 0.1(m) because too far path!"
-                    )
-                    self.mission = MissionHandle(execution, destination=destination)
-                    self.attempt_cmd_until_success(
-                        cmd=self.perform_docking,
-                        args=(
-                            destination,
-                            True,
-                            -0.1,
-                        ),
-                    )
-                    return
-
-            self.cmd_id += 1
-            self.repeat_wp_count = 0
-            # Check if robot need unlift:
-            if self.unlift:
                 self.mission = MissionHandle(execution, destination=destination)
-                self.unlift = False
-                unliftDist = -self.dist(self.last_known_status.position[0:2], destination.xy)
-                self.node.get_logger().info(
-                    f"[{self.name}] Received navigation command but "
-                    f"robot will unlift: {unliftDist} first."
+                self.mission.done = True
+                self.mission.execution.finished()
+                self.mission.execution = None
+                self.repeat_wp_count += 1
+                return
+            else:
+                self.cmd_id += 1
+                self.repeat_wp_count = 0
+                self.node.get_logger().warn(
+                    f"[{self.name}] will go back 0.1(m) because too far path!"
                 )
+                self.mission = MissionHandle(execution, destination=destination)
                 self.attempt_cmd_until_success(
                     cmd=self.perform_docking,
                     args=(
                         destination,
                         True,
-                        unliftDist,
-                    ),
-                )
-                return
-            # Check if robot need docking
-            elif destination.dock is not None:
-                self.node.get_logger().info(
-                    f"[{self.name}] Received navigation command to "
-                    f"dock, will trigger docking to '{destination.name}'"
-                )
-                self.mission = MissionHandle(execution, docking=True, destination=destination)
-                self.attempt_cmd_until_success(cmd=self.perform_docking, args=(destination,))
-                return
-            # Check if robot need undock:
-            elif self.undock is not None:
-                self.node.get_logger().info(
-                    f"[{self.name}] received navigate command but "
-                    f"robot will undock '{self.undock.name}' first."
-                )
-                self.mission = MissionHandle(execution, undock=True, destination=destination)
-                self.attempt_cmd_until_success(
-                    cmd=self.perform_docking,
-                    args=(
-                        self.undock,
-                        True,
+                        -0.1,
                     ),
                 )
                 return
 
-            # Navigation normal:
-            is_last_destination = False
-            if (
-                destination.xy[0] == last_destination.xy[0]
-                and destination.xy[1] == last_destination.xy[1]
-            ):
-                is_last_destination = True
-                self.node.get_logger().info(
-                    f"[{self.name}] to navigate to last destination "
-                    f"on map [{destination.map}]: cmd_id {self.cmd_id}"
-                )
-
-            self.mission = MissionHandle(
-                execution,
-                navigate=True,
-                destination=destination,
-                is_last_destination=is_last_destination,
+        self.repeat_wp_count = 0
+        if self.state is not None and self.state.mode == RobotMode.MODE_DOCKING:
+            self.node.get_logger().warn(
+                f"Robot [{self.name}] is waiting docking finished, ignore this navigation command!"
             )
-            vertex = None
-            if destination.name != "":
-                vertex = self.vertexs_config.get(destination.name, None)
+            return
 
-            if vertex != None:
-                pose = [
-                    destination.position[0],
-                    destination.position[1],
-                    vertex.orientation,
-                ]
-            else:
-                pose = destination.position
-
+        self.cmd_id += 1
+        # Check if robot need unlift:
+        if self.need_unlift:
+            self.mission = MissionHandle(execution, destination=destination)
+            self.need_unlift = False
+            unliftDist = -self.dist(self.last_known_status.position[0:2], destination.xy)
+            self.node.get_logger().info(
+                f"[{self.name}] Received navigation command but "
+                f"robot will unlift: {unliftDist} first."
+            )
             self.attempt_cmd_until_success(
-                cmd=self.api.navigate,
+                cmd=self.perform_docking,
                 args=(
-                    self.name,
-                    self.cmd_id,
-                    pose,
-                    destination.map,
-                    destination.speed_limit,
+                    destination,
+                    True,
+                    unliftDist,
                 ),
             )
+            return
+        # Check if robot need docking
+        elif destination.dock is not None:
+            self.node.get_logger().info(
+                f"[{self.name}] Received navigation command to "
+                f"dock, will trigger docking to '{destination.name}'"
+            )
+            self.mission = MissionHandle(execution, docking=True, destination=destination)
+            self.attempt_cmd_until_success(cmd=self.perform_docking, args=(destination,))
+            return
+        # Check if robot need undock:
+        elif self.need_undock is not None:
+            self.node.get_logger().info(
+                f"[{self.name}] received navigate command but "
+                f"robot will undock '{self.need_undock.name}' first."
+            )
+            self.mission = MissionHandle(execution, undock=True, destination=destination)
+            self.attempt_cmd_until_success(
+                cmd=self.perform_docking,
+                args=(
+                    self.need_undock,
+                    True,
+                ),
+            )
+            return
+
+        # Navigation normal:
+        is_last_destination = False
+        if (
+            destination.xy[0] == last_destination.xy[0]
+            and destination.xy[1] == last_destination.xy[1]
+        ):
+            is_last_destination = True
+            self.node.get_logger().info(
+                f"[{self.name}] to navigate to last destination "
+                f"on map [{destination.map}]: cmd_id {self.cmd_id}"
+            )
+
+        self.mission = MissionHandle(
+            execution,
+            navigate=True,
+            destination=destination,
+            is_last_destination=is_last_destination,
+        )
+        vertex = None
+        if destination.name != "":
+            vertex = self.vertexs_config.get(destination.name, None)
+
+        if vertex != None:
+            pose = [
+                destination.position[0],
+                destination.position[1],
+                vertex.orientation,
+            ]
+        else:
+            pose = destination.position
+
+        self.attempt_cmd_until_success(
+            cmd=self.api.navigate,
+            args=(
+                self.name,
+                self.cmd_id,
+                pose,
+                destination.map,
+                destination.speed_limit,
+            ),
+        )
 
     def localize(self, estimate, execution):
-        with self._lock:
-            self.cmd_id += 1
-            self.mission = MissionHandle(execution, localize=True, destination=estimate)
-            self.node.get_logger().info(
-                f"Commanding [{self.name}] to localize to {estimate.name} "
-                f"on map [{estimate.map}]: cmd_id {self.cmd_id}"
+        # with self._lock:
+        self.cmd_id += 1
+        self.mission = MissionHandle(execution, localize=True, destination=estimate)
+        self.node.get_logger().info(
+            f"Commanding [{self.name}] to localize to {estimate.name} "
+            f"on map [{estimate.map}]: cmd_id {self.cmd_id}"
+        )
+        if estimate.inside_lift:
+            lift_name = estimate.inside_lift.name
+            self.node.get_logger().info(f"[{self.name}] in lift with lift_name: {lift_name}")
+            self.attempt_cmd_until_success(
+                cmd=self.api.localize,
+                args=(self.name, self.cmd_id, estimate.map, estimate.position),
             )
-            if estimate.inside_lift:
-                lift_name = estimate.inside_lift.name
-                self.node.get_logger().info(f"[{self.name}] in lift with lift_name: {lift_name}")
-                self.attempt_cmd_until_success(
-                    cmd=self.api.localize,
-                    args=(self.name, self.cmd_id, estimate.map, estimate.position),
-                )
 
     def pause(self):
-        with self._lock:
-            """Set pause flag and hold on to any requested navigate"""
-            mission = self.mission
-            if mission is not None and mission.execution is not None:
-                if not self.paused:
-                    self.paused = True
-                    self.cmd_id += 1
-                    # self.paused_mission = mission
-                    self.node.get_logger().info(f"[PAUSE] {self.name}: current mission saved!")
-                    self.attempt_cmd_until_success(
-                        cmd=self.api.pause, args=(self.name, self.cmd_id)
-                    )
-                else:
-                    self.node.get_logger().info(f"[PAUSE] {self.name}: robot was paused!")
+        # with self._lock:
+        """Set pause flag and hold on to any requested navigate"""
+        mission = self.mission
+        if mission is not None and mission.execution is not None:
+            if not self.paused:
+                self.paused = True
+                self.cmd_id += 1
+                # self.paused_mission = mission
+                self.node.get_logger().info(f"[PAUSE] {self.name}: current mission saved!")
+                self.attempt_cmd_until_success(cmd=self.api.pause, args=(self.name, self.cmd_id))
             else:
-                self.node.get_logger().info(
-                    f"{self.name}: receive paused action but robot don't have mission!"
-                )
+                self.node.get_logger().info(f"[PAUSE] {self.name}: robot was paused!")
+        else:
+            self.node.get_logger().info(
+                f"{self.name}: receive paused action but robot don't have mission!"
+            )
 
     def wait(self):
-        with self._lock:
-            """Set wait flag and hold on to any requested navigate"""
-            mission = self.mission
-            if mission is not None and mission.execution is not None:
-                if not self.waiting_robot:
-                    self.waiting_robot = True
-                    self.cmd_id += 1
-                    self.node.get_logger().info(f"[WAIT] {self.name}: current mission saved!")
-                    self.attempt_cmd_until_success(cmd=self.api.wait, args=(self.name, self.cmd_id))
-                else:
-                    self.node.get_logger().info(f"[WAIT] {self.name}: robot was waiting!")
+        # with self._lock:
+        """Set wait flag and hold on to any requested navigate"""
+        mission = self.mission
+        if mission is not None and mission.execution is not None:
+            if not self.waiting_robot:
+                self.waiting_robot = True
+                self.cmd_id += 1
+                self.node.get_logger().info(f"[WAIT] {self.name}: current mission saved!")
+                self.attempt_cmd_until_success(cmd=self.api.wait, args=(self.name, self.cmd_id))
             else:
-                self.node.get_logger().info(
-                    f"{self.name}: receive wait action but robot don't have mission!"
-                )
+                self.node.get_logger().info(f"[WAIT] {self.name}: robot was waiting!")
+        else:
+            self.node.get_logger().info(
+                f"{self.name}: receive wait action but robot don't have mission!"
+            )
 
     def resume(self):
-        with self._lock:
-            """Unset pause flag and substitute paused mission if no paths exist."""
-            if self.paused or self.waiting_robot:
-                self.cmd_id += 1
-                self.attempt_cmd_until_success(cmd=self.api.resume, args=(self.name, self.cmd_id))
-                self.paused = False
-                self.waiting_robot = False
-                # self.mission = self.paused_mission
-                self.node.get_logger().info(f"[RESUME] {self.name}: saved mission restored!")
+        # with self._lock:
+        """Unset pause flag and substitute paused mission if no paths exist."""
+        if self.paused or self.waiting_robot:
+            self.cmd_id += 1
+            self.attempt_cmd_until_success(cmd=self.api.resume, args=(self.name, self.cmd_id))
+            self.paused = False
+            self.waiting_robot = False
+            # self.mission = self.paused_mission
+            self.node.get_logger().info(f"[RESUME] {self.name}: saved mission restored!")
 
     def stop(self, activity):
-        with self._lock:
-            mission = self.mission
-            if mission is not None:
+        # with self._lock:
+        mission = self.mission
+        if mission is not None:
+            if mission.execution is not None and activity.is_same(mission.execution.identifier):
                 if mission.docking or mission.undock or mission.localize:
                     msgInfo = "perform_docking"
                     if mission.undock:
@@ -816,18 +824,17 @@ class RobotAdapter:
                     self.node.get_logger().info(
                         f"Robot [{self.name}] is {msgInfo} mission, ignoring stop issued by RMF"
                     )
-                    return
-
-                if mission.execution is not None and activity.is_same(mission.execution.identifier):
+                else:
                     self.cmd_id += 1
                     self.node.get_logger().info(
                         f"[{self.name}] Stop requested from RMF (cmd_id: {self.cmd_id})!"
                     )
                     self.attempt_cmd_until_success(cmd=self.api.stop, args=(self.name, self.cmd_id))
                     self.mission = None
-                    self.undock = None
-                    self.paused = False
-                    self.waiting_robot = False
+                    self.need_undock = None
+
+                self.paused = False
+                self.waiting_robot = False
 
     def execute_action(self, category: str, description: dict, execution):
         self.cmd_id += 1

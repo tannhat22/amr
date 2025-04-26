@@ -451,6 +451,7 @@ class RobotUpdateData:
         x = position["x"]
         y = position["y"]
         yaw = position["yaw"]
+        self.time = data["time"]
         self.position = [x, y, yaw]
         self.map = data["map_name"]
         self.battery_soc = data["battery"] / 100.0

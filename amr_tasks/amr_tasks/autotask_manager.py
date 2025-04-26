@@ -398,6 +398,7 @@ class AutoTaskManager(Node):
         start_time = now.sec * 1000 + round(now.nanosec / 10**6)
         request["unix_millis_request_time"] = start_time
         request["unix_millis_earliest_start_time"] = start_time
+        request["priority"] = {"type": "binary", "value": 1}
         request["requester"] = requester
 
         if fleet:

@@ -246,6 +246,9 @@ docks:
       rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
   ### CHARGERS
+  charger001--charge:
+    go_out_dock: [mov:-0.9]
+    
   charger003--charge:
     go_out_dock: [mov:-1.1]
 
