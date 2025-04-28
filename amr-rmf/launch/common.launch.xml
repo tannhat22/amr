@@ -66,7 +66,9 @@
 
   <!-- Proto-Reservation system-->
   <group  if="$(var use_reservation_node)">
-    <node pkg="rmf_reservation_node" exec="queue_manager"></node>
+    <node pkg="rmf_reservation_node" exec="queue_manager">
+      <param name="use_sim_time" value="$(var use_sim_time)"/>
+    </node>
   </group>
 
   <!-- MutexGroup Supervisor -->

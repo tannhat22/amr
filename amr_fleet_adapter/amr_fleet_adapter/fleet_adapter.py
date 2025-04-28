@@ -246,15 +246,15 @@ class MissionHandle:
         self.destination = destination
         self.is_last_destination = is_last_destination
         self.done = False
-        # self.mission_queue_id = None
-        # self.mutex = threading.Lock()
+        self.mission_id = None
+        self.mutex = threading.Lock()
         # Block before beginning the request to guarantee that a call to stop()
         # cannot possibly lock it first
-        # self.mutex.acquire(blocking=True)
+        self.mutex.acquire(blocking=True)
 
-    # def set_mission_queue_id(self, mission_queue_id):
-    #     self.mission_queue_id = mission_queue_id
-    #     self.mutex.release()
+    def set_mission_id(self, mission_id):
+        self.mission_id = mission_id
+        self.mutex.release()
 
     @property
     def activity(self):
@@ -306,7 +306,6 @@ class RobotAdapter:
         self.repeat_wp_count = 0
 
         # Threading variables
-        # self._lock = threading.Lock()
         self.issue_cmd_thread = None
         self.cancel_cmd_event = threading.Event()
 
@@ -372,7 +371,6 @@ class RobotAdapter:
 
     @parallel
     def update(self, state, data):
-        # with self._lock:
         # Update the stored mission status from AMR
         mission = self.mission
         self.update_mission_status(data, mission)
@@ -560,8 +558,8 @@ class RobotAdapter:
                     self.need_unlift = True
 
             mission.done = True
-            # self.paused = False
-            # self.waiting_robot = False
+            self.paused = False
+            self.waiting_robot = False
         # Will finished goal early if it's not last destination of the path!
         elif mission.navigate and not mission.is_last_destination:
             dist2Goal = self.dist(self.last_known_status.position[0:2], mission.destination.xy)
@@ -596,8 +594,6 @@ class RobotAdapter:
         return callbacks
 
     def navigate(self, destination, last_destination, execution):
-        # with self._lock:
-        # self.execution = execution
         self.node.get_logger().info(
             f"Commanding [{self.name}] to navigate to {destination.position} "
             f"on map [{destination.map}]: cmd_id {self.cmd_id}"
@@ -635,6 +631,7 @@ class RobotAdapter:
                 self.mission.done = True
                 self.mission.execution.finished()
                 self.mission.execution = None
+                self.mission.set_mission_id(self.cmd_id)
                 self.repeat_wp_count += 1
                 return
             else:
@@ -652,6 +649,7 @@ class RobotAdapter:
                         -0.1,
                     ),
                 )
+                self.mission.set_mission_id(self.cmd_id)
                 return
 
         self.repeat_wp_count = 0
@@ -679,6 +677,7 @@ class RobotAdapter:
                     unliftDist,
                 ),
             )
+            self.mission.set_mission_id(self.cmd_id)
             return
         # Check if robot need docking
         elif destination.dock is not None:
@@ -688,6 +687,7 @@ class RobotAdapter:
             )
             self.mission = MissionHandle(execution, docking=True, destination=destination)
             self.attempt_cmd_until_success(cmd=self.perform_docking, args=(destination,))
+            self.mission.set_mission_id(self.cmd_id)
             return
         # Check if robot need undock:
         elif self.need_undock is not None:
@@ -703,6 +703,7 @@ class RobotAdapter:
                     True,
                 ),
             )
+            self.mission.set_mission_id(self.cmd_id)
             return
 
         # Navigation normal:
@@ -746,25 +747,25 @@ class RobotAdapter:
                 destination.speed_limit,
             ),
         )
+        self.mission.set_mission_id(self.cmd_id)
 
     def localize(self, estimate, execution):
-        # with self._lock:
-        self.cmd_id += 1
         self.mission = MissionHandle(execution, localize=True, destination=estimate)
         self.node.get_logger().info(
             f"Commanding [{self.name}] to localize to {estimate.name} "
             f"on map [{estimate.map}]: cmd_id {self.cmd_id}"
         )
         if estimate.inside_lift:
+            self.cmd_id += 1
             lift_name = estimate.inside_lift.name
             self.node.get_logger().info(f"[{self.name}] in lift with lift_name: {lift_name}")
             self.attempt_cmd_until_success(
                 cmd=self.api.localize,
                 args=(self.name, self.cmd_id, estimate.map, estimate.position),
             )
+            self.mission.set_mission_id(self.cmd_id)
 
     def pause(self):
-        # with self._lock:
         """Set pause flag and hold on to any requested navigate"""
         mission = self.mission
         if mission is not None and mission.execution is not None:
@@ -782,7 +783,6 @@ class RobotAdapter:
             )
 
     def wait(self):
-        # with self._lock:
         """Set wait flag and hold on to any requested navigate"""
         mission = self.mission
         if mission is not None and mission.execution is not None:
@@ -799,7 +799,6 @@ class RobotAdapter:
             )
 
     def resume(self):
-        # with self._lock:
         """Unset pause flag and substitute paused mission if no paths exist."""
         if self.paused or self.waiting_robot:
             self.cmd_id += 1
@@ -810,31 +809,33 @@ class RobotAdapter:
             self.node.get_logger().info(f"[RESUME] {self.name}: saved mission restored!")
 
     def stop(self, activity):
-        # with self._lock:
         mission = self.mission
-        if mission is not None:
-            if mission.execution is not None and activity.is_same(mission.execution.identifier):
-                if mission.docking or mission.undock or mission.localize:
-                    msgInfo = "perform_docking"
-                    if mission.undock:
-                        msgInfo = "undock"
-                    elif mission.localize:
-                        msgInfo = "localize"
+        if mission is None:
+            return
 
-                    self.node.get_logger().info(
-                        f"Robot [{self.name}] is {msgInfo} mission, ignoring stop issued by RMF"
-                    )
-                else:
-                    self.cmd_id += 1
-                    self.node.get_logger().info(
-                        f"[{self.name}] Stop requested from RMF (cmd_id: {self.cmd_id})!"
-                    )
+        if mission.execution is not None and activity.is_same(mission.execution.identifier):
+            if mission.docking or mission.undock or mission.localize:
+                msgInfo = "perform_docking"
+                if mission.undock:
+                    msgInfo = "undock"
+                elif mission.localize:
+                    msgInfo = "localize"
+
+                self.node.get_logger().info(
+                    f"Robot [{self.name}] is {msgInfo} mission, ignoring stop issued by RMF"
+                )
+            else:
+                self.cmd_id += 1
+                self.node.get_logger().info(
+                    f"[{self.name}] Stop requested from RMF (cmd_id: {self.cmd_id})!"
+                )
+                with mission.mutex:
                     self.attempt_cmd_until_success(cmd=self.api.stop, args=(self.name, self.cmd_id))
-                    self.mission = None
-                    self.need_undock = None
+                self.mission = None
+                self.need_undock = None
 
-                self.paused = False
-                self.waiting_robot = False
+            self.paused = False
+            self.waiting_robot = False
 
     def execute_action(self, category: str, description: dict, execution):
         self.cmd_id += 1
