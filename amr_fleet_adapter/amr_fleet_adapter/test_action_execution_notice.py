@@ -33,7 +33,7 @@ def main(argv=sys.argv):
     - request_mode: pause
     """
 
-    default_fleet_name = "amr_tayrua"
+    default_fleet_name = "amr_tp3"
     default_robot_name = "amr001"
     default_request_mode = "pause"
     default_topic_name = "/action_execution_notice"
@@ -57,11 +57,15 @@ def main(argv=sys.argv):
         durability=rclpy.qos.DurabilityPolicy.TRANSIENT_LOCAL,
     )
 
+    request_qos = rclpy.qos.QoSProfile(
+        depth=10,
+        reliability=rclpy.qos.ReliabilityPolicy.RELIABLE,
+        durability=rclpy.qos.DurabilityPolicy.TRANSIENT_LOCAL,
+    )
+
     rclpy.init()
     node = rclpy.create_node("send_action_execution_notice_node")
-    pub = node.create_publisher(
-        ModeRequest, args.topic_name, qos_profile=qos_profile_system_default
-    )
+    pub = node.create_publisher(ModeRequest, args.topic_name, qos_profile=request_qos)
 
     msg = ModeRequest()
     msg.fleet_name = args.fleet_name

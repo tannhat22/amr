@@ -773,7 +773,9 @@ class RobotAdapter:
                 self.paused = True
                 self.cmd_id += 1
                 # self.paused_mission = mission
-                self.node.get_logger().info(f"[PAUSE] {self.name}: current mission saved!")
+                self.node.get_logger().info(
+                    f"[PAUSE] {self.name}: current mission saved (cmd_id: {self.cmd_id})!"
+                )
                 self.attempt_cmd_until_success(cmd=self.api.pause, args=(self.name, self.cmd_id))
             else:
                 self.node.get_logger().info(f"[PAUSE] {self.name}: robot was paused!")
@@ -789,7 +791,9 @@ class RobotAdapter:
             if not self.waiting_robot:
                 self.waiting_robot = True
                 self.cmd_id += 1
-                self.node.get_logger().info(f"[WAIT] {self.name}: current mission saved!")
+                self.node.get_logger().info(
+                    f"[WAIT] {self.name}: current mission saved (cmd_id: {self.cmd_id})!"
+                )
                 self.attempt_cmd_until_success(cmd=self.api.wait, args=(self.name, self.cmd_id))
             else:
                 self.node.get_logger().info(f"[WAIT] {self.name}: robot was waiting!")
@@ -806,7 +810,9 @@ class RobotAdapter:
             self.paused = False
             self.waiting_robot = False
             # self.mission = self.paused_mission
-            self.node.get_logger().info(f"[RESUME] {self.name}: saved mission restored!")
+            self.node.get_logger().info(
+                f"[RESUME] {self.name}: saved mission restored (cmd_id: {self.cmd_id})!"
+            )
 
     def stop(self, activity):
         mission = self.mission

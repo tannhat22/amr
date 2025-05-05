@@ -24,12 +24,12 @@ class State:
         fleet_name: str = "",
         vicinity: float = 0.0,
         state: RobotState = None,
-        last_mode_request: RobotMode = None,
+        # last_mode_request: RobotMode = None,
     ):
         self.fleet_name = fleet_name
         self.vicinity = vicinity
         self.state = state
-        self.last_mode_request = last_mode_request
+        # self.last_mode_request = last_mode_request
         self.wait_HID = None
         self.wait_LID = []
 
@@ -353,22 +353,23 @@ class FleetConflictsHandle(Node):
                                 continue
 
                             detect_obtacles = True
-                            if robot1State.last_mode_request is None:
+                            # if robot1State.last_mode_request is None:
+                            if robot1State.state.mode.mode == RobotMode.MODE_MOVING:
                                 self.mode_request(
                                     fleet_name=robot1State.fleet_name,
                                     robot_name=robot1Name,
                                     mode=RobotMode.MODE_WAITING,
                                 )
-                                robot1State.last_mode_request = RobotMode.MODE_WAITING
+                                # robot1State.last_mode_request = RobotMode.MODE_WAITING
                                 robot1State.wait_HID = robot2Name
                                 self.get_logger().warn(
-                                    f"Robot[{robot1Name}] waiting for detect collision!"
+                                    f"Robot[{robot1Name}] need wait for detect collision!"
                                 )
                             break
 
                 # if robot1State.last_mode_request == RobotMode.MODE_WAITING and not detect_obtacles:
                 if not detect_obtacles:
-                    robot1State.last_mode_request = None
+                    # robot1State.last_mode_request = None
                     robot1State.wait_HID = None
                     if robot1State.state.mode.mode == RobotMode.MODE_WAITING:
                         self.mode_request(
@@ -376,11 +377,13 @@ class FleetConflictsHandle(Node):
                             robot_name=robot1Name,
                             mode=RobotMode.MODE_MOVING,
                         )
-                        self.get_logger().info(
+                        self.get_logger().warn(
                             f"Robot[{robot1Name}] resume moving because obstacles is clearing!"
                         )
+                else:
+                    break
             else:
-                robot1State.last_mode_request = None
+                # robot1State.last_mode_request = None
                 robot1State.wait_HID = None
 
         if self.debug:
