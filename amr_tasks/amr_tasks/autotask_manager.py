@@ -8,6 +8,7 @@ import rclpy
 import json
 import uuid
 
+from asyncio import Future
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
 from rclpy.qos import qos_profile_system_default
@@ -19,7 +20,7 @@ from rclpy.qos import QoSReliabilityPolicy as Reliability
 # from rclpy.executors import MultiThreadedExecutor
 # from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from std_msgs.msg import String
-from rmf_task_msgs.msg import ApiRequest
+from rmf_task_msgs.msg import ApiRequest, ApiResponse
 from machine_fleet_msgs.msg import (
     DeliveryItem,
     DeliveryParams,
@@ -412,39 +413,46 @@ class AutoTaskManager(Node):
                 "dropoff": self.__create_dropoff_desc(delivery_params[0]),
             }
         else:
-            # Define multi_delivery with request category compose
-            request["category"] = "compose"
+            # # Define multi_delivery with request category compose
+            # request["category"] = "compose"
 
-            # Define task request description with phases
-            description = {}  # task_description_Compose.json
-            description["category"] = "multi_delivery"
-            description["phases"] = []
-            activities = []
-            for i in range(0, len(delivery_params)):
-                # Add each pickup
-                activities.append(
-                    {
-                        "category": "pickup",
-                        "description": self.__create_pickup_desc(delivery_params[i]),
-                    }
-                )
-                # Add each dropoff
-                activities.append(
-                    {
-                        "category": "dropoff",
-                        "description": self.__create_dropoff_desc(delivery_params[i]),
-                    }
-                )
+            # # Define task request description with phases
+            # description = {}  # task_description_Compose.json
+            # description["category"] = "multi_delivery"
+            # description["phases"] = []
+            # activities = []
+            # for i in range(0, len(delivery_params)):
+            #     # Add each pickup
+            #     activities.append(
+            #         {
+            #             "category": "pickup",
+            #             "description": self.__create_pickup_desc(delivery_params[i]),
+            #         }
+            #     )
+            #     # Add each dropoff
+            #     activities.append(
+            #         {
+            #             "category": "dropoff",
+            #             "description": self.__create_dropoff_desc(delivery_params[i]),
+            #         }
+            #     )
 
-            # Add activities to phases
-            description["phases"].append(
-                {
-                    "activity": {
-                        "category": "sequence",
-                        "description": {"activities": activities},
-                    }
-                }
-            )
+            # # Add activities to phases
+            # description["phases"].append(
+            #     {
+            #         "activity": {
+            #             "category": "sequence",
+            #             "description": {"activities": activities},
+            #         }
+            #     }
+            # )
+
+            # Define multi_delivery with request category patrol
+            request["category"] = "patrol"
+            description = {"places": [], "rounds": 1}
+            for param in delivery_params:
+                description["places"].append(param.pickup_place_name)
+                description["places"].append(param.dropoff_place_name)
 
         request["description"] = description
         payload["request"] = request
@@ -452,6 +460,30 @@ class AutoTaskManager(Node):
 
         # print(f"Json msg payload: \n{json.dumps(payload, indent=2)}")
         self.task_api_req_pub.publish(msg)
+
+    # async def call(self, payload: str, timeout: float = 5) -> str:
+    #     req_id = str(uuid4())
+    #     msg = ApiRequest(request_id=req_id, json_msg=payload)
+    #     fut = Future()
+    #     self._requests[req_id] = fut
+    #     self._api_pub.publish(msg)
+    #     logging.info(f"sent request '{req_id}'")
+    #     logging.debug(msg)
+    #     try:
+    #         return await asyncio.wait_for(fut, timeout)
+    #     except asyncio.TimeoutError as e:
+    #         raise HTTPException(500, "rmf service timed out") from e
+    #     finally:
+    #         del self._requests[req_id]
+
+    # def _handle_response(self, msg: ApiResponse):
+    #     logging.info(f"got response '{msg.request_id}'")
+    #     logging.debug(msg)
+    #     fut = self._requests.get(msg.request_id)
+    #     if fut is None:
+    #         logging.warning(f"Received response for unknown request id: {msg.request_id}")
+    #         return
+    #     fut.set_result(msg.json_msg)
 
     def task_state_update_cb(self, msg: String):
         taskState = json.loads(msg.data)

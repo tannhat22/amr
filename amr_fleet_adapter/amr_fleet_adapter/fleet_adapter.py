@@ -337,7 +337,7 @@ class RobotAdapter:
                     self.node.get_logger().warn(
                         f"Unable to retrieve state from robot [{self.name}]!"
                     )
-            elif not self.robot_is_connecting(data.time, now.seconds_nanoseconds()[0], 60.0):
+            elif not self.robot_is_connecting(data.time, now.seconds_nanoseconds()[0], 30.0):
                 if not self.disconnect:
                     self.disconnect = True
                     self.node.get_logger().warn(
@@ -388,11 +388,13 @@ class RobotAdapter:
         # Recommision will be handle by hand
         if data.mode == RobotMode.MODE_EMERGENCY or data.mode == RobotMode.MODE_REQUEST_ERROR:
             if not self.is_decommission:
+                self.update_handle.more().override_status("error")
                 self.attempt_cmd_until_success(cmd=self.api.decommission, args=(self.name,))
                 self.is_decommission = True
                 return
-        else:
+        elif self.is_decommission:
             self.is_decommission = False
+            self.update_handle.more().override_status(None)
 
         # Update RMF to mark the ActionExecution as finished
         if mission is not None:

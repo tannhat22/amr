@@ -32,7 +32,7 @@
 
   <!-- Visualizer -->
   <group>
-    <include file="$(find-pkg-share rmf_visualization)/visualization.launch.xml">
+    <include file="$(find-pkg-share amr-rmf)/launch/visualization.launch.xml">
       <arg name="use_sim_time" value="$(var use_sim_time)"/>
       <arg name="map_name" value="$(var initial_map)"/>
       <arg name="viz_config_file" value ="$(var viz_config_file)"/>

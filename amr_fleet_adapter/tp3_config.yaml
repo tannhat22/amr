@@ -155,7 +155,11 @@ docks:
     tag_names: [tag_frame_8]
 
   line86--dropoff:
+    go_in_dock: [mov:-0.38]
     go_out_dock: [mov:0.7]
+    limits:
+      rotate_angle: 45
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   ### LINE 87
   clr87--pickup:
@@ -250,7 +254,7 @@ docks:
     go_out_dock: [mov:-0.9]
     
   charger003--charge:
-    go_out_dock: [mov:-1.1]
+    go_out_dock: [mov:-0.9]
 
   charger004--charge:
     go_out_dock: [mov:-1.1]
