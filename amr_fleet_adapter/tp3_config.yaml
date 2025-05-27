@@ -4,8 +4,8 @@
 rmf_fleet:
   name: "amr_tp3"
   limits:
-    linear: [0.8, 0.9] # velocity, acceleration
-    angular: [0.7, 1.2] # velocity, acceleration
+    linear: [0.8, 0.4] # velocity, acceleration
+    angular: [0.7, 0.35] # velocity, acceleration
   profile: # Robot profile is modelled as a circle
     footprint: 0.45 # radius in m
     vicinity: 0.5 # radius in m

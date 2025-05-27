@@ -9,7 +9,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    map_name = "tp2-tp3-layout"
+    map_name = "tp23-layout"
     config_file_arg = DeclareLaunchArgument(
         "config_file",
         default_value=PathJoinSubstitution([FindPackageShare("amr_tasks"), "config.yaml"]),

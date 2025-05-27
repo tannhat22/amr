@@ -8,7 +8,7 @@ import rclpy
 import json
 import uuid
 
-from asyncio import Future
+# from asyncio import Future
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
 from rclpy.qos import qos_profile_system_default
@@ -21,6 +21,7 @@ from rclpy.qos import QoSReliabilityPolicy as Reliability
 # from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from std_msgs.msg import String
 from rmf_task_msgs.msg import ApiRequest, ApiResponse
+from rmf_fleet_msgs.msg import MutexGroupStates, MutexGroupAssignment
 from machine_fleet_msgs.msg import (
     DeliveryItem,
     DeliveryParams,
@@ -33,6 +34,10 @@ from machine_fleet_msgs.msg import (
     StationState,
     StationRequest,
 )
+
+TASK_FAILED = ["error", "failed", "canceled", "killed"]
+TASK_NO_ACTIVE = ["error", "failed", "canceled", "killed", "completed"]
+MUTEX_NO_CLAIMANT = 18446744073709551615
 
 
 class StationContext:
@@ -91,11 +96,20 @@ class DeliveryStep:
         self.dropoff_stations = dropoff_stations
 
 
+class TaskState:
+    delivery_params: list[DeliveryParams]
+
+    def __init__(self, id, submit_time, last_update, state, delivery_params):
+        self.id = id
+        self.submit_time = submit_time
+        self.last_update = last_update
+        self.state = state
+        self.delivery_params = delivery_params
+
+
 class MachineRequester:
     _lock: threading.Lock
-
-    _destination_pickup: str
-    _destination_dropoff: str
+    _current_task: TaskState | None
 
     def __init__(
         self,
@@ -119,44 +133,33 @@ class MachineRequester:
         self.delivery_item.quantity = 1
         self.station_names = station_names
 
-        self._destination_pickup = ""
-        self._destination_dropoff = ""
-
+        self._current_task = None
         self._lock = threading.Lock()
 
-    def set_destination_pickup(self, destination_pickup: str) -> None:
+    def set_current_task(self, current_task: TaskState | None) -> None:
         with self._lock:
-            self._destination_pickup = destination_pickup
+            self._current_task = current_task
 
-    def get_destination_pickup(self) -> str:
-        return self._destination_pickup
-
-    def set_destination_dropoff(self, destination_dropoff: str) -> None:
-        with self._lock:
-            self._destination_dropoff = destination_dropoff
-
-    def get_destination_dropoff(self) -> str:
-        return self._destination_dropoff
+    def get_current_task(self) -> TaskState | None:
+        return self._current_task
 
 
 class StationRequester:
     _lock: threading.Lock
-
-    _destination_dropoff: str
+    _current_task: TaskState | None
 
     def __init__(self, name: str, delivery_steps: list[DeliveryStep]) -> None:
         self.name = name
         self.delivery_steps = delivery_steps
-        self._destination_dropoff = ""
-
+        self._current_task = None
         self._lock = threading.Lock()
 
-    def set_destination_dropoff(self, destination_dropoff: str) -> None:
+    def set_current_task(self, current_task: TaskState | None) -> None:
         with self._lock:
-            self._destination_dropoff = destination_dropoff
+            self._current_task = current_task
 
-    def get_destination_dropoff(self) -> str:
-        return self._destination_dropoff
+    def get_current_task(self) -> TaskState | None:
+        return self._current_task
 
 
 def search_mode_docking(dock_name: str):
@@ -181,6 +184,7 @@ class AutoTaskManager(Node):
 
         self._pickup_context_dict = {}
         self._dropoff_context_dict = {}
+        self.mutex_RF370CB_is_locked = False
 
         for nav_graph in nav_graphs:
             if nav_graph is None:
@@ -340,6 +344,13 @@ class AutoTaskManager(Node):
             qos_profile=qos_profile_system_default,
         )
 
+        self.create_subscription(
+            MutexGroupStates,
+            "/mutex_group_states",
+            self.mutex_group_states_cb,
+            qos_profile=qos_profile_system_default,
+        )
+
         # Timers:
         self.create_timer(1.0, self.publish_station_states)
 
@@ -408,51 +419,50 @@ class AutoTaskManager(Node):
         # Use standard delivery task type
         if len(delivery_params) == 1:
             request["category"] = "delivery"
+            request["labels"] = [
+                "task_definition_id=delivery",
+                f"pickup={delivery_params[0].pickup_place_name}",
+                f"destination={delivery_params[0].dropoff_place_name}",
+                f"cart_id={delivery_params[0].dropoff_items.sku}",
+            ]
             description = {
                 "pickup": self.__create_pickup_desc(delivery_params[0]),
                 "dropoff": self.__create_dropoff_desc(delivery_params[0]),
             }
         else:
-            # # Define multi_delivery with request category compose
-            # request["category"] = "compose"
+            # Define multi_delivery with request category compose
+            request["category"] = "compose"
+            request["labels"] = [
+                "task_definition_id=delivery_multiple",
+                f"pickup={delivery_params[0].pickup_place_name}",
+                f"destination={delivery_params[0].dropoff_place_name}",
+                f"cart_id={delivery_params[0].dropoff_items.sku}",
+            ]
 
-            # # Define task request description with phases
-            # description = {}  # task_description_Compose.json
-            # description["category"] = "multi_delivery"
-            # description["phases"] = []
-            # activities = []
-            # for i in range(0, len(delivery_params)):
-            #     # Add each pickup
-            #     activities.append(
-            #         {
-            #             "category": "pickup",
-            #             "description": self.__create_pickup_desc(delivery_params[i]),
-            #         }
-            #     )
-            #     # Add each dropoff
-            #     activities.append(
-            #         {
-            #             "category": "dropoff",
-            #             "description": self.__create_dropoff_desc(delivery_params[i]),
-            #         }
-            #     )
-
-            # # Add activities to phases
-            # description["phases"].append(
-            #     {
-            #         "activity": {
-            #             "category": "sequence",
-            #             "description": {"activities": activities},
-            #         }
-            #     }
-            # )
-
-            # Define multi_delivery with request category patrol
-            request["category"] = "patrol"
-            description = {"places": [], "rounds": 1}
-            for param in delivery_params:
-                description["places"].append(param.pickup_place_name)
-                description["places"].append(param.dropoff_place_name)
+            # Define task request description with phases
+            description = {}
+            description["category"] = "multi_delivery"
+            # description["detail"] = "Delivery rotor TTR and STR"
+            description["phases"] = []
+            for i in range(0, len(delivery_params)):
+                # Add each pickup activity to phases
+                description["phases"].append(
+                    {
+                        "activity": {
+                            "category": "pickup",
+                            "description": self.__create_pickup_desc(delivery_params[i]),
+                        }
+                    }
+                )
+                # Add each dropoff activity to phases
+                description["phases"].append(
+                    {
+                        "activity": {
+                            "category": "dropoff",
+                            "description": self.__create_dropoff_desc(delivery_params[i]),
+                        }
+                    }
+                )
 
         request["description"] = description
         payload["request"] = request
@@ -460,89 +470,95 @@ class AutoTaskManager(Node):
 
         # print(f"Json msg payload: \n{json.dumps(payload, indent=2)}")
         self.task_api_req_pub.publish(msg)
+        return msg.request_id
 
-    # async def call(self, payload: str, timeout: float = 5) -> str:
-    #     req_id = str(uuid4())
-    #     msg = ApiRequest(request_id=req_id, json_msg=payload)
-    #     fut = Future()
-    #     self._requests[req_id] = fut
-    #     self._api_pub.publish(msg)
-    #     logging.info(f"sent request '{req_id}'")
-    #     logging.debug(msg)
-    #     try:
-    #         return await asyncio.wait_for(fut, timeout)
-    #     except asyncio.TimeoutError as e:
-    #         raise HTTPException(500, "rmf service timed out") from e
-    #     finally:
-    #         del self._requests[req_id]
-
-    # def _handle_response(self, msg: ApiResponse):
-    #     logging.info(f"got response '{msg.request_id}'")
-    #     logging.debug(msg)
-    #     fut = self._requests.get(msg.request_id)
-    #     if fut is None:
-    #         logging.warning(f"Received response for unknown request id: {msg.request_id}")
-    #         return
-    #     fut.set_result(msg.json_msg)
+    def mutex_group_states_cb(self, msg: MutexGroupStates):
+        assignment: MutexGroupAssignment
+        for assignment in msg.assignments:
+            if assignment.group == "zone_RF370CB":
+                if assignment.claimant == MUTEX_NO_CLAIMANT:
+                    self.mutex_RF370CB_is_locked = False
+                else:
+                    self.mutex_RF370CB_is_locked = True
+                break
 
     def task_state_update_cb(self, msg: String):
+        current_time = self.get_clock().now()
         taskState = json.loads(msg.data)
         requester = taskState["data"]["booking"]["requester"]
+        taskId = taskState["data"]["booking"]["id"]
         status = taskState["data"]["status"]
-        if status in ["killed", "canceled", "error", "failed"]:
-            if requester in self._sreq_context_dict:
-                requesterContext = self._sreq_context_dict.get(requester)
-                for step in requesterContext.delivery_steps:
-                    if len(step.dropoff_stations) > 1:
-                        for do_station in step.dropoff_stations:
-                            if do_station.get_occupant() == requester:
-                                self.get_logger().warn(
-                                    f"Detect autotask from [{requester}] was {status}, reset common dropoff station [{do_station.get_state().station_name}]!"
-                                )
-                                do_station.reset()
-                                break
 
-            elif requester in self._mreq_context_dict:
-                requesterContext = self._mreq_context_dict.get(requester)
-                machineReq = MachineRequest()
-                machineReq.machine_name = requester
-                machineReq.time = self.get_clock().now().to_msg()
-                if status == "canceled":
-                    machineReq.request_mode.mode = DeviceMode.MODE_CANCEL
-                else:
-                    machineReq.request_mode.mode = DeviceMode.MODE_ROBOT_ERROR
+        if requester in self._sreq_context_dict:
+            requesterContext = self._sreq_context_dict.get(requester)
+            currentTask = requesterContext.get_current_task()
+            if currentTask is not None:
+                currentTask.state = status
+                currentTask.last_update = current_time
+                if status in TASK_FAILED:
+                    for param in currentTask.delivery_params:
+                        do_station = self._dropoff_context_dict.get(param.dropoff_place_name)
+                        if do_station.get_occupant() == requester:
+                            self.get_logger().warn(
+                                f"Detect autotask from [{requester}] was {status} (task_id: {taskId}), reset common dropoff station [{param.dropoff_place_name}]!"
+                            )
+                            do_station.reset()
+            # else:
+            #     self.get_logger().warn(
+            #         f"Requester [{requester}] current task is None, please check for debugging!"
+            #     )
 
-                self.get_logger().warn(f"Detect autotask from [{requester}] was {status}!")
+        elif requester in self._mreq_context_dict:
+            requesterContext = self._mreq_context_dict.get(requester)
+            currentTask = requesterContext.get_current_task()
+            if currentTask is not None:
+                currentTask.state = status
+                currentTask.last_update = current_time
+                if status in TASK_FAILED:
+                    machineReq = MachineRequest()
+                    machineReq.machine_name = requester
+                    machineReq.time = current_time.to_msg()
+                    if status == "canceled":
+                        machineReq.request_mode.mode = DeviceMode.MODE_CANCEL
+                    else:
+                        machineReq.request_mode.mode = DeviceMode.MODE_ROBOT_ERROR
 
-                for pk_station in requesterContext.pickup_stations:
-                    if pk_station.get_occupant() == requester:
-                        self.get_logger().warn(
-                            f"Reset common pickup station [{pk_station.get_state().station_name}]!"
-                        )
-                        pk_station.reset()
-                        break
-                for do_station in requesterContext.dropoff_stations:
-                    if do_station.get_occupant() == requester:
-                        self.get_logger().warn(
-                            f"Reset common dropoff station [{do_station.get_state().station_name}]!"
-                        )
-                        do_station.reset()
-                        break
+                    self.get_logger().warn(
+                        f"Detect autotask from [{requester}] was {status} (task_id: {taskId})!"
+                    )
 
-                if requesterContext.get_destination_pickup() != "":
-                    machineReq.request_type = MachineRequest.REQUEST_INGESTOR
-                elif requesterContext.get_destination_dropoff() != "":
-                    machineReq.request_type = MachineRequest.REQUEST_DISPENSER
-                else:
-                    return
+                    for param in currentTask.delivery_params:
+                        pk_station = self._pickup_context_dict.get(param.pickup_place_name, None)
+                        do_station = self._dropoff_context_dict.get(param.dropoff_place_name, None)
+                        if pk_station is not None and pk_station.get_occupant() == requester:
+                            self.get_logger().warn(
+                                f"Reset common pickup station [{param.pickup_place_name}]!"
+                            )
+                            pk_station.reset()
+                        if do_station is not None and do_station.get_occupant() == requester:
+                            self.get_logger().warn(
+                                f"Reset common dropoff station [{param.dropoff_place_name}]!"
+                            )
+                            do_station.reset()
 
-                self.get_logger().warn(
-                    f"Response [{status}] to [{requesterContext.name}] (request_type: {machineReq.request_type})!"
-                )
-                self.machine_req_pub.publish(machineReq)
+                    if (
+                        currentTask.delivery_params[0].pickup_place_name
+                        == requesterContext.dispenser
+                    ):
+                        machineReq.request_type = MachineRequest.REQUEST_DISPENSER
+                    else:
+                        machineReq.request_type = MachineRequest.REQUEST_INGESTOR
 
-            else:
-                return
+                    self.get_logger().warn(
+                        f"Response [{status}] to [{requesterContext.name}] (request_type: {machineReq.request_type})!"
+                    )
+                    self.machine_req_pub.publish(machineReq)
+            # else:
+            #     self.get_logger().warn(
+            #         f"Requester [{requester}] current task is None, please check for debugging!"
+            #     )
+        else:
+            return
 
     def station_request_callback(self, request: StationRequest):
         stationContext = None
@@ -581,9 +597,11 @@ class AutoTaskManager(Node):
             if state.machine_name in self._mreq_context_dict:
                 requester = self._mreq_context_dict.get(state.machine_name)
                 if requester.mode_operation == "combine":
+                    current_time = self.get_clock().now()
+                    currentTask = requester.get_current_task()
                     # Handle pickup request
                     if state.request_pickup:
-                        if requester.get_destination_dropoff() == "":
+                        if currentTask is None:
                             for station_context in requester.dropoff_stations:
                                 if (
                                     station_context.get_state().mode == StationState.MODE_EMPTY
@@ -602,19 +620,33 @@ class AutoTaskManager(Node):
                                         f"detect pickup request from machine [{requester.name}], send task delivery "
                                         f"(pickup: {param.pickup_place_name} -> dropoff: {param.dropoff_place_name})!"
                                     )
-                                    self.dispatch_delivery(
+
+                                    taskId = self.dispatch_delivery(
                                         start_time_task=0,
                                         requester=requester.name,
                                         delivery_params=[param],
                                     )
-                                    requester.set_destination_dropoff(param.dropoff_place_name)
+                                    requester.set_current_task(
+                                        TaskState(
+                                            id=taskId,
+                                            submit_time=current_time,
+                                            last_update=current_time,
+                                            state="queued",
+                                            delivery_params=[param],
+                                        )
+                                    )
                                     break
-                    else:
-                        requester.set_destination_dropoff("")
+
+                    elif (
+                        currentTask is not None
+                        and currentTask.delivery_params[0].pickup_place_name == requester.dispenser
+                        and currentTask.state in TASK_NO_ACTIVE
+                    ):
+                        requester.set_current_task(None)
 
                     # Handle dropoff request
                     if state.request_dropoff:
-                        if requester.get_destination_pickup() == "":
+                        if currentTask is None:
                             for station_context in requester.pickup_stations:
                                 if (
                                     station_context.get_state().mode == StationState.MODE_FILLED
@@ -634,15 +666,28 @@ class AutoTaskManager(Node):
                                         f"(pickup: {param.pickup_place_name} -> dropoff: {param.dropoff_place_name})!"
                                     )
 
-                                    self.dispatch_delivery(
+                                    taskId = self.dispatch_delivery(
                                         start_time_task=0,
                                         requester=requester.name,
                                         delivery_params=[param],
                                     )
-                                    requester.set_destination_pickup(param.pickup_place_name)
+                                    requester.set_current_task(
+                                        TaskState(
+                                            id=taskId,
+                                            submit_time=current_time,
+                                            last_update=current_time,
+                                            state="queued",
+                                            delivery_params=[param],
+                                        )
+                                    )
                                     break
-                    else:
-                        requester.set_destination_pickup("")
+
+                    elif (
+                        currentTask is not None
+                        and currentTask.delivery_params[0].dropoff_place_name == requester.ingestor
+                        and currentTask.state in TASK_NO_ACTIVE
+                    ):
+                        requester.set_current_task(None)
 
                 # Handles station state
                 station: StationState
@@ -661,7 +706,7 @@ class AutoTaskManager(Node):
                         continue
 
     def publish_station_states(self):
-        current_time = self.get_clock().now().to_msg()
+        current_time = self.get_clock().now()
         pickup_stations = []
         dropoff_stations = []
         for pk_name, pk_context in self._pickup_context_dict.items():
@@ -671,8 +716,15 @@ class AutoTaskManager(Node):
             # Gửi nhiệm vụ tự động khi phát hiện có hàng ở các trạm pickup requester:
             if pk_name in self._sreq_context_dict:
                 requester = self._sreq_context_dict.get(pk_name)
+                currentTask = requester.get_current_task()
                 if pk_state.mode == StationState.MODE_FILLED:
-                    if requester.get_destination_dropoff() == "":
+                    if currentTask is None:
+                        if self.mutex_RF370CB_is_locked:
+                            self.get_logger().warn(
+                                f"detect cart in requester station: [{requester.name}] but mutex group zone_RF370CB is locked, will wait for mutex is released!"
+                            )
+                            continue
+
                         deliveryParams = []
                         for step in requester.delivery_steps:
                             param = DeliveryParams()
@@ -712,22 +764,35 @@ class AutoTaskManager(Node):
                                 f"detect cart in requester station: [{requester.name}], send task delivery ({information})!"
                             )
 
-                            requester.set_destination_dropoff(deliveryParams[-1].dropoff_place_name)
-
-                            self.dispatch_delivery(
+                            taskId = self.dispatch_delivery(
                                 start_time_task=0,
                                 requester=requester.name,
                                 delivery_params=deliveryParams,
                             )
-                else:
-                    requester.set_destination_dropoff("")
+                            requester.set_current_task(
+                                TaskState(
+                                    id=taskId,
+                                    submit_time=current_time,
+                                    last_update=current_time,
+                                    state="queued",
+                                    delivery_params=deliveryParams,
+                                )
+                            )
+                    elif currentTask.state == "completed":
+                        self.get_logger().warn(
+                            f"detect cart in requester station: [{requester.name}] and current task was completed, reset current task!"
+                        )
+                        requester.set_current_task(None)
+
+                elif currentTask is not None and currentTask.state in TASK_NO_ACTIVE:
+                    requester.set_current_task(None)
 
         for do_context in self._dropoff_context_dict.values():
             do_state = do_context.get_state()
             dropoff_stations.append(do_state)
 
         msg = FleetStationState()
-        msg.time = current_time
+        msg.time = current_time.to_msg()
         msg.pickup_stations = pickup_stations
         msg.dropoff_stations = dropoff_stations
         self.station_state_pub.publish(msg)

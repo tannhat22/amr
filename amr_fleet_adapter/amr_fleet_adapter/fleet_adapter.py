@@ -122,6 +122,7 @@ def main(argv=sys.argv):
 
     fleet_config.server_uri = server_uri
     fleet_handle = adapter.add_easy_fleet(fleet_config)
+    fleet_handle.more().set_planner_cache_reset_size(3000)
     fleet_handle.more().fleet_state_publish_period(None)
 
     # Initialize robot API for this fleet
