@@ -122,7 +122,7 @@ def main(argv=sys.argv):
 
     fleet_config.server_uri = server_uri
     fleet_handle = adapter.add_easy_fleet(fleet_config)
-    fleet_handle.more().set_planner_cache_reset_size(3000)
+    fleet_handle.more().set_planner_cache_reset_size(2500)
     fleet_handle.more().fleet_state_publish_period(None)
 
     # Initialize robot API for this fleet
@@ -942,9 +942,10 @@ class RobotAdapter:
             self.name, self.cmd_id, "dock", activity_des, destination.map
         ):
             case (RobotAPIResult.SUCCESS, path):
-                # self.override = self.mission.execution.override_schedule(
-                #     path["map_name"], path["path"]
-                # )
+                if not undock:
+                    self.override = self.mission.execution.override_schedule(
+                        path["map_name"], path["path"]
+                    )
                 return True
             case RobotAPIResult.RETRY:
                 self.node.get_logger().error(f"Robot [{self.name}] was perform_docking error!")
