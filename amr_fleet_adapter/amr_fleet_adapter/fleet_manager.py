@@ -23,10 +23,12 @@ import threading
 import time
 import re
 import uuid
-from typing import Optional
-
-from fastapi import FastAPI
+import socketio
+import uvicorn
+import yaml
 import numpy as np
+from typing import Optional
+from fastapi import FastAPI
 from pydantic import BaseModel
 from pyproj import Transformer
 import rclpy
@@ -64,9 +66,7 @@ from machine_fleet_msgs.msg import (
     MachineRequest,
     StationRequest,
 )
-import socketio
-import uvicorn
-import yaml
+from rmf_lift_msgs.msg import LiftState, LiftRequest
 
 app = FastAPI()
 
@@ -93,6 +93,12 @@ class Response(BaseModel):
 # Machine state:
 class MCState:
     def __init__(self, state: MachineState = None) -> None:
+        self.state = state
+
+
+# Lift state:
+class LState:
+    def __init__(self, state: LiftState = None) -> None:
         self.state = state
 
 
@@ -153,6 +159,7 @@ class FleetManager(Node):
     _dock_context: dict[str, DockInfo]
     robots: dict[str, State]
     machines: dict[str, MCState]
+    lifts: dict[str, LState]
 
     def __init__(self, config, nav_graph):
         self.debug = False
@@ -175,6 +182,7 @@ class FleetManager(Node):
         self.action_paths = {}  # Map activities to paths
         self._dock_context = {}
         self.machines = {}  # Map machine name to state
+        self.lifts = {}  # Map lift name to state
 
         if "docks" in self.config:
             self.add_dock_context()
@@ -187,6 +195,9 @@ class FleetManager(Node):
 
         # Add machine context:
         self.add_machine_context(nav_graph)
+
+        # Add lift context:
+        self.add_lift_context(nav_graph)
 
         profile = traits.Profile(
             geometry.make_final_convex_circle(self.config["rmf_fleet"]["profile"]["footprint"]),
@@ -237,6 +248,13 @@ class FleetManager(Node):
             10,
         )
 
+        self.create_subscription(
+            LiftState,
+            "lift_states",
+            self.lift_states_cb,
+            10,
+        )
+
         transient_qos = QoSProfile(
             history=History.KEEP_LAST,
             depth=10,
@@ -253,6 +271,10 @@ class FleetManager(Node):
 
         self.task_api_req_pub = self.create_publisher(
             ApiRequest, "task_api_requests", transient_qos
+        )
+
+        self.lift_req_pub = self.create_publisher(
+            LiftRequest, "adapter_lift_requests", transient_qos
         )
 
         self.path_pub = self.create_publisher(
@@ -802,6 +824,46 @@ class FleetManager(Node):
 
         # ///////////////////////////////////////////////////////////////////////
 
+        # ---------------------------- LIFT --------------------------------- #
+        @app.get("/open-rmf/rmf_vdm_fm/lift_status/", response_model=Response)
+        async def lift_status(lift_name: str):
+            response = {"data": {}, "success": False, "msg": ""}
+
+            state = self.lifts.get(lift_name)
+            if state is None or state.state is None:
+                return response
+            response["data"] = self.get_lift_state(state.state, lift_name)
+            response["success"] = True
+            return response
+
+        @app.post("/open-rmf/rmf_vdm_fm/lift_request/", response_model=Response)
+        async def lift_request(lift_name: str, task: Request):
+            response = {"success": False, "msg": ""}
+            if task.data is None:
+                response["msg"] = "Lift request data is missing!"
+                return response
+
+            lift_request = LiftRequest()
+            lift_request.lift_name = lift_name
+            lift_request.request_type = LiftRequest.REQUEST_AGV_MODE
+            lift_request.session_id = task.data["session_id"]
+            lift_request.destination_floor = task.data["destination_floor"]
+            if task.data["door_state"] == "closed":
+                lift_request.door_state = LiftRequest.DOOR_CLOSED
+            else:
+                lift_request.door_state = LiftRequest.DOOR_OPEN
+
+            lift_request.request_time = self.get_clock().now().to_msg()
+            self.lift_req_pub.publish(lift_request)
+
+            if self.debug:
+                print(f"Sending adapter lift request for {lift_name}")
+
+            response["success"] = True
+            return response
+
+        # ///////////////////////////////////////////////////////////////////////
+
         # ---------------------------- CHARGER --------------------------------- #
         @app.post("/open-rmf/rmf_vdm_fm/charger_trigger/", response_model=Response)
         async def charger_trigger(robot_name: str, cmd_id: int, request: Request):
@@ -922,6 +984,12 @@ class FleetManager(Node):
                     self.machines[machine_name] = MCState()
         return
 
+    def add_lift_context(self, nav_graph):
+        for lift in nav_graph["lifts"]:
+            if lift not in self.lifts:
+                self.lifts[lift] = LState()
+        return
+
     def _make_mode_request(self, robot_name, cmd_id, mode, action=""):
         mode_msg = ModeRequest()
         mode_msg.fleet_name = self.fleet_name
@@ -1005,6 +1073,11 @@ class FleetManager(Node):
                 machine = self.machines[machineMsg.machine_name]
                 machine.state = machineMsg
 
+    def lift_states_cb(self, msg: LiftState):
+        if msg.lift_name in self.lifts:
+            lift = self.lifts[msg.lift_name]
+            lift.state = msg
+
     def dock_summary_cb(self, msg):
         for fleet in msg.docks:
             if fleet.fleet_name == self.fleet_name:
@@ -1075,6 +1148,17 @@ class FleetManager(Node):
         data["dispenser_mode"] = machine.state.dispenser_mode.mode
         data["ingestor_mode"] = machine.state.ingestor_mode.mode
         data["mode"] = machine.state.machine_mode
+        return data
+
+    def get_lift_state(self, lift: LiftState, lift_name):
+        data = {}
+        data["lift_name"] = lift_name
+        data["current_floor"] = lift.current_floor
+        data["destination_floor"] = lift.destination_floor
+        data["door_state"] = lift.door_state
+        data["motion_state"] = lift.motion_state
+        data["current_mode"] = lift.current_mode
+        data["session_id"] = lift.session_id
         return data
 
     def disp(self, A, B):

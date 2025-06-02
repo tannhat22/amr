@@ -419,6 +419,44 @@ class RobotAPI:
             print(f"Other error: {err}")
         return False
 
+    # ///////////////////////////////////////////////////////////////////////////
+    # API for lift:
+    def get_lift_data(self, lift_name: str):
+        """
+        Return a LiftUpdateData
+        """
+        url = self.prefix + f"/open-rmf/rmf_vdm_fm/lift_status?lift_name={lift_name}"
+        try:
+            response = requests.get(url, timeout=self.timeout)
+            response.raise_for_status()
+            if self.debug:
+                print(f"Response: {response.json()}")
+            return LiftUpdateData(response.json()["data"])
+        except HTTPError as http_err:
+            print(f"HTTP error for {lift_name} in get_lift_data , {http_err}")
+        except Exception as err:
+            print(f"Other error: {err}")
+        return None
+
+    def lift_request(self, lift_name: str, data: dict):
+        """Request the lift to begin a process
+        Return True if the lift has accepted the request, else False"""
+        url = self.prefix + f"/open-rmf/rmf_vdm_fm/lift_request?lift_name={lift_name}"
+
+        data = {"data": data}
+        try:
+            response = requests.post(url, timeout=self.timeout, json=data)
+            response.raise_for_status()
+            if self.debug:
+                print(f"Response: {response.json()}")
+            return response.json()["success"]
+        except HTTPError as http_err:
+            print(f"HTTP error: {http_err}")
+        except Exception as err:
+            print(f"Other error: {err}")
+        return False
+
+    # ///////////////////////////////////////////////////////////////////////////
     # API for charger:
     def charger_trigger(self, robot_name: str, cmd_id: int, process: dict):
         """Request the charger to begin a process
@@ -474,3 +512,16 @@ class MachineUpdateData:
         self.dispenser_mode = data["dispenser_mode"]
         self.ingestor_mode = data["ingestor_mode"]
         self.mode = data["mode"]
+
+
+class LiftUpdateData:
+    """Update data for a single lift."""
+
+    def __init__(self, data):
+        self.lift_name = data["lift_name"]
+        self.current_floor = data["current_floor"]
+        self.destination_floor = data["destination_floor"]
+        self.door_state = data["door_state"]
+        self.motion_state = data["motion_state"]
+        self.current_mode = data["current_mode"]
+        self.session_id = data["session_id"]

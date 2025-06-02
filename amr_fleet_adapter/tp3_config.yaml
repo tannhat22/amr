@@ -225,7 +225,7 @@ docks:
 
   doimahang02--dropoff:
     go_in_dock: [rot:-90, mov:-0.43]
-    go_out_dock: [mov:0.9, rot:-90]
+    go_out_dock: [mov:1.0, rot:-90]
     limits:
       rotate_angle: 30
       rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise

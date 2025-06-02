@@ -33,10 +33,8 @@ from rclpy.qos import QoSReliabilityPolicy as Reliability
 import rmf_adapter
 from rmf_adapter import Adapter
 import rmf_adapter.easy_full_control as rmf_easy
-from rmf_fleet_msgs.msg import ClosedLanes
-from rmf_fleet_msgs.msg import LaneRequest
-from rmf_fleet_msgs.msg import ModeRequest
-from rmf_fleet_msgs.msg import RobotMode, Location
+from rmf_fleet_msgs.msg import ClosedLanes, LaneRequest, ModeRequest, RobotMode, Location
+from rmf_lift_msgs.msg import LiftState
 from machine_fleet_msgs.msg import DeviceMode, StationRequest
 import yaml
 
@@ -302,6 +300,7 @@ class RobotAdapter:
         self.paused_mission: MissionHandle | None = None
         self.vertexs_config = vertexs_config
         self.charger_server = charger_server
+        self.need_replan = False
         self.need_undock = None
         self.need_unlift = False
         self.repeat_wp_count = 0
@@ -573,6 +572,16 @@ class RobotAdapter:
                     f"Robot [{self.name}] has navigated finished early because"
                     f" this is not last destination of the path!"
                 )
+        # elif status.mode == RobotMode.MODE_REQUEST_ERROR:
+        #     self.node.get_logger().error(
+        #         "Robot [{self.name}] has request error will replan after error was reset!"
+        #     )
+        #     self.need_replan = True
+        # elif status.mode == RobotMode.MODE_EMERGENCY:
+        #     self.need_unlift = False
+        #     self.need_undock = None
+        #     self.paused = False
+        #     self.waiting_robot = False
         else:
             if (
                 status.mode == RobotMode.MODE_REQUEST_ERROR
@@ -727,29 +736,7 @@ class RobotAdapter:
             destination=destination,
             is_last_destination=is_last_destination,
         )
-        vertex = None
-        if destination.name != "":
-            vertex = self.vertexs_config.get(destination.name, None)
-
-        if vertex != None:
-            pose = [
-                destination.position[0],
-                destination.position[1],
-                vertex.orientation,
-            ]
-        else:
-            pose = destination.position
-
-        self.attempt_cmd_until_success(
-            cmd=self.api.navigate,
-            args=(
-                self.name,
-                self.cmd_id,
-                pose,
-                destination.map,
-                destination.speed_limit,
-            ),
-        )
+        self.attempt_cmd_until_success(cmd=self.request_navigate, args=(destination,))
         self.mission.set_mission_id(self.cmd_id)
 
     def localize(self, estimate, execution):
@@ -845,6 +832,55 @@ class RobotAdapter:
 
             self.paused = False
             self.waiting_robot = False
+
+    def request_navigate(self, destination):
+        vertex = None
+        if destination.name != "":
+            vertex = self.vertexs_config.get(destination.name, None)
+
+        if vertex != None:
+            pose = [
+                destination.position[0],
+                destination.position[1],
+                vertex.orientation,
+            ]
+        else:
+            pose = destination.position
+
+        # Check lift state if robot is navigate in to lift
+        if destination.inside_lift is not None:
+            lift_name = destination.inside_lift.name
+            while rclpy.ok():
+                lift_state = self.api.get_lift_data(lift_name)
+                if lift_state is None:
+                    self.node.get_logger().error(
+                        f"[{self.name}] can't get lift state of [{lift_name}]!"
+                    )
+                    return False
+
+                if (
+                    lift_state.current_floor != destination.map
+                    or lift_state.door_state != LiftState.DOOR_OPEN
+                ):
+                    self.node.get_logger().warn(
+                        f"[{self.name}] to navigate in to lift [{lift_name}] but LiftState is not ready!"
+                    )
+                    process = {
+                        "session_id": f"{self.fleet_handle.more().fleet_name}/{self.name}",
+                        "destination_floor": destination.map,
+                        "door_state": "open",
+                    }
+
+                    self.api.lift_request(lift_name=lift_name, data=process)
+                else:
+                    break
+
+                if self.cancel_cmd_event.wait(1.0):
+                    return False
+
+        return self.api.navigate(
+            self.name, self.cmd_id, pose, destination.map, destination.speed_limit
+        )
 
     def execute_action(self, category: str, description: dict, execution):
         self.cmd_id += 1
