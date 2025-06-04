@@ -565,7 +565,7 @@ class FleetManager(Node):
 
             robot = self.robots[robot_name]
 
-            if request.activity == "dock":
+            if request.activity == "dock" or request.activity == "redock":
                 dock_request = DockRequest()
                 if request.activity_desc["mode"] == "charge":
                     dock_request.dock_mode.mode = DockMode.MODE_CHARGE
@@ -628,8 +628,9 @@ class FleetManager(Node):
                 else:
                     dock_request.dock_limit = dock_config.dock_limit
                     dock_request.tag_names = dock_config.tag_names
-                    dock_request.go_in_dock = dock_config.go_in_dock
                     dock_request.go_out_dock = dock_config.go_out_dock
+                    if request.activity == "dock":
+                        dock_request.go_in_dock = dock_config.go_in_dock
 
                 dock_request.task_id = str(cmd_id)
                 self.dock_pub.publish(dock_request)

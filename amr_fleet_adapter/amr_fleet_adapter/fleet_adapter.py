@@ -300,7 +300,9 @@ class RobotAdapter:
         self.paused_mission: MissionHandle | None = None
         self.vertexs_config = vertexs_config
         self.charger_server = charger_server
-        self.need_replan = False
+        self.is_status_overrided = False
+        self.requested_retry = False
+        self.last_request_cancel_id = None
         self.need_undock = None
         self.need_unlift = False
         self.repeat_wp_count = 0
@@ -319,6 +321,13 @@ class RobotAdapter:
         if mission is not None:
             return self.mission.activity
         return None
+
+    def reset_variables(self):
+        self.need_unlift = False
+        self.need_undock = None
+        self.paused = False
+        self.waiting_robot = False
+        self.requested_retry = False
 
     def robot_is_connecting(
         self, robot_time: int, now_time: int, timeout_sec: float = 60.0
@@ -384,40 +393,82 @@ class RobotAdapter:
                 f"Mission is None / Robot is localizing, ignore status " f"update"
             )
 
-        # Decommission the robot if it is in an error or emergency state
-        # Recommision will be handle by hand
-        if data.mode == RobotMode.MODE_EMERGENCY or data.mode == RobotMode.MODE_REQUEST_ERROR:
-            if not self.is_decommission:
-                self.update_handle.more().override_status("error")
-                self.attempt_cmd_until_success(cmd=self.api.decommission, args=(self.name,))
-                self.is_decommission = True
-                return
-        elif self.is_decommission:
-            self.is_decommission = False
-            self.update_handle.more().override_status(None)
-
         # Update RMF to mark the ActionExecution as finished
         if mission is not None:
             if mission.done:
                 self.update_rmf_finished(mission)
-            elif self.is_decommission:
+            # Handle emergency and request error modes
+            elif data.mode == RobotMode.MODE_EMERGENCY:
                 self.node.get_logger().error(
-                    f"Robot {self.name} has state {data.mode} when process last requested "
-                    f"with task_id: {self.update_handle.more().current_task_id()}."
+                    f"Robot {self.name} has state emergency stop when process requested "
+                    f"with task_id: {self.update_handle.more().current_task_id()}, decommission robot!"
                 )
-
+                self.attempt_cmd_until_success(cmd=self.api.decommission, args=(self.name,))
+                self.is_status_overrided = True
+                self.update_handle.more().override_status("error")
                 self.update_handle.more().kill_task(
                     self.update_handle.more().current_task_id(),
                     ["kill_task"],
                     self.on_killed_task,
                 )
                 self.mission = None
+                self.reset_variables()
+
+            elif data.mode == RobotMode.MODE_REQUEST_ERROR:
+                if not self.is_status_overrided:
+                    self.node.get_logger().error(
+                        f"Robot [{self.name}] is in request error mode, waiting error handling from operation!"
+                    )
+                    self.reset_variables()
+                    self.is_status_overrided = True
+                    self.update_handle.more().override_status("error")
+
+            elif data.mode == RobotMode.MODE_REQUEST_REPLAN:
+                if not self.requested_retry:
+                    self.node.get_logger().warn(
+                        f"Robot [{self.name}] request retry destination after handling error!"
+                    )
+                    self.retry_mission(mission.destination, mission.execution)
+                    self.requested_retry = True
+
+            elif data.mode == RobotMode.MODE_REQUEST_CANCEL:
+                if self.last_request_cancel_id != data.last_request_completed:
+                    self.node.get_logger().warn(
+                        f"Robot [{self.name}] request cancel task after handling error (task_id: {self.update_handle.more().current_task_id()})!"
+                    )
+                    mission.undock = False
+                    mission.docking = False
+                    mission.localize = False
+                    self.update_handle.more().cancel_task(
+                        self.update_handle.more().current_task_id(),
+                        ["cancel_task"],
+                        self.on_canceled_task,
+                    )
+                    self.last_request_cancel_id = data.last_request_completed
+
+            elif self.is_status_overrided:
+                self.is_status_overrided = False
+                self.update_handle.more().override_status(None)
+
+        elif (
+            self.is_status_overrided
+            and data.mode != RobotMode.MODE_EMERGENCY
+            and data.mode != RobotMode.MODE_REQUEST_ERROR
+            and data.mode != RobotMode.MODE_REQUEST_REPLAN
+            and data.mode != RobotMode.MODE_REQUEST_CANCEL
+        ):
+            # If we are not in emergency or request error mode, we can reset the status override
+            self.is_status_overrided = False
+            self.update_handle.more().override_status(None)
 
         if self.teleoperation is not None:
             self.teleoperation.update(data)
 
         # Update robot state:
         self.state = data
+
+    def on_canceled_task(self, canceled):
+        return
 
     def on_killed_task(self, killed):
         return
@@ -562,35 +613,18 @@ class RobotAdapter:
             mission.done = True
             self.paused = False
             self.waiting_robot = False
+            self.requested_retry = False
         # Will finished goal early if it's not last destination of the path!
         elif mission.navigate and not mission.is_last_destination:
             dist2Goal = self.dist(self.last_known_status.position[0:2], mission.destination.xy)
             if dist2Goal <= self.distance_tolerance:
                 mission.navigate = False
                 mission.done = True
+                self.requested_retry = False
                 self.node.get_logger().info(
                     f"Robot [{self.name}] has navigated finished early because"
                     f" this is not last destination of the path!"
                 )
-        # elif status.mode == RobotMode.MODE_REQUEST_ERROR:
-        #     self.node.get_logger().error(
-        #         "Robot [{self.name}] has request error will replan after error was reset!"
-        #     )
-        #     self.need_replan = True
-        # elif status.mode == RobotMode.MODE_EMERGENCY:
-        #     self.need_unlift = False
-        #     self.need_undock = None
-        #     self.paused = False
-        #     self.waiting_robot = False
-        else:
-            if (
-                status.mode == RobotMode.MODE_REQUEST_ERROR
-                or status.mode == RobotMode.MODE_EMERGENCY
-            ):
-                self.need_unlift = False
-                self.need_undock = None
-                self.paused = False
-                self.waiting_robot = False
 
     def make_callbacks(self):
         callbacks = rmf_easy.RobotCallbacks(
@@ -773,6 +807,30 @@ class RobotAdapter:
             self.node.get_logger().info(
                 f"{self.name}: receive paused action but robot don't have mission!"
             )
+
+    def retry_mission(self, destination, execution):
+        """Retry mission with the same destination"""
+        self.cmd_id += 1
+        # Check if robot need docking
+        if destination.dock is not None:
+            self.node.get_logger().info(
+                f"[{self.name}] Received navigation command to "
+                f"dock, will trigger docking to '{destination.name}'"
+            )
+            self.mission = MissionHandle(execution, docking=True, destination=destination)
+            self.attempt_cmd_until_success(cmd=self.perform_docking, args=(destination,))
+            self.mission.set_mission_id(self.cmd_id)
+            return
+
+        # Navigation normal:
+        self.mission = MissionHandle(
+            execution,
+            navigate=True,
+            destination=destination,
+            is_last_destination=True,
+        )
+        self.attempt_cmd_until_success(cmd=self.request_navigate, args=(destination,))
+        self.mission.set_mission_id(self.cmd_id)
 
     def wait(self):
         """Set wait flag and hold on to any requested navigate"""
@@ -974,8 +1032,13 @@ class RobotAdapter:
         if undock_dist is not None:
             activity_des.update({"undock_dist": undock_dist})
 
+        # Handle normal dock or replan dock
+        activity = "dock"
+        if self.requested_retry:
+            activity = "redock"
+
         match self.api.start_activity(
-            self.name, self.cmd_id, "dock", activity_des, destination.map
+            self.name, self.cmd_id, activity, activity_des, destination.map
         ):
             case (RobotAPIResult.SUCCESS, path):
                 if not undock:
