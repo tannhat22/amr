@@ -428,8 +428,8 @@ class RobotAdapter:
                     self.node.get_logger().warn(
                         f"Robot [{self.name}] request retry destination after handling error!"
                     )
-                    self.retry_mission(mission.destination, mission.execution)
                     self.requested_retry = True
+                    self.retry_mission(mission.destination, mission.execution)
 
             elif data.mode == RobotMode.MODE_REQUEST_CANCEL:
                 if self.last_request_cancel_id != data.last_request_completed:
@@ -1033,12 +1033,12 @@ class RobotAdapter:
             activity_des.update({"undock_dist": undock_dist})
 
         # Handle normal dock or replan dock
-        activity = "dock"
+        activity_type = "dock"
         if self.requested_retry:
-            activity = "redock"
+            activity_type = "redock"
 
         match self.api.start_activity(
-            self.name, self.cmd_id, activity, activity_des, destination.map
+            self.name, self.cmd_id, activity_type, activity_des, destination.map
         ):
             case (RobotAPIResult.SUCCESS, path):
                 if not undock:

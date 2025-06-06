@@ -21,7 +21,6 @@ from rclpy.qos import QoSReliabilityPolicy as Reliability
 # from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from std_msgs.msg import String
 from rmf_task_msgs.msg import ApiRequest, ApiResponse
-from rmf_fleet_msgs.msg import MutexGroupStates, MutexGroupAssignment
 from machine_fleet_msgs.msg import (
     DeliveryItem,
     DeliveryParams,
@@ -104,6 +103,7 @@ class TaskState:
         self.submit_time = submit_time
         self.last_update = last_update
         self.state = state
+        # self.current_phase = 0
         self.delivery_params = delivery_params
 
 
@@ -184,7 +184,7 @@ class AutoTaskManager(Node):
 
         self._pickup_context_dict = {}
         self._dropoff_context_dict = {}
-        self.mutex_RF370CB_is_locked = False
+        self.mutex_high_req = False
 
         for nav_graph in nav_graphs:
             if nav_graph is None:
@@ -299,7 +299,7 @@ class AutoTaskManager(Node):
 
         transient_qos = QoSProfile(
             history=History.KEEP_LAST,
-            depth=1,
+            depth=10,
             reliability=Reliability.RELIABLE,
             durability=Durability.TRANSIENT_LOCAL,
         )
@@ -345,9 +345,9 @@ class AutoTaskManager(Node):
         )
 
         self.create_subscription(
-            MutexGroupStates,
-            "/mutex_group_states",
-            self.mutex_group_states_cb,
+            String,
+            "/fleet_state_update",
+            self.fleet_state_update_cb,
             qos_profile=qos_profile_system_default,
         )
 
@@ -472,15 +472,23 @@ class AutoTaskManager(Node):
         self.task_api_req_pub.publish(msg)
         return msg.request_id
 
-    def mutex_group_states_cb(self, msg: MutexGroupStates):
-        assignment: MutexGroupAssignment
-        for assignment in msg.assignments:
-            if assignment.group == "zone_RF370CB":
-                if assignment.claimant == MUTEX_NO_CLAIMANT:
-                    self.mutex_RF370CB_is_locked = False
-                else:
-                    self.mutex_RF370CB_is_locked = True
+    def fleet_state_update_cb(self, msg: String):
+        waiting = False
+        fleetStateUpdate = json.loads(msg.data)
+        fleetState = fleetStateUpdate["data"]
+
+        if fleetState["name"] != "amr_tp3":
+            return
+
+        for name, robot in fleetState["robots"].items():
+            if "zone_RF370CB" in robot["mutex_groups"]["requesting"]:
+                waiting = True
                 break
+
+        if waiting:
+            self.mutex_high_req = True
+        else:
+            self.mutex_high_req = False
 
     def task_state_update_cb(self, msg: String):
         current_time = self.get_clock().now()
@@ -488,6 +496,7 @@ class AutoTaskManager(Node):
         requester = taskState["data"]["booking"]["requester"]
         taskId = taskState["data"]["booking"]["id"]
         status = taskState["data"]["status"]
+        # currentPhase = taskState["data"]["active"]
 
         if requester in self._sreq_context_dict:
             requesterContext = self._sreq_context_dict.get(requester)
@@ -495,6 +504,7 @@ class AutoTaskManager(Node):
             if currentTask is not None:
                 currentTask.state = status
                 currentTask.last_update = current_time
+                # currentTask.current_phase = currentPhase
                 if status in TASK_FAILED:
                     for param in currentTask.delivery_params:
                         do_station = self._dropoff_context_dict.get(param.dropoff_place_name)
@@ -719,9 +729,9 @@ class AutoTaskManager(Node):
                 currentTask = requester.get_current_task()
                 if pk_state.mode == StationState.MODE_FILLED:
                     if currentTask is None:
-                        if self.mutex_RF370CB_is_locked:
+                        if self.mutex_high_req:
                             self.get_logger().warn(
-                                f"detect cart in requester station: [{requester.name}] but mutex group zone_RF370CB is locked, will wait for mutex is released!"
+                                f"detect cart in requester station: [{requester.name}] but mutex group zone_RF370CB is in high request, will wait for mutex available!"
                             )
                             continue
 
