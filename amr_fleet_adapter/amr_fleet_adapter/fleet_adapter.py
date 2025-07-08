@@ -395,22 +395,24 @@ class RobotAdapter:
 
         # Update RMF to mark the ActionExecution as finished
         if mission is not None:
+            current_task_id = self.update_handle.more().current_task_id()
             if mission.done:
                 self.update_rmf_finished(mission)
             # Handle emergency and request error modes
             elif data.mode == RobotMode.MODE_EMERGENCY:
                 self.node.get_logger().error(
                     f"Robot {self.name} has state emergency stop when process requested "
-                    f"with task_id: {self.update_handle.more().current_task_id()}, decommission robot!"
+                    f"with task_id: {current_task_id}, decommission robot!"
                 )
                 self.attempt_cmd_until_success(cmd=self.api.decommission, args=(self.name,))
                 self.is_status_overrided = True
                 self.update_handle.more().override_status("error")
-                self.update_handle.more().kill_task(
-                    self.update_handle.more().current_task_id(),
-                    ["kill_task"],
-                    self.on_killed_task,
-                )
+                if current_task_id:
+                    self.update_handle.more().kill_task(
+                        current_task_id,
+                        ["kill_task"],
+                        self.on_killed_task,
+                    )
                 self.mission = None
                 self.reset_variables()
 
@@ -432,15 +434,15 @@ class RobotAdapter:
                     self.retry_mission(mission.destination, mission.execution)
 
             elif data.mode == RobotMode.MODE_REQUEST_CANCEL:
-                if self.last_request_cancel_id != data.last_request_completed:
+                if self.last_request_cancel_id != data.last_request_completed and current_task_id:
                     self.node.get_logger().warn(
-                        f"Robot [{self.name}] request cancel task after handling error (task_id: {self.update_handle.more().current_task_id()})!"
+                        f"Robot [{self.name}] request cancel task after handling error (task_id: {current_task_id})!"
                     )
                     mission.undock = False
                     mission.docking = False
                     mission.localize = False
                     self.update_handle.more().cancel_task(
-                        self.update_handle.more().current_task_id(),
+                        current_task_id,
                         ["cancel_task"],
                         self.on_canceled_task,
                     )
@@ -501,7 +503,10 @@ class RobotAdapter:
                 self.node.get_logger().info(f"Robot [{self.name}] has begun charging...")
             elif mission.undock:
                 self.node.get_logger().info(f"Robot [{self.name}] has undock finished.")
-                dock_mode = search_mode_docking(self.need_undock.name)
+                dock_mode = None
+                if self.need_undock is not None:
+                    dock_mode = search_mode_docking(self.need_undock.name)
+                    
                 if dock_mode == "pickup":
                     station_process = {
                         "station_type": dock_mode,
@@ -908,6 +913,7 @@ class RobotAdapter:
         # Check lift state if robot is navigate in to lift
         if destination.inside_lift is not None:
             lift_name = destination.inside_lift.name
+            lift_session_id = f"{self.fleet_handle.more().fleet_name}/{self.name}"
             while rclpy.ok():
                 lift_state = self.api.get_lift_data(lift_name)
                 if lift_state is None:
@@ -915,7 +921,7 @@ class RobotAdapter:
                         f"[{self.name}] can't get lift state of [{lift_name}]!"
                     )
                     return False
-
+                
                 if (
                     lift_state.current_floor != destination.map
                     or lift_state.door_state != LiftState.DOOR_OPEN
@@ -923,13 +929,18 @@ class RobotAdapter:
                     self.node.get_logger().warn(
                         f"[{self.name}] to navigate in to lift [{lift_name}] but LiftState is not ready!"
                     )
-                    process = {
-                        "session_id": f"{self.fleet_handle.more().fleet_name}/{self.name}",
-                        "destination_floor": destination.map,
-                        "door_state": "open",
-                    }
 
-                    self.api.lift_request(lift_name=lift_name, data=process)
+                    if (lift_state.session_id != lift_session_id or lift_state.destination_floor != destination.map):
+                        self.node.get_logger().warn(
+                            f"[{self.name}] try request lift [{lift_name}] to [{destination.map}] because seem rmf lost request!"
+                        )                        
+                        process = {
+                            "session_id": lift_session_id,
+                            "destination_floor": destination.map,
+                            "door_state": "open",
+                        }
+
+                        self.api.lift_request(lift_name=lift_name, data=process)
                 else:
                     break
 
