@@ -99,17 +99,19 @@ docks:
     go_out_dock: [mov:0.65]
 
   line56--pickup:
-    go_out_dock: [mov:1.22, rot:-90]
+    go_in_dock: [rot:-90, mov:-0.40]
+    go_out_dock: [mov:1.08, rot:-90]
     tag_names: [tag_frame_3]
     limits:
       rotate_angle: 30
-      rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   line56--dropoff:
-    go_out_dock: [mov:0.4, rot:-90]
+    go_in_dock: [rot:-90]
+    go_out_dock: [mov:0.65]
     limits:
       rotate_angle: 45
-      rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
 
   ### CHARGERS
   charger001--charge:
@@ -151,5 +153,5 @@ vertexs:
   # LINE 56:
   clr56_PKFD: 1.57199
   # clr56_DOFD: 3.14
-  # line56_PKFD: 3.14
+  line56_PKFD: 1.57199
   line56_DOFD: 1.57199
