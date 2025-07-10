@@ -285,8 +285,8 @@ vertexs:
   ### TP2
   lift001-L1: [1.57199, True]
   waiting_for_lift_201: 1.57199
-  lift_parking_201: 3.14
-  lift_parking_202: 3.14
+  parking_201: 3.14
+  parking_202: 3.14
 
   ### TP3
   lift_parking_301: 1.5708

@@ -141,8 +141,8 @@ docks:
 #       120 = 2.0944, 135 = 2.3562, 150 = 2.618, 180 = 3.1416
 vertexs:
   ### TP2
-  lift_parking_201: 3.14
-  lift_parking_202: 3.14
+  parking_201: 3.14
+  parking_202: 3.14
 
   # LINE 55:
   clr55_PKFD: 1.57199

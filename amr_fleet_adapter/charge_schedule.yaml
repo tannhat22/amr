@@ -1,3 +1,9 @@
+amr_tp2:
+  "00:00": { amr004: charger001--charge }
+  "06:00": { amr004: parking_202 }
+  "12:00": { amr004: charger001--charge }
+  "18:00": { amr004: parking_202 }
+
 amr_tp3:
   "23:58": { amr001: parking_303, amr002: parking_304 }
   "00:00": { amr003: parking_301, amr005: parking_302 }
@@ -23,4 +29,4 @@ amr_tp3:
   "20:00": { amr001: parking_301, amr002: parking_302 }
   "20:02": { amr003: charger003--charge, amr005: charger004--charge }
 
-parking: ["parking_301", "parking_302", "parking_303", "parking_304"]
+parking: ["parking_202", "parking_301", "parking_302", "parking_303", "parking_304"]
