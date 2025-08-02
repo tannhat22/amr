@@ -350,6 +350,9 @@ class FleetConflictsHandle(Node):
                                 robot1Name == robot2State.wait_HID
                                 and robot1State.state.avoid_obstacles
                             ):
+                                self.get_logger().warn(
+                                    f"Robot [{robot1Name}] allowed to move because robot [{robot2Name}] is waiting for it, and it can avoid_obstacles!"
+                                )                                
                                 continue
 
                             detect_obtacles = True
@@ -380,8 +383,8 @@ class FleetConflictsHandle(Node):
                         self.get_logger().warn(
                             f"Robot[{robot1Name}] resume moving because obstacles is clearing!"
                         )
-                else:
-                    break
+                # else:
+                #     break
             else:
                 # robot1State.last_mode_request = None
                 robot1State.wait_HID = None

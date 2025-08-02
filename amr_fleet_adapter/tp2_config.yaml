@@ -40,7 +40,7 @@ rmf_fleet:
   distance_tolerance: 0.3 # Distance_tolerance to the next destination if destination is not last
   robots:
     amr004:
-      charger: "charger001--charge"
+      # charger: "charger001--charge"
 
 fleet_manager:
   ip: "127.0.0.1"
