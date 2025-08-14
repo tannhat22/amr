@@ -44,6 +44,18 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            # Fleet charging manager
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution(
+                        [
+                            FindPackageShare("amr_charging_manager"),
+                            "launch",
+                            "rmf_charging_manager.launch.py",
+                        ]
+                    )
+                )
+            ),
             # Common launch
             IncludeLaunchDescription(
                 XMLLaunchDescriptionSource(
@@ -90,7 +102,9 @@ def generate_launch_description():
             # Experimental lift watchdog group (disabled)
             GroupAction(
                 condition=UnlessCondition(enable_experimental_lift_watchdog),
-                actions=[SetEnvironmentVariable(name="EXPT_LIFT_WATCHDOG_SRV", value="")],
+                actions=[
+                    SetEnvironmentVariable(name="EXPT_LIFT_WATCHDOG_SRV", value="")
+                ],
                 scoped=False,
             ),
             #### AMR_TP3 fleet adapter

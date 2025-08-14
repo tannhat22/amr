@@ -202,11 +202,19 @@ class AutoTaskManager(Node):
 
                         if "pickup_dispenser" in wp[2]:
                             self._pickup_context_dict.update(
-                                {dock_name: StationContext(dock_name, wp[2]["pickup_dispenser"])}
+                                {
+                                    dock_name: StationContext(
+                                        dock_name, wp[2]["pickup_dispenser"]
+                                    )
+                                }
                             )
                         elif "dropoff_ingestor" in wp[2]:
                             self._dropoff_context_dict.update(
-                                {dock_name: StationContext(dock_name, wp[2]["dropoff_ingestor"])}
+                                {
+                                    dock_name: StationContext(
+                                        dock_name, wp[2]["dropoff_ingestor"]
+                                    )
+                                }
                             )
 
         task_requester_yaml = config["TaskRequester"]
@@ -310,7 +318,9 @@ class AutoTaskManager(Node):
         )
 
         self._adapter_station_request_pub = self.create_publisher(
-            StationRequest, "/adapter_station_requests", qos_profile=qos_profile_system_default
+            StationRequest,
+            "/adapter_station_requests",
+            qos_profile=qos_profile_system_default,
         )
 
         self.station_state_pub = self.create_publisher(
@@ -360,7 +370,9 @@ class AutoTaskManager(Node):
     def __create_pickup_desc(self, pickup: DeliveryParams):
         place = pickup.pickup_place_name
         handler = pickup.pickup_dispenser
-        payload = [{"sku": pickup.pickup_items.sku, "quantity": pickup.pickup_items.quantity}]
+        payload = [
+            {"sku": pickup.pickup_items.sku, "quantity": pickup.pickup_items.quantity}
+        ]
 
         return {
             "place": place,
@@ -372,7 +384,12 @@ class AutoTaskManager(Node):
     def __create_dropoff_desc(self, dropoff: DeliveryParams):
         place = dropoff.dropoff_place_name
         handler = dropoff.dropoff_ingestor
-        payload = [{"sku": dropoff.dropoff_items.sku, "quantity": dropoff.dropoff_items.quantity}]
+        payload = [
+            {
+                "sku": dropoff.dropoff_items.sku,
+                "quantity": dropoff.dropoff_items.quantity,
+            }
+        ]
 
         return {
             "place": place,
@@ -450,7 +467,9 @@ class AutoTaskManager(Node):
                     {
                         "activity": {
                             "category": "pickup",
-                            "description": self.__create_pickup_desc(delivery_params[i]),
+                            "description": self.__create_pickup_desc(
+                                delivery_params[i]
+                            ),
                         }
                     }
                 )
@@ -459,7 +478,9 @@ class AutoTaskManager(Node):
                     {
                         "activity": {
                             "category": "dropoff",
-                            "description": self.__create_dropoff_desc(delivery_params[i]),
+                            "description": self.__create_dropoff_desc(
+                                delivery_params[i]
+                            ),
                         }
                     }
                 )
@@ -507,7 +528,9 @@ class AutoTaskManager(Node):
                 # currentTask.current_phase = currentPhase
                 if status in TASK_FAILED:
                     for param in currentTask.delivery_params:
-                        do_station = self._dropoff_context_dict.get(param.dropoff_place_name)
+                        do_station = self._dropoff_context_dict.get(
+                            param.dropoff_place_name
+                        )
                         if do_station.get_occupant() == requester:
                             self.get_logger().warn(
                                 f"Detect autotask from [{requester}] was {status} (task_id: {taskId}), reset common dropoff station [{param.dropoff_place_name}]!"
@@ -538,14 +561,24 @@ class AutoTaskManager(Node):
                     )
 
                     for param in currentTask.delivery_params:
-                        pk_station = self._pickup_context_dict.get(param.pickup_place_name, None)
-                        do_station = self._dropoff_context_dict.get(param.dropoff_place_name, None)
-                        if pk_station is not None and pk_station.get_occupant() == requester:
+                        pk_station = self._pickup_context_dict.get(
+                            param.pickup_place_name, None
+                        )
+                        do_station = self._dropoff_context_dict.get(
+                            param.dropoff_place_name, None
+                        )
+                        if (
+                            pk_station is not None
+                            and pk_station.get_occupant() == requester
+                        ):
                             self.get_logger().warn(
                                 f"Reset common pickup station [{param.pickup_place_name}]!"
                             )
                             pk_station.reset()
-                        if do_station is not None and do_station.get_occupant() == requester:
+                        if (
+                            do_station is not None
+                            and do_station.get_occupant() == requester
+                        ):
                             self.get_logger().warn(
                                 f"Reset common dropoff station [{param.dropoff_place_name}]!"
                             )
@@ -614,7 +647,8 @@ class AutoTaskManager(Node):
                         if currentTask is None:
                             for station_context in requester.dropoff_stations:
                                 if (
-                                    station_context.get_state().mode == StationState.MODE_EMPTY
+                                    station_context.get_state().mode
+                                    == StationState.MODE_EMPTY
                                     and station_context.set_occupant(requester.name)
                                 ):
                                     param = DeliveryParams()
@@ -649,7 +683,8 @@ class AutoTaskManager(Node):
 
                     elif (
                         currentTask is not None
-                        and currentTask.delivery_params[0].pickup_place_name == requester.dispenser
+                        and currentTask.delivery_params[0].pickup_place_name
+                        == requester.dispenser
                         and currentTask.state in TASK_NO_ACTIVE
                     ):
                         requester.set_current_task(None)
@@ -659,7 +694,8 @@ class AutoTaskManager(Node):
                         if currentTask is None:
                             for station_context in requester.pickup_stations:
                                 if (
-                                    station_context.get_state().mode == StationState.MODE_FILLED
+                                    station_context.get_state().mode
+                                    == StationState.MODE_FILLED
                                     and station_context.set_occupant(requester.name)
                                 ):
                                     param = DeliveryParams()
@@ -694,7 +730,8 @@ class AutoTaskManager(Node):
 
                     elif (
                         currentTask is not None
-                        and currentTask.delivery_params[0].dropoff_place_name == requester.ingestor
+                        and currentTask.delivery_params[0].dropoff_place_name
+                        == requester.ingestor
                         and currentTask.state in TASK_NO_ACTIVE
                     ):
                         requester.set_current_task(None)
@@ -702,8 +739,12 @@ class AutoTaskManager(Node):
                 # Handles station state
                 station: StationState
                 for station in state.station_states:
-                    pk_context = self._pickup_context_dict.get(station.station_name, None)
-                    do_context = self._dropoff_context_dict.get(station.station_name, None)
+                    pk_context = self._pickup_context_dict.get(
+                        station.station_name, None
+                    )
+                    do_context = self._dropoff_context_dict.get(
+                        station.station_name, None
+                    )
                     if pk_context is not None:
                         if station.mode == StationState.MODE_EMPTY:
                             pk_context.reset()
@@ -740,10 +781,14 @@ class AutoTaskManager(Node):
                             param = DeliveryParams()
                             param.pickup_items = step.item
                             param.pickup_dispenser = step.pickup_station._handler
-                            param.pickup_place_name = step.pickup_station.get_state().station_name
+                            param.pickup_place_name = (
+                                step.pickup_station.get_state().station_name
+                            )
                             param.dropoff_items = step.item
                             if len(step.dropoff_stations) == 1:
-                                param.dropoff_ingestor = step.dropoff_stations[0]._handler
+                                param.dropoff_ingestor = step.dropoff_stations[
+                                    0
+                                ]._handler
                                 param.dropoff_place_name = (
                                     step.dropoff_stations[0].get_state().station_name
                                 )
@@ -752,10 +797,13 @@ class AutoTaskManager(Node):
                                 found_station_empty = False
                                 for station_context in step.dropoff_stations:
                                     if (
-                                        station_context.get_state().mode == StationState.MODE_EMPTY
+                                        station_context.get_state().mode
+                                        == StationState.MODE_EMPTY
                                         and station_context.set_occupant(requester.name)
                                     ):
-                                        param.dropoff_ingestor = station_context._handler
+                                        param.dropoff_ingestor = (
+                                            station_context._handler
+                                        )
                                         param.dropoff_place_name = (
                                             station_context.get_state().station_name
                                         )

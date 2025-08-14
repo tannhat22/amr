@@ -1,0 +1,15 @@
+
+fleets:
+  amr_tp2:
+    robots: [amr004]
+    use_recharge_threshold: true
+    recharge_threshold: 0.5
+    charger: [charger001--charge]
+    parking: ["parking_202"]
+
+  amr_tp3:
+    robots: [amr001, amr002, amr003, amr005]
+    use_recharge_threshold: false
+    recharge_threshold: 0.5
+    charger: [charger003--charge, charger004--charge]
+    parking: ["parking_301", "parking_302"]

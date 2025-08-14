@@ -22,8 +22,8 @@ rmf_fleet:
     power: 20.0 # W
   tool_system:
     power: 0.0 # W
-  recharge_threshold: 0.20 # Battery level below which robots in this fleet will not operate
-  recharge_soc: 0.5 # Battery level to which robots in this fleet should be charged up to during recharging tasks
+  recharge_threshold: 0.30 # Battery level below which robots in this fleet will not operate
+  recharge_soc: 0.50 # Battery level to which robots in this fleet should be charged up to during recharging tasks
   max_delay: 15.0 # allowed seconds of delay of the current itinerary before it gets interrupted and replanned
   publish_fleet_state: 10.0 # Publish frequency for fleet state, ensure that it is same as robot_state_update_frequency
   account_for_battery_drain: True
