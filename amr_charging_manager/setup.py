@@ -25,7 +25,6 @@ setup(
     entry_points={
         "console_scripts": [
             "charging_manager=amr_charging_manager.charging_manager:main",
-            "fleet_data_test=amr_charging_manager.fleet_data_test:main",
         ],
     },
 )

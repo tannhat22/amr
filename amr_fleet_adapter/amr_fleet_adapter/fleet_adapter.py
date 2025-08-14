@@ -432,6 +432,10 @@ class RobotAdapter:
                 )
                 self.is_status_overrided = True
                 self.update_handle.more().override_status("error")
+
+                # fix bug kill another task when decommission is not done
+                time.sleep(1.0)
+
                 if current_task_id:
                     self.update_handle.more().kill_task(
                         current_task_id,

@@ -39,7 +39,7 @@ def generate_launch_description():
                 parameters=[
                     {
                         "update_frequency": 0.2,
-                        "min_charge_time": 1.0,
+                        "min_charge_time": 30.0,
                         "debug": True,
                     }
                 ],
