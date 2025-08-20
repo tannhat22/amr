@@ -81,7 +81,7 @@ docks:
   
   line82--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.75, rot:-90]
+    go_out_dock: [mov:0.75, rot:-60, mov:-0.4, rot:-30, mov:0.5]
     tag_names: [tag_frame_4]
 
   line82--dropoff:

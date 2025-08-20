@@ -336,7 +336,7 @@ class RobotAdapter:
         # another thread modifies self.mission while we're still using it.
         mission = self.mission
         if mission is not None:
-            return self.mission.activity
+            return mission.activity
         return None
 
     def reset_variables(self):
@@ -718,10 +718,10 @@ class RobotAdapter:
                 if self.last_known_status.last_request_completed is not None:
                     self.cmd_id = self.last_known_status.last_request_completed
 
-                self.mission = MissionHandle(execution, destination=destination)
+                self.mission = MissionHandle(None, destination=destination)
                 self.mission.done = True
-                self.mission.execution.finished()
-                self.mission.execution = None
+                execution.finished()
+                # self.mission.execution = None
                 self.mission.set_mission_id(self.cmd_id)
                 self.repeat_wp_count += 1
                 return

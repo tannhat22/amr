@@ -1,4 +1,3 @@
-
 fleets:
   amr_tp2:
     robots: [amr004]

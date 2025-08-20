@@ -3,6 +3,7 @@ import argparse
 import yaml
 import json
 import time
+import math
 import rclpy
 
 from rclpy.node import Node
@@ -31,8 +32,13 @@ class RobotState:
 
 
 class Waypoint:
-    def __init__(self, name: str, is_charger: bool = False):
+    def __init__(
+        self, name: str, level: str, x: float, y: float, is_charger: bool = False
+    ):
         self.name = name
+        self.level = level
+        self.x = x
+        self.y = y
         self.is_charger = is_charger
         self.assigned_robot: str = None
         self.assigned_since: float = None
@@ -57,23 +63,51 @@ class FleetChargingConfigure:
 class ChargingManager(Node):
     fleets: dict[str, FleetChargingConfigure]
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, nav_graphs):
         super().__init__(f"charging_manager")
 
         # Params:
         self.declare_parameter("update_frequency", 1.0)
         self.declare_parameter("min_charge_time", 60.0)
+        self.declare_parameter("mutex_graph", "")
         self.declare_parameter("debug", True)
 
         self.update_frequency = self.get_parameter("update_frequency").value
         self.min_charge_time = self.get_parameter("min_charge_time").value
+        self.mutex_graph = self.get_parameter("mutex_graph").value
         self.debug = self.get_parameter("debug").value
 
         self.get_logger().info(f"update_frequency: {self.update_frequency}")
         self.get_logger().info(f"min_charge_time: {self.min_charge_time}")
+        self.get_logger().info(f"mutex_graph: {self.mutex_graph}")
 
         # if self.debug:
         #     pass
+
+        self.mutex_locked = None
+
+        building_map = {"charger": {}, "parking": {}}
+        for nav_graph in nav_graphs:
+            if nav_graph is None:
+                continue
+
+            for level in nav_graph["levels"]:
+                for wp in nav_graph["levels"][level]["vertices"]:
+                    assert len(wp) == 3, "Vertical structure not match, please check!"
+
+                    if "name" in wp[2]:
+                        name = wp[2]["name"]
+                        is_charger = wp[2].get("is_charger", False)
+                        is_parking_spot = wp[2].get("is_parking_spot", False)
+
+                        if is_charger:
+                            building_map["charger"].update(
+                                {name: (level, wp[0], wp[1])}
+                            )
+                        elif is_parking_spot:
+                            building_map["parking"].update(
+                                {name: (level, wp[0], wp[1])}
+                            )
 
         self.fleets = {}
         self.fleets_assignments = {}
@@ -106,11 +140,15 @@ class ChargingManager(Node):
 
             cwp = []
             for c in charger:
-                cwp.append(Waypoint(c, True))
+                c_graph = building_map["charger"].get(c, False)
+                assert c_graph, f"Not found place '{c}' in nav_graph, please check!"
+                cwp.append(Waypoint(c, c_graph[0], c_graph[1], c_graph[2], True))
 
             pwp = []
             for p in parking:
-                pwp.append(Waypoint(p, False))
+                p_graph = building_map["parking"].get(p, False)
+                assert p_graph, f"Not found place '{p}' in nav_graph, please check!"
+                pwp.append(Waypoint(p, p_graph[0], p_graph[1], p_graph[2], False))
 
             self.fleets.update(
                 {
@@ -163,6 +201,20 @@ class ChargingManager(Node):
             msg.assignments.append(assignment)
 
         self.charging_assignments_pub.publish(msg)
+
+    def dist(self, A, B):
+        assert len(A) > 1
+        assert len(B) > 1
+        return math.sqrt((A[0] - B[0]) ** 2 + (A[1] - B[1]) ** 2)
+
+    def is_robot_near_charger(self, robot: dict, charge: Waypoint):
+        if robot["map"] != charge.level:
+            return False
+
+        if self.dist((robot["x"], robot["y"]), (charge.x, charge.y)) > 5.0:
+            return False
+        else:
+            return True
 
     def _charging_handle_cb(self):
         current_time = time.time()
@@ -227,8 +279,11 @@ class ChargingManager(Node):
                                     robot_battery_sorted.index(assigned_robot_name)
                                     >= len(fleet_charging.charger)
                                     and other_robot.battery > robot.battery
-                                    and other_robot.status != "charging"
                                     and time_charging >= self.min_charge_time * 60.0
+                                    and not self.is_robot_near_charger(
+                                        other_robot.location, charger
+                                    )
+                                    and self.mutex_locked is None
                                 ):
                                     # Nếu robot này pin thấp hơn robot khác và đã sạc đủ thời gian tối thiểu thì có thể đổi quyền sử dụng trạm này
                                     charger_id_available = id
@@ -309,11 +364,20 @@ class ChargingManager(Node):
 
         fleetContext = self.fleets.get(fleetState["name"], None)
         if fleetContext is not None:
+            mutex_locked = None
             for name, robot in fleetState["robots"].items():
                 if name in fleetContext.robots:
                     fleetContext.robots[name].status = robot["status"]
                     fleetContext.robots[name].battery = robot["battery"]
                     fleetContext.robots[name].location = robot["location"]
+
+                    if (
+                        self.mutex_graph in robot["mutex_groups"]["locked"]
+                        or self.mutex_graph in robot["mutex_groups"]["requesting"]
+                    ):
+                        mutex_locked = name
+            if fleetState["name"] == "amr_tp3":
+                self.mutex_locked = mutex_locked
 
 
 # ------------------------------------------------------------------------------
@@ -335,16 +399,45 @@ def main(argv=sys.argv):
         required=True,
         help="Path to the all config.yaml file",
     )
+
+    parser.add_argument(
+        "-n1",
+        "--nav_graph_1_file",
+        type=str,
+        required=True,
+        help="Path to the nav_graph_1_file for this charging manager",
+    )
+    parser.add_argument(
+        "-n2",
+        "--nav_graph_2_file",
+        type=str,
+        required=True,
+        help="Path to the nav_graph_2_file for this charging manager",
+    )
+
     args = parser.parse_args(args_without_ros[1:])
-    print(f"Starting charging manager...")
 
-    config = {}
+    config_yaml = {}
+    config_path = args.config_file
+    nav_graph_1_path = args.nav_graph_1_file
+    nav_graph_2_path = args.nav_graph_2_file
 
-    if args.config_file != "":
-        with open(args.config_file, "r") as f:
-            config = yaml.safe_load(f)
+    with open(config_path, "r") as f:
+        config_yaml = yaml.safe_load(f)
 
-    charging_manager = ChargingManager(config)
+    if nav_graph_1_path == "":
+        nav_graph_1 = None
+    else:
+        with open(nav_graph_1_path, "r") as f:
+            nav_graph_1 = yaml.safe_load(f)
+
+    if nav_graph_2_path == "":
+        nav_graph_2 = None
+    else:
+        with open(nav_graph_2_path, "r") as f:
+            nav_graph_2 = yaml.safe_load(f)
+
+    charging_manager = ChargingManager(config_yaml, [nav_graph_1, nav_graph_2])
     rclpy.spin(charging_manager)
 
     # Destroy the node explicitly
