@@ -11,7 +11,6 @@ from rclpy.node import Node
 
 # from rclpy.executors import MultiThreadedExecutor
 # from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
-from enum import IntEnum
 from rclpy.qos import QoSDurabilityPolicy as Durability
 from rclpy.qos import QoSProfile
 from rclpy.qos import QoSReliabilityPolicy as Reliability
@@ -34,15 +33,6 @@ class State:
         self.wait_LID = []
 
 
-class PriotityCode(IntEnum):
-    DEST_TOO_NEAR_POSSITION = 1
-    BATTERY_PRIORITY = 2
-    BATTERY_PRIORITY_THRESHOLD = 3
-    BATTERY_PRIORITY_THRESHOLD_AND_PATH_EQUAL = 4
-    BATTERY_PRIORITY_THRESHOLD_AND_PATH_SHORTER = 5
-    PATH_DISTANCE_PRIORITY = 6
-
-
 class FleetConflictsHandle(Node):
     robots: dict[str, State]
 
@@ -55,14 +45,18 @@ class FleetConflictsHandle(Node):
         # Params:
         self.declare_parameter("update_frequency", 5.0)
         self.declare_parameter("look_ahead_distance", 3.0)
+        self.declare_parameter("min_vicinity", 0.5)
         self.declare_parameter("debug", True)
 
         self.update_frequency = self.get_parameter("update_frequency").value
         self.look_ahead_distance = self.get_parameter("look_ahead_distance").value
+        self.min_vicinity = self.get_parameter("min_vicinity").value
         self.debug = self.get_parameter("debug").value
 
         self.get_logger().info(f"update_frequency: {self.update_frequency}")
         self.get_logger().info(f"look_ahead_distance: {self.look_ahead_distance}")
+        self.get_logger().info(f"min_vicinity: {self.min_vicinity}")
+
         if self.debug:
             # Chart
             self.fig, self.axs = plt.subplots(
@@ -79,13 +73,16 @@ class FleetConflictsHandle(Node):
                 continue
 
             fleet_name = config["rmf_fleet"]["name"]
-            vicinity = config["rmf_fleet"]["profile"]["vicinity"]
+            vicinity = max(
+                config["rmf_fleet"]["profile"]["vicinity"], self.min_vicinity
+            )
             for robot_name, robot_config in config["rmf_fleet"]["robots"].items():
-                self.robots[robot_name] = State(fleet_name=fleet_name, vicinity=vicinity)
+                self.robots[robot_name] = State(
+                    fleet_name=fleet_name, vicinity=vicinity
+                )
             self.robots_length = len(self.robots)
         assert self.robots_length > 0
 
-        self.recharge_threshold = config["rmf_fleet"]["recharge_threshold"]
         update_period = 1.0 / self.update_frequency
 
         # Threading variables
@@ -118,86 +115,6 @@ class FleetConflictsHandle(Node):
         msg.mode.mode = mode
         self.mode_request_pub.publish(msg)
 
-    # Check priority between robot A and B with state of two robots
-    # return highPriority
-    def check_priority(self, robot_A: State, robot_B: State):
-        destA = None
-        destB = None
-        result = robot_A.state.name
-        code = None
-        posCurrent_A = robot_A.state.location
-        posCurrent_B = robot_B.state.location
-
-        if len(robot_A.state.path) > 0:
-            destA = robot_A.state.path[-1]
-        if len(robot_B.state.path) > 0:
-            destB = robot_B.state.path[-1]
-
-        # Kiểm tra đích đến của robot có nằm quá gần vị trí của robot còn lại không:
-        if destA is not None and self.dist(destA, posCurrent_B) < 1.0:
-            code = PriotityCode.DEST_TOO_NEAR_POSSITION
-            result = robot_B.state.name
-        elif destB is not None and self.dist(destB, posCurrent_A) < 1.0:
-            code = PriotityCode.DEST_TOO_NEAR_POSSITION
-            result = robot_A.state.name
-        # Kiểm tra cả hai robot đều đã dưới mức ngưỡng sạc:
-        elif (
-            robot_A.state.battery_percent <= self.recharge_threshold
-            and robot_B.state.battery_percent <= self.recharge_threshold
-        ):
-            robotA_path_dis = self.calc_path_distance(robot_A.state.location, robot_A.state.path)
-            robotB_path_dis = self.calc_path_distance(robot_B.state.location, robot_B.state.path)
-            if robotA_path_dis == robotB_path_dis:
-                code = PriotityCode.BATTERY_PRIORITY_THRESHOLD_AND_PATH_EQUAL
-                if robot_A.state.battery_percent <= robot_B.state.battery_percent:
-                    result = robot_A.state.name
-                else:
-                    result = robot_B.state.name
-            elif robotA_path_dis > robotB_path_dis:
-                code = PriotityCode.BATTERY_PRIORITY_THRESHOLD_AND_PATH_SHORTER
-                result = robot_A.state.name
-            else:
-                code = PriotityCode.BATTERY_PRIORITY_THRESHOLD_AND_PATH_SHORTER
-                result = robot_B.state.name
-        elif robot_A.state.battery_percent <= self.recharge_threshold:
-            code = PriotityCode.BATTERY_PRIORITY_THRESHOLD
-            result = robot_A.state.name
-        elif robot_B.state.battery_percent <= self.recharge_threshold:
-            code = PriotityCode.BATTERY_PRIORITY_THRESHOLD
-            result = robot_B.state.name
-        elif robot_A.state.battery_percent / robot_B.state.battery_percent > 1.1:
-            code = PriotityCode.BATTERY_PRIORITY
-            result = robot_B.state.name
-        elif robot_B.state.battery_percent / robot_A.state.battery_percent > 1.1:
-            code = PriotityCode.BATTERY_PRIORITY
-            result = robot_A.state.name
-        else:
-            robotA_path_dis = self.calc_path_distance(robot_A.state.location, robot_A.state.path)
-            robotB_path_dis = self.calc_path_distance(robot_B.state.location, robot_B.state.path)
-
-            code = PriotityCode.PATH_DISTANCE_PRIORITY
-            if robotA_path_dis is None:
-                self.get_logger().warn(f"[{robot_A.state.name}] don't have path, please check!")
-                return robot_B.state.name
-            elif robotB_path_dis is None:
-                self.get_logger().warn(f"[{robot_B.state.name}] don't have path, please check!")
-                return robot_A.state.name
-
-            if robotA_path_dis >= robotB_path_dis:
-                result = robot_A.state.name
-            else:
-                result = robot_B.state.name
-
-        if result == robot_A.state.name:
-            self.get_logger().warn(
-                f"[{robot_B.state.name}] will pause for conflicts handle (code: {code})!"
-            )
-        else:
-            self.get_logger().warn(
-                f"[{robot_A.state.name}] will pause for conflicts handle (code: {code})!"
-            )
-        return result
-
     def point_to_segment_path_distance(
         self, position: Location, destination: Location, check_point: Location
     ):
@@ -206,9 +123,13 @@ class FleetConflictsHandle(Node):
         norm = px * px + py * py
 
         if norm == 0:
-            return ((check_point.x - position.x) ** 2 + (check_point.y - position.y) ** 2) ** 0.5
+            return (
+                (check_point.x - position.x) ** 2 + (check_point.y - position.y) ** 2
+            ) ** 0.5
 
-        u = ((check_point.x - position.x) * px + (check_point.y - position.y) * py) / norm
+        u = (
+            (check_point.x - position.x) * px + (check_point.y - position.y) * py
+        ) / norm
         u = max(0, min(1, u))
 
         # Nếu vị trí đến vật cản nằm phía sau vị trí robot hiện tại so với hướng đường đi hiện tại thì bỏ qua vật cản
@@ -218,7 +139,9 @@ class FleetConflictsHandle(Node):
         closest_x = position.x + u * px
         closest_y = position.y + u * py
 
-        return ((check_point.x - closest_x) ** 2 + (check_point.y - closest_y) ** 2) ** 0.5
+        return (
+            (check_point.x - closest_x) ** 2 + (check_point.y - closest_y) ** 2
+        ) ** 0.5
 
     def get_look_ahead_point(
         self, position: Location, destination: Location, look_ahead_distance: float
@@ -310,11 +233,18 @@ class FleetConflictsHandle(Node):
             if len(robot1State.state.path) > 0:
                 pos1 = robot1State.state.location
                 dest1 = robot1State.state.path[-1]
-                look_ahead_point = self.get_look_ahead_point(pos1, dest1, self.look_ahead_distance)
+                look_ahead_point = self.get_look_ahead_point(
+                    pos1, dest1, self.look_ahead_distance
+                )
 
                 if self.debug:
                     # Vẽ đoạn thẳng từ vị trí robot hiện tại đến đích của nó:
-                    ax.plot([pos1.x, dest1.x], [pos1.y, dest1.y], "--", color=f"C{color_count}")
+                    ax.plot(
+                        [pos1.x, dest1.x],
+                        [pos1.y, dest1.y],
+                        "--",
+                        color=f"C{color_count}",
+                    )
                     ax.arrow(
                         pos1.x,
                         pos1.y,
@@ -352,7 +282,7 @@ class FleetConflictsHandle(Node):
                             ):
                                 self.get_logger().warn(
                                     f"Robot [{robot1Name}] allowed to move because robot [{robot2Name}] is waiting for it, and it can avoid_obstacles!"
-                                )                                
+                                )
                                 continue
 
                             detect_obtacles = True

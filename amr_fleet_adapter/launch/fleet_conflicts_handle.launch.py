@@ -42,11 +42,17 @@ def generate_launch_description():
                 output="screen",
                 emulate_tty=True,
                 respawn=False,
-                arguments=["--config_file_1", config_file_1, "--config_file_2", config_file_2],
+                arguments=[
+                    "--config_file_1",
+                    config_file_1,
+                    "--config_file_2",
+                    config_file_2,
+                ],
                 parameters=[
                     {
                         "update_frequency": 10.0,
                         "look_ahead_distance": 3.5,
+                        "min_vicinity": 0.47,
                         "debug": False,
                     }
                 ],
