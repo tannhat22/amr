@@ -15,15 +15,15 @@ TaskRequester:
     #                     "clr003--dropoff", "clr004--dropoff",
     #                     "clr005--dropoff"]
     
-    # D241:
-    #     mode_operation: "combine"  # (station, combine)
-    #     sku: "E29"
-    #     dispenser: "D241--mpickup"
-    #     ingestor: "D241--mdropoff"
-    #     pickup_stations: ["station001--pickup", "station002--pickup",
-    #                       "station003--pickup", "station004--pickup"]
-    #     dropoff_stations: ["station24101--dropoff", "station24102--dropoff"]
-    #     station_names: ["station24101--dropoff", "station24102--dropoff"]
+    D241:
+        mode_operation: "combine"  # (station, combine)
+        sku: "E29"
+        dispenser: "D241--mpickup"
+        ingestor: "D241--mdropoff"
+        pickup_stations: ["station001--pickup", "station002--pickup",
+                          "station003--pickup", "station004--pickup"]
+        dropoff_stations: ["station24101--dropoff", "station24102--dropoff"]
+        station_names: ["station24101--dropoff", "station24102--dropoff"]
 
     D242:
         mode_operation: "combine"  # (station, combine)

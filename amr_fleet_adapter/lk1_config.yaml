@@ -93,9 +93,9 @@ docks:
     # go_in_dock: [rot:90]
     go_out_dock: [mov:0.65]
 
-  D241--dropoff:
-    # machine_name: D241
-    go_in_dock: [rot:-180, mov:-0.1]
+  D241--mdropoff:
+    machine_name: D241
+    go_in_dock: [rot:-270, mov:-0.1]
     go_out_dock: [mov:1.50]
     limits:
       rotate_angle: 30
@@ -134,8 +134,8 @@ docks:
     tag_names: [tag_frame_0, tag_frame_1, tag_frame_2, tag_frame_3, tag_frame_4,
                 tag_frame_5, tag_frame_6, tag_frame_7, tag_frame_8, tag_frame_9]
 
-  D241--pickup:
-    # machine_name: D241
+  D241--mpickup:
+    machine_name: D241
     go_in_dock: [rot:90, mov:-0.27]
     go_out_dock: [mov:1.8]
     tag_names: [tag_frame_0, tag_frame_1, tag_frame_2, tag_frame_3, tag_frame_4,
@@ -175,7 +175,7 @@ vertexs:
   station24102_DOFD: 0.0  
   station24201_DOFD: 0.0
   station24202_DOFD: 0.0
-  D241_DOFD: 1.57199
+  D241_DOFD: 3.14
   D242_DOFD: 0.0
   station001_PKFD: -1.57199
   station002_PKFD: -1.57199
