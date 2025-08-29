@@ -662,6 +662,7 @@ class RobotAdapter:
                 return
 
             # Navigation normal:
+            vertex = None
             is_last_destination = False
             if (
                 destination.xy[0] == last_destination.xy[0]
@@ -673,15 +674,16 @@ class RobotAdapter:
                     f"on map [{destination.map}]: cmd_id {self.cmd_id}"
                 )
 
+                if destination.name != "":
+                    vertex = self.vertexs_config.get(destination.name, None)
+
             self.mission = MissionHandle(
                 execution,
                 navigate=True,
                 destination=destination,
                 is_last_destination=is_last_destination,
             )
-            vertex = None
-            if destination.name != "":
-                vertex = self.vertexs_config.get(destination.name, None)
+
 
             if vertex != None:
                 pose = [

@@ -172,7 +172,7 @@ def generate_launch_description():
                         [
                             FindPackageShare("amr-rmf"),
                             "launch",
-                            "machine_client.launch.py",
+                            "machine_D242_client.launch.py",
                         ]
                     )
                 )

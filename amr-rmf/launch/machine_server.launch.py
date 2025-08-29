@@ -19,7 +19,7 @@ def generate_launch_description():
                 parameters=[
                     {
                         "fleet_name": "station",
-                        "machine_names": ["nqvlm104"],
+                        "machine_names": ["D242"],
                         "fleet_state_topic": "fleet_machine_state",
                         "machine_request_topic": "machine_requests",
                         "station_request_topic": "adapter_station_requests",

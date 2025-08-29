@@ -4,8 +4,8 @@
 rmf_fleet:
   name: "amr_lk1"
   limits:
-    linear: [0.8, 1.6] # velocity, acceleration
-    angular: [0.8, 1.6] # velocity, acceleration
+    linear: [0.6, 1.6] # velocity, acceleration
+    angular: [0.6, 1.6] # velocity, acceleration
   profile: # Robot profile is modelled as a circle
     footprint: 1.0 # radius in m
     vicinity: 1.2 # radius in m
@@ -80,21 +80,31 @@ docks:
   #     rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise   
   # /******************** LK1 *********************/
   # Dropoffs:
-  station001--dropoff:
-    go_in_dock: [rot:90]
+  station24101--dropoff:
     go_out_dock: [mov:0.65]
+
+  station24102--dropoff:
+    go_out_dock: [mov:0.65]
+
+  station24201--dropoff:
+    go_out_dock: [mov:0.65]
+
+  station24202--dropoff:
+    # go_in_dock: [rot:90]
+    go_out_dock: [mov:0.65]
+
+  D241--dropoff:
+    # machine_name: D241
+    go_in_dock: [rot:-180, mov:-0.1]
+    go_out_dock: [mov:1.50]
     limits:
       rotate_angle: 30
-      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
+      rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
-  station002--dropoff:
-    go_in_dock: [rot:90]
-    go_out_dock: [mov:0.65]
-
-  m104--mdropoff:
-    machine_name: nqvlm104
+  D242--mdropoff:
+    machine_name: D242
     go_in_dock: [rot:-90, mov:-0.1]
-    go_out_dock: [mov:1.60]
+    go_out_dock: [mov:1.50]
     limits:
       rotate_angle: 30
       rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
@@ -102,30 +112,40 @@ docks:
   # Pickups:
   station001--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.90]
+    go_out_dock: [mov:0.85]
     tag_names: [tag_frame_0, tag_frame_1, tag_frame_2, tag_frame_3, tag_frame_4,
                 tag_frame_5, tag_frame_6, tag_frame_7, tag_frame_8, tag_frame_9]
 
   station002--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.90]
+    go_out_dock: [mov:0.85]
     tag_names: [tag_frame_0, tag_frame_1, tag_frame_2, tag_frame_3, tag_frame_4,
                 tag_frame_5, tag_frame_6, tag_frame_7, tag_frame_8, tag_frame_9]
 
   station003--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.90]
+    go_out_dock: [mov:0.85]
     tag_names: [tag_frame_0, tag_frame_1, tag_frame_2, tag_frame_3, tag_frame_4,
                 tag_frame_5, tag_frame_6, tag_frame_7, tag_frame_8, tag_frame_9]
 
   station004--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.90]
+    go_out_dock: [mov:0.85]
     tag_names: [tag_frame_0, tag_frame_1, tag_frame_2, tag_frame_3, tag_frame_4,
                 tag_frame_5, tag_frame_6, tag_frame_7, tag_frame_8, tag_frame_9]
 
-  m104--mpickup:
-    machine_name: nqvlm104
+  D241--pickup:
+    # machine_name: D241
+    go_in_dock: [rot:90, mov:-0.27]
+    go_out_dock: [mov:1.8]
+    tag_names: [tag_frame_0, tag_frame_1, tag_frame_2, tag_frame_3, tag_frame_4,
+                tag_frame_5, tag_frame_6, tag_frame_7, tag_frame_8, tag_frame_9]
+    limits:
+      rotate_angle: 30
+      rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  D242--mpickup:
+    machine_name: D242
     go_in_dock: [rot:90, mov:-0.27]
     go_out_dock: [mov:1.8]
     tag_names: [tag_frame_0, tag_frame_1, tag_frame_2, tag_frame_3, tag_frame_4,
@@ -151,12 +171,16 @@ docks:
 #       120 = 2.0944, 135 = 2.3562, 150 = 2.618, 180 = 3.1416
 vertexs:
   park001: 1.57199
-  station001_DOFD: -1.57199
-  station002_DOFD: -1.57199
-  m104_DOFD: 0.0
+  station24101_DOFD: 0.0
+  station24102_DOFD: 0.0  
+  station24201_DOFD: 0.0
+  station24202_DOFD: 0.0
+  D241_DOFD: 1.57199
+  D242_DOFD: 0.0
   station001_PKFD: -1.57199
   station002_PKFD: -1.57199
   station003_PKFD: -1.57199
   station004_PKFD: -1.57199
-  m104_PKFD: 3.14
+  D241_PKFD: 3.14
+  D242_PKFD: 3.14
 
