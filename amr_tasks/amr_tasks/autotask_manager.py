@@ -502,7 +502,9 @@ class AutoTaskManager(Node):
             return
 
         for name, robot in fleetState["robots"].items():
-            if "zone_RF370CB" in robot["mutex_groups"]["requesting"]:
+            if len(robot["mutex_groups"]["locked"]) > 0 and (
+                robot["status"] == "idle" or robot["task_id"] == ""
+            ):
                 waiting = True
                 break
 

@@ -691,7 +691,7 @@ class RobotAdapter:
         )
 
         # If the nav command coming in is to bring the robot to same waypoint
-        # with waypoint robot is at on, we ignore this nav command, but if to
+        # with waypoint robot is at on, we ignore this nav command, but if too
         # many cmd for this point we check and go back to fix this
         if (
             self.last_known_status is not None
@@ -715,8 +715,8 @@ class RobotAdapter:
                     )
                     self.need_undock = destination
 
-                if self.last_known_status.last_request_completed is not None:
-                    self.cmd_id = self.last_known_status.last_request_completed
+                # if self.last_known_status.last_request_completed is not None:
+                #     self.cmd_id = self.last_known_status.last_request_completed
 
                 self.mission = MissionHandle(None, destination=destination)
                 self.mission.done = True
