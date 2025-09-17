@@ -426,7 +426,7 @@ class AutoTaskManager(Node):
         now.sec = now.sec + start_time_task
         start_time = now.sec * 1000 + round(now.nanosec / 10**6)
         request["unix_millis_request_time"] = start_time
-        request["unix_millis_earliest_start_time"] = start_time
+        request["unix_millis_earliest_start_time"] = 0
         request["priority"] = {"type": "binary", "value": 1}
         request["requester"] = requester
 
@@ -535,7 +535,7 @@ class AutoTaskManager(Node):
                         )
                         if do_station.get_occupant() == requester:
                             self.get_logger().warn(
-                                f"Detect autotask from [{requester}] was {status} (task_id: {taskId}), reset common dropoff station [{param.dropoff_place_name}]!"
+                                f"Task from [{requester}] was {status} (task_id: {taskId}), reset common dropoff station [{param.dropoff_place_name}]!"
                             )
                             do_station.reset()
             # else:
@@ -559,7 +559,7 @@ class AutoTaskManager(Node):
                         machineReq.request_mode.mode = DeviceMode.MODE_ROBOT_ERROR
 
                     self.get_logger().warn(
-                        f"Detect autotask from [{requester}] was {status} (task_id: {taskId})!"
+                        f"Task from [{requester}] was {status} (task_id: {taskId})!"
                     )
 
                     for param in currentTask.delivery_params:
@@ -663,7 +663,7 @@ class AutoTaskManager(Node):
                                         station_context.get_state().station_name
                                     )
                                     self.get_logger().warn(
-                                        f"detect pickup request from machine [{requester.name}], send task delivery "
+                                        f"Machine [{requester.name}] - pickup is ON, send task delivery "
                                         f"(pickup: {param.pickup_place_name} -> dropoff: {param.dropoff_place_name})!"
                                     )
 
@@ -710,7 +710,7 @@ class AutoTaskManager(Node):
                                     param.dropoff_ingestor = requester.name
                                     param.dropoff_place_name = requester.ingestor
                                     self.get_logger().warn(
-                                        f"detect dropoff request from machine [{requester.name}], send task delivery "
+                                        f"Machine [{requester.name}] - dropoff is ON, send task delivery "
                                         f"(pickup: {param.pickup_place_name} -> dropoff: {param.dropoff_place_name})!"
                                     )
 
@@ -774,7 +774,7 @@ class AutoTaskManager(Node):
                     if currentTask is None:
                         if self.mutex_high_req:
                             self.get_logger().warn(
-                                f"detect cart in requester station: [{requester.name}] but mutex group zone_RF370CB is in high request, will wait for mutex available!"
+                                f"[{requester.name}] is ON but mutex group zone_RF370CB is in high request, will wait for mutex available!"
                             )
                             continue
 
@@ -821,7 +821,7 @@ class AutoTaskManager(Node):
                                 information += f"pickup: {param.pickup_place_name} -> dropoff: {param.dropoff_place_name} ->"
                             information = information[:-3]
                             self.get_logger().warn(
-                                f"detect cart in requester station: [{requester.name}], send task delivery ({information})!"
+                                f"[{requester.name}] is ON, will send task delivery ({information})!"
                             )
 
                             taskId = self.dispatch_delivery(
@@ -838,11 +838,23 @@ class AutoTaskManager(Node):
                                     delivery_params=deliveryParams,
                                 )
                             )
+                    # Nhiệm vụ đã hoàn thành tiến hành reset current task
                     elif currentTask.state == "completed":
                         self.get_logger().warn(
-                            f"detect cart in requester station: [{requester.name}] and current task was completed, reset current task!"
+                            f"[{requester.name}] is ON and current task was completed, reset current task!"
                         )
                         requester.set_current_task(None)
+
+                    # Tắt tín hiệu gọi nhiệm vụ tại trạm hàng nếu vẫn đang ON khi nhiệm vụ đã thất bại
+                    elif currentTask.state in TASK_FAILED:
+                        self.get_logger().warn(
+                            f"[{requester.name}] is ON but current task was failed, turn OFF signal, please check!"
+                        )
+                        msgReq = StationRequest()
+                        msgReq.station_name = requester.name
+                        msgReq.station_type = StationRequest.TYPE_PICKUP
+                        msgReq.mode = StationRequest.MODE_EMPTY
+                        self.station_request_callback(request=msgReq)
 
                 elif currentTask is not None and currentTask.state in TASK_NO_ACTIVE:
                     requester.set_current_task(None)
