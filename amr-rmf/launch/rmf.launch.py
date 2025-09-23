@@ -2,6 +2,7 @@ from launch import LaunchDescription
 from launch.actions import (
     IncludeLaunchDescription,
     GroupAction,
+    TimerAction,
     SetEnvironmentVariable,
 )
 from launch.conditions import IfCondition, UnlessCondition
@@ -249,23 +250,28 @@ def generate_launch_description():
                 )
             ),
             ## Autotask
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    PathJoinSubstitution(
-                        [
-                            FindPackageShare("amr_tasks"),
-                            "launch",
-                            "amr_autotask.launch.py",
-                        ]
+            TimerAction(
+                period=10.0,
+                actions=[
+                    IncludeLaunchDescription(
+                        PythonLaunchDescriptionSource(
+                            PathJoinSubstitution(
+                                [
+                                    FindPackageShare("amr_tasks"),
+                                    "launch",
+                                    "amr_autotask.launch.py",
+                                ]
+                            )
+                        ),
+                        launch_arguments={
+                            "config_file": PathJoinSubstitution(
+                                [FindPackageShare("amr_tasks"), "config.yaml"]
+                            ),
+                            "nav_graph_1_file": nav_graph_file_tp3_path,
+                            "nav_graph_2_file": nav_graph_file_tp2_path,
+                        }.items(),
                     )
-                ),
-                launch_arguments={
-                    "config_file": PathJoinSubstitution(
-                        [FindPackageShare("amr_tasks"), "config.yaml"]
-                    ),
-                    "nav_graph_1_file": nav_graph_file_tp3_path,
-                    "nav_graph_2_file": nav_graph_file_tp2_path,
-                }.items(),
+                ],
             ),
         ]
     )
