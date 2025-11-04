@@ -250,9 +250,6 @@ docks:
       rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
   ### CHARGERS
-  charger001--charge:
-    go_out_dock: [mov:-0.9]
-    
   charger003--charge:
     go_out_dock: [mov:-0.9]
 
@@ -285,8 +282,6 @@ vertexs:
   ### TP2
   lift001-L1: [1.57199, True]
   waiting_for_lift_201: 1.57199
-  parking_201: 3.14
-  parking_202: 3.14
 
   ### TP3
   lift_parking_301: 1.5708

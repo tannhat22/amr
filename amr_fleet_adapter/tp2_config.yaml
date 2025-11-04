@@ -71,16 +71,11 @@ docks:
   # /******************** TP2 *********************/
   # LINE 55
   clr55--pickup:
-    go_in_dock: [rot:-90]
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
     tag_names: [tag_frame_0, tag_frame_1, tag_frame_2]
 
-  clr55--dropoff:
-    go_in_dock: [rot:180]
-    go_out_dock: [mov:0.65]
-
   line55--pickup:
-    go_in_dock: [rot:-90]
     go_out_dock: [mov:0.85]
     tag_names: [tag_frame_0, tag_frame_1, tag_frame_2]
 
@@ -90,13 +85,9 @@ docks:
 
   # LINE 56
   clr56--pickup:
-    go_in_dock: [rot:-90]
+    go_in_dock: [rot:180]
     go_out_dock: [mov:0.90]
     tag_names: [tag_frame_3]
-
-  clr56--dropoff:
-    go_in_dock: [rot:180]
-    go_out_dock: [mov:0.65]
 
   line56--pickup:
     go_in_dock: [rot:-90, mov:-0.40]
@@ -112,6 +103,25 @@ docks:
     limits:
       rotate_angle: 45
       rotate_orientation: 2 # 0: both, # 1: counter clockwise, 2: clockwise
+
+  ### CLEANINGROOM TTR COMMON DROPOFF:
+  clr001--dropoff:
+    go_out_dock: [mov:0.65]
+
+  clr002--dropoff:
+    go_out_dock: [mov:0.65]
+
+  clr003--dropoff:
+    go_out_dock: [mov:0.65]
+
+  clr004--dropoff:
+    go_out_dock: [mov:0.65]
+
+  clr005--dropoff:
+    go_out_dock: [mov:0.65, rot:90, mov:-0.4, rot:-180]
+    limits:
+      rotate_angle: 45
+      rotate_orientation: 1 # 0: both, # 1: counter clockwise, 2: clockwise
 
   ### CHARGERS
   charger001--charge:
@@ -141,17 +151,18 @@ docks:
 #       120 = 2.0944, 135 = 2.3562, 150 = 2.618, 180 = 3.1416
 vertexs:
   ### TP2
-  parking_201: 3.14
-  parking_202: 3.14
+
+  ### CLEANINGROOM TTR COMMON DROPOFF:
+  clr001_DOFD: 3.14
+  clr002_DOFD: 3.14
+  clr003_DOFD: 3.14
+  clr004_DOFD: 3.14
+  clr005_DOFD: 3.14
 
   # LINE 55:
-  clr55_PKFD: 1.57199
-  # clr55_DOFD: 3.14
-  line55_PKFD: 1.57199
+  line55_PKFD: 0.0
   line55_DOFD: -1.5708
 
   # LINE 56:
-  clr56_PKFD: 1.57199
-  # clr56_DOFD: 3.14
   line56_PKFD: 1.57199
   line56_DOFD: 1.57199

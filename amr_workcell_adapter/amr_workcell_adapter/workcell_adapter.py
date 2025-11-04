@@ -113,13 +113,19 @@ def main(argv=sys.argv):
     # Initialize robot API for this workcell
     workcell_mgr_yaml = config_yaml["workcell_manager"]
     update_period = 1.0 / workcell_mgr_yaml.get("workcell_state_update_frequency", 10.0)
-    api_prefix = "http://" + workcell_mgr_yaml["ip"] + ":" + str(workcell_mgr_yaml["port"])
-    api = MachineAPI(api_prefix, workcell_mgr_yaml["user"], workcell_mgr_yaml["password"])
+    api_prefix = (
+        "http://" + workcell_mgr_yaml["ip"] + ":" + str(workcell_mgr_yaml["port"])
+    )
+    api = MachineAPI(
+        api_prefix, workcell_mgr_yaml["user"], workcell_mgr_yaml["password"]
+    )
 
     # Publishers:
     dispenser_state_pub = node.create_publisher(DispenserState, "/dispenser_states", 10)
 
-    dispenser_result_pub = node.create_publisher(DispenserResult, "/dispenser_results", 10)
+    dispenser_result_pub = node.create_publisher(
+        DispenserResult, "/dispenser_results", 10
+    )
 
     ingestor_state_pub = node.create_publisher(IngestorState, "/ingestor_states", 10)
 
@@ -143,9 +149,9 @@ def main(argv=sys.argv):
                 # add Dispenser context
                 if "pickup_dispenser" in wp[2]:
                     dispenser_name = wp[2]["pickup_dispenser"]
-                    assert (
-                        dispenser_name not in dispensers
-                    ), f"Pickup_dispenser [{dispenser_name}] is duplicated, please check!"
+                    # assert (
+                    #     dispenser_name not in dispensers
+                    # ), f"Pickup_dispenser [{dispenser_name}] is duplicated, please check!"
 
                     is_machine = False
                     if search_mode_docking(wp[2]["dock_name"]) == "mpickup":
@@ -163,9 +169,9 @@ def main(argv=sys.argv):
                 # add Ingestor context
                 elif "dropoff_ingestor" in wp[2]:
                     ingestor_name = wp[2]["dropoff_ingestor"]
-                    assert (
-                        ingestor_name not in ingestors
-                    ), f"Dropoff_ingestor [{ingestor_name}] is duplicated, please check!"
+                    # assert (
+                    #     ingestor_name not in ingestors
+                    # ), f"Dropoff_ingestor [{ingestor_name}] is duplicated, please check!"
 
                     is_machine = False
                     if search_mode_docking(wp[2]["dock_name"]) == "mdropoff":
@@ -294,7 +300,9 @@ class DispenserAdapter:
         self.state.mode = DispenserState.IDLE
 
         if is_machine:
-            assert api is not None, f"Dispenser [{name}] is machine but no configure api!"
+            assert (
+                api is not None
+            ), f"Dispenser [{name}] is machine but no configure api!"
 
         # Threading variables
         self._lock = threading.Lock()
@@ -423,7 +431,9 @@ class DispenserAdapter:
         with self._lock:
             request_guid = self.request_guid
             if request_guid is not None:
-                self.node.get_logger().info(f"Dispenser [{self.name}] stop requested from RMF!")
+                self.node.get_logger().info(
+                    f"Dispenser [{self.name}] stop requested from RMF!"
+                )
                 self.request_guid = None
 
     def perform_operate(self, mode: int):
@@ -483,7 +493,9 @@ class IngestorAdapter:
         self.state.mode = IngestorState.IDLE
 
         if is_machine:
-            assert api is not None, f"Ingestor [{name}] is machine but no configure api!"
+            assert (
+                api is not None
+            ), f"Ingestor [{name}] is machine but no configure api!"
 
         # Threading variables
         self._lock = threading.Lock()
@@ -611,7 +623,9 @@ class IngestorAdapter:
         with self._lock:
             request_guid = self.request_guid
             if request_guid is not None:
-                self.node.get_logger().info(f"Ingestor [{self.name}] stop requested from RMF!")
+                self.node.get_logger().info(
+                    f"Ingestor [{self.name}] stop requested from RMF!"
+                )
                 self.request_guid = None
 
     def perform_operate(self, mode: int):
