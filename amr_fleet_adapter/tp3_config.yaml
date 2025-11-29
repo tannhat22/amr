@@ -233,10 +233,16 @@ docks:
   ### CLEANINGROOM TTR COMMON DROPOFF:
   clr001--dropoff:
     go_out_dock: [mov:0.65]
+    limits:
+      rotate_angle: 60
+      rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
 
   clr002--dropoff:
     go_out_dock: [mov:0.65]
-
+    limits:
+      rotate_angle: 60
+      rotate_orientation: 0 # 0: both, # 1: counter clockwise, 2: clockwise
+      
   clr003--dropoff:
     go_out_dock: [mov:0.65]
 
