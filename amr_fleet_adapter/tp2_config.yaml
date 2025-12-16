@@ -91,7 +91,7 @@ docks:
 
   line56--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.95, rot:-90]
+    go_out_dock: [mov:0.90, rot:-90]
     tag_names: [tag_frame_3]
     limits:
       rotate_angle: 30
