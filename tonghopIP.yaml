@@ -5,10 +5,11 @@ amr002: 10.7.11.20
 amr003: 10.7.11.21
 amr004: 10.7.11.22
 amr005: 10.7.11.23
-thangmay: 10.7.11.16
+pc-thangmay: 10.7.11.16
 raspberry001 - RF370CB: 10.7.11.18
 raspberry002 - tivi-tp3: ip động
 raspberry003 - Phòng tẩy rửa: 10.7.11.17
+PLC-thangmay: 10.7.11.91
 
 Linhkien1:
 server: 10.7.11.13

@@ -36,6 +36,19 @@ rmf_fleet:
   use_parking_reservations: True
   reassign_task_interval: 60 # seconds, specify how often a task reassignment should be triggered in the fleet
   # max_merge_waypoint_distance: 0.3
+  task_assignment_strategy:
+    profile: "Custom"   # [DefaultFastest, BatteryAware, Custom]
+    # DefaultFastest: Prioritize task efficiency (fastest finish time)
+    # BatteryAware: Optimize throughput with battery SoC in mind
+    # Custom: Use custom weights below
+    weights:  # Polynomial coefficients in the format [A, B, ..., N] such that cost = Ax + Bx^2 + ... + Nx^N
+      finish_time: [1.0] # task finish time cost
+      battery_penalty: [5.0, 20.0] # battery penalty for low SoC
+      busy_penalty: [60.0] # penalty for assigning tasks to busy robots, 2 modes:
+                                #   Binary: penalty applied if robot is busy with any task
+                                #   Count: penalty increases with number of tasks assigned to robot
+    options:
+      busy_mode: "Binary"   # [Binary, Count]
   charger_server_running: False  # Server charge is running or not
   distance_tolerance: 0.3 # Distance_tolerance to the next destination if destination is not last
   robots:
@@ -189,7 +202,7 @@ docks:
   
   line89--pickup:
     go_in_dock: [rot:-90]
-    go_out_dock: [mov:0.75, rot:-60, mov:-0.55, rot:-30, mov:0.52]
+    go_out_dock: [mov:0.76, rot:-90]
     tag_names: [tag_frame_11]
 
   line89--dropoff:
@@ -204,8 +217,8 @@ docks:
     tag_names: [tag_frame_12]
   
   line90--pickup:
-    go_in_dock: [rot:180, mov:-0.07]
-    go_out_dock: [mov:0.77]
+    go_in_dock: [rot:180, mov:-0.14]
+    go_out_dock: [mov:0.76]
     tag_names: [tag_frame_12]
 
   line90--dropoff:
